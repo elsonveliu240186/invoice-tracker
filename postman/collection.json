@@ -1,0 +1,47 @@
+{
+  "info": {
+    "name": "invoice-tracker",
+    "description": "Postman collection for invoice-tracker. Regenerated from `/v3/api-docs` by the documentation agent each feature; preserved request bodies and tests are merged back in.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Ping",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/ping",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "ping"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('returns pong', () => pm.expect(pm.response.json().message).to.eql('pong'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "apiVersion", "value": "v1" }
+  ]
+}

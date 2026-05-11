@@ -1,0 +1,31 @@
+# Backend
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+
+# OWASP DC cache
+**/dependency-check-data/
+**/dependency-check-report.*
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Env
+.env.local
+.env.*.local
+*.log
+
+# Generated docs
+docs/openapi.json

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+    <!--
+        Suppression policy (see workflows/SECURITY_CHECKLIST.md):
+        every entry MUST include <notes> with: reason, owner, tracking-issue link, expiry date.
+        Anything past expiry is treated as a fail by the security-auditor agent.
+
+        Template:
+        <suppress>
+            <notes>
+                reason: <why>
+                owner: <name or team>
+                tracking: <issue url>
+                expires: <YYYY-MM-DD>
+            </notes>
+            <gav regex="true">.*:.*:.*</gav>
+            <cve>CVE-YYYY-NNNNN</cve>
+        </suppress>
+    -->
+</suppressions>
