@@ -9,6 +9,7 @@ export default mergeConfig(
       environment: 'jsdom',
       setupFiles: ['./src/test-setup.ts'],
       css: false,
+      exclude: ['**/node_modules/**', '**/dist/**', 'tests/**/*.spec.ts'],
       coverage: {
         provider: 'v8',
         reporter: ['text', 'html', 'lcov'],
@@ -24,7 +25,9 @@ export default mergeConfig(
           'src/test-setup.ts',
           'src/main.tsx',
           'src/shared/api/mocks/**',
+          'src/mocks/**',
           'src/**/*.d.ts',
+          'src/**/types.ts',
         ],
       },
     },

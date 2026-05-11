@@ -39,6 +39,219 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Clients",
+      "item": [
+        {
+          "name": "List Clients",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/clients?query=&page=0&size=20&sort=name,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "clients"],
+              "query": [
+                { "key": "query", "value": "", "description": "Case-insensitive substring match on name or email" },
+                { "key": "page", "value": "0", "description": "Zero-based page number" },
+                { "key": "size", "value": "20", "description": "Page size (1-100)" },
+                { "key": "sort", "value": "name,asc", "description": "Sort field and direction" }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('response has page envelope', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('content').that.is.an('array');",
+                  "  pm.expect(body).to.have.property('page').that.is.a('number');",
+                  "  pm.expect(body).to.have.property('size').that.is.a('number');",
+                  "  pm.expect(body).to.have.property('totalElements').that.is.a('number');",
+                  "  pm.expect(body).to.have.property('totalPages').that.is.a('number');",
+                  "});",
+                  "if (pm.response.json().content.length > 0) {",
+                  "  pm.environment.set('clientId', pm.response.json().content[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Client",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/clients",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "clients"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Corp\",\n  \"email\": \"billing@acme.example\",\n  \"phone\": \"+1 555-123-4567\",\n  \"address\": \"123 Main St, Springfield\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('Location header present', () => {",
+                  "  pm.expect(pm.response.headers.get('Location')).to.match(/\\/api\\/v1\\/clients\\//);",
+                  "});",
+                  "pm.test('response body has id and timestamps', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body).to.have.property('createdAt');",
+                  "  pm.expect(body).to.have.property('updatedAt');",
+                  "  pm.expect(body.name).to.eql('Acme Corp');",
+                  "  pm.expect(body.email).to.eql('billing@acme.example');",
+                  "  pm.environment.set('clientId', body.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Client",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/clients/{{clientId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "clients", "{{clientId}}"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('response is a client object', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id').that.eql(pm.environment.get('clientId'));",
+                  "  pm.expect(body).to.have.property('name');",
+                  "  pm.expect(body).to.have.property('email');",
+                  "  pm.expect(body).to.have.property('createdAt');",
+                  "  pm.expect(body).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Client",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/clients/{{clientId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "clients", "{{clientId}}"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Corp (Updated)\",\n  \"email\": \"billing@acme.example\",\n  \"phone\": \"+1 555-999-0000\",\n  \"address\": \"456 New Ave, Springfield\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('name was updated', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.name).to.eql('Acme Corp (Updated)');",
+                  "  pm.expect(body.phone).to.eql('+1 555-999-0000');",
+                  "  pm.expect(body.address).to.eql('456 New Ave, Springfield');",
+                  "});",
+                  "pm.test('updatedAt is present', () => {",
+                  "  pm.expect(pm.response.json()).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Client",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/clients/{{clientId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "clients", "{{clientId}}"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 No Content', () => pm.response.to.have.status(204));",
+                  "pm.test('response body is empty', () => {",
+                  "  pm.expect(pm.response.text()).to.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [

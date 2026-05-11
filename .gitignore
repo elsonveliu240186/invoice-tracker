@@ -9,7 +9,8 @@ frontend/coverage/
 frontend/playwright-report/
 frontend/test-results/
 
-# OWASP DC cache
+# OWASP DC cache (Docker volume mount)
+.dc-data/
 **/dependency-check-data/
 **/dependency-check-report.*
 
@@ -22,7 +23,8 @@ frontend/test-results/
 Thumbs.db
 .DS_Store
 
-# Env
+# Env — never commit these
+.env
 .env.local
 .env.*.local
 *.log

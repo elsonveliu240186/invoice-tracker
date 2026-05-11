@@ -5,7 +5,8 @@
     { "key": "apiVersion", "value": "v1", "enabled": true, "type": "default" },
     { "key": "username", "value": "user", "enabled": true, "type": "default" },
     { "key": "password", "value": "password", "enabled": true, "type": "secret" },
-    { "key": "authToken", "value": "", "enabled": true, "type": "secret" }
+    { "key": "authToken", "value": "", "enabled": true, "type": "secret" },
+    { "key": "clientId", "value": "", "enabled": true, "type": "default" }
   ],
   "_postman_variable_scope": "environment"
 }

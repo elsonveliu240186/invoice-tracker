@@ -10,7 +10,7 @@ _(none)_
 
 | Date | Feature | Finding | Severity | Resolution | Reference |
 |------|---------|---------|----------|------------|-----------|
-| _ | _ | _ | _ | _ | _ |
+| 2026-05-11 | FEAT-20260511-01 Client management | No required fixes. Two Moderate dev-only CVEs (esbuild GHSA-67mh-4wv8-2f99, vite GHSA-4w7w-66w2-5vf9) — dev server only, do not affect production build. | Low | Upgrade recommended before production (`pnpm update vite esbuild --latest`). Six non-blocking hardening recommendations logged (Semgrep/gitleaks in CI, env-var DB creds, auth rate limiting, CSP headers, backdrop-dismiss fix, MSW _idCounter reset). | [SECURITY.md](.features/FEAT-20260511-01/SECURITY.md) |
 
 ## OWASP Top 10 posture
 
