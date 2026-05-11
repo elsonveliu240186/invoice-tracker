@@ -29,5 +29,4 @@ Thumbs.db
 .env.*.local
 *.log
 
-# Generated docs
-docs/openapi.json
+# Generated docs — openapi.json is committed and maintained by the documentation agent
