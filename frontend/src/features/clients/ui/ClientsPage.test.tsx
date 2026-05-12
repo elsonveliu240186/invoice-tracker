@@ -3,16 +3,20 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import { http, HttpResponse } from 'msw';
+import { I18nextProvider } from 'react-i18next';
 import { server } from '@/mocks/server';
 import { ClientsPage } from './ClientsPage';
 import { ToastProvider } from '@/shared/ui/Toast';
+import i18n from '@/shared/lib/i18n';
 
 function renderPage() {
   return render(
     <MemoryRouter>
-      <ToastProvider>
-        <ClientsPage />
-      </ToastProvider>
+      <I18nextProvider i18n={i18n}>
+        <ToastProvider>
+          <ClientsPage />
+        </ToastProvider>
+      </I18nextProvider>
     </MemoryRouter>,
   );
 }
@@ -175,7 +179,17 @@ describe('ClientsPage', () => {
     server.use(
       http.get('/api/v1/clients', () =>
         HttpResponse.json({
-          content: [{ id: 'p1', name: 'Page Client', email: 'pc@example.com', phone: null, address: null, createdAt: '', updatedAt: '' }],
+          content: [
+            {
+              id: 'p1',
+              name: 'Page Client',
+              email: 'pc@example.com',
+              phone: null,
+              address: null,
+              createdAt: '',
+              updatedAt: '',
+            },
+          ],
           page: 0,
           size: 20,
           totalElements: 25,
@@ -198,7 +212,17 @@ describe('ClientsPage', () => {
         const page = url.searchParams.get('page') ?? '0';
         callCount++;
         return HttpResponse.json({
-          content: [{ id: `p${page}`, name: `Client Page ${page}`, email: `p${page}@example.com`, phone: null, address: null, createdAt: '', updatedAt: '' }],
+          content: [
+            {
+              id: `p${page}`,
+              name: `Client Page ${page}`,
+              email: `p${page}@example.com`,
+              phone: null,
+              address: null,
+              createdAt: '',
+              updatedAt: '',
+            },
+          ],
           page: parseInt(page),
           size: 20,
           totalElements: 40,

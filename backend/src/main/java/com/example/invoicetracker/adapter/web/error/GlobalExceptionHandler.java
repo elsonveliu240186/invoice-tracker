@@ -1,5 +1,6 @@
 package com.example.invoicetracker.adapter.web.error;
 
+import com.example.invoicetracker.domain.UserEmailTakenException;
 import com.example.invoicetracker.domain.client.ClientEmailTakenException;
 import com.example.invoicetracker.domain.client.ClientNotFoundException;
 import java.net.URI;
@@ -10,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -66,6 +68,32 @@ public class GlobalExceptionHandler {
         problem.setTitle("Conflict");
         problem.setDetail("A client with this email already exists.");
         problem.setProperty("code", "CLIENT_EMAIL_TAKEN");
+        return problem;
+    }
+
+    /**
+     * Handles invalid credentials (401).
+     */
+    @ExceptionHandler(BadCredentialsException.class)
+    public ProblemDetail handleBadCredentials(BadCredentialsException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Unauthorized");
+        problem.setDetail("Invalid credentials.");
+        problem.setProperty("code", "INVALID_CREDENTIALS");
+        return problem;
+    }
+
+    /**
+     * Handles user email already taken (409).
+     */
+    @ExceptionHandler(UserEmailTakenException.class)
+    public ProblemDetail handleUserEmailTaken(UserEmailTakenException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Conflict");
+        problem.setDetail("A user with this email already exists.");
+        problem.setProperty("code", "USER_EMAIL_TAKEN");
         return problem;
     }
 

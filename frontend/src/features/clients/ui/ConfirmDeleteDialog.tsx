@@ -1,3 +1,13 @@
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/shared/ui/dialog';
+import { Button } from '@/shared/ui/button';
+
 interface ConfirmDeleteDialogProps {
   open: boolean;
   clientName: string;
@@ -11,48 +21,35 @@ export function ConfirmDeleteDialog({
   onConfirm,
   onCancel,
 }: ConfirmDeleteDialogProps) {
-  if (!open) return null;
-
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-title"
-      data-testid="confirm-delete-dialog"
-      className="fixed inset-0 z-50 flex items-center justify-center"
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) onCancel();
+      }}
     >
-      <div
-        className="absolute inset-0 bg-black/40"
-        onClick={onCancel}
-        aria-hidden="true"
-      />
-      <div className="relative z-10 w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
-        <h2 id="confirm-title" className="mb-2 text-lg font-semibold">
-          Delete client
-        </h2>
-        <p className="mb-6 text-sm text-slate-600">
-          Are you sure you want to delete <strong>{clientName}</strong>? This action cannot be
-          undone.
-        </p>
-        <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded px-4 py-2 text-sm text-slate-600 hover:bg-slate-100"
-            data-testid="btn-cancel-delete"
-          >
+      <DialogContent data-testid="confirm-delete-dialog">
+        <DialogHeader>
+          <DialogTitle>Delete client</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            Are you sure you want to delete <strong>{clientName}</strong>? This action cannot be
+            undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={onCancel} data-testid="btn-cancel-delete">
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="destructive"
             onClick={onConfirm}
-            className="rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
             data-testid="btn-confirm-delete"
           >
             Delete
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

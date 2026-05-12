@@ -87,12 +87,11 @@ jobs:
       - name: Build and test
         working-directory: backend
         run: |
-          FLAGS=""
+          FLAGS="-Ddependency-check.skip=true"   # OWASP DC runs as a separate cached job
           [ "$BE_COVERAGE"   = "false" ] && FLAGS="$FLAGS -Djacoco.skip=true -Djacoco.check.skip=true"
           [ "$BE_CHECKSTYLE" = "false" ] && FLAGS="$FLAGS -Dcheckstyle.skip=true"
           [ "$BE_SPOTBUGS"   = "false" ] && FLAGS="$FLAGS -Dspotbugs.skip=true"
           [ "$BE_PMD"        = "false" ] && FLAGS="$FLAGS -Dpmd.skip=true"
-          [ "$BE_OWASP_DC"   = "false" ] && FLAGS="$FLAGS -Ddependency-check.skip=true"
           ./mvnw -B verify $FLAGS
 
       - name: Upload JaCoCo report
@@ -228,41 +227,49 @@ jobs:
             anchore/grype:latest \
             dir:/src --fail-on high
 
-  # ── OWASP Dependency-Check ─────────────────────────────────────────────────
+  # ── OWASP Dependency-Check (Maven + cached NVD DB) ────────────────────────
+  #
+  # Strategy:
+  #   • DB lives in ~/.dependency-check and is cached between runs.
+  #   • autoUpdate=false on every CI run — DB is never refreshed mid-build.
+  #   • The nightly `dependency-check-update.yml` workflow runs update-only
+  #     and writes a fresh cache entry; this job restores it.
+  #   • Expected runtime: ~30 s from warm cache vs 5–15 min cold.
   owasp-dc:
-    needs: [load-checks, detect-changes]
+    needs: [load-checks, detect-changes, backend]
     if: needs.load-checks.outputs.be_owasp_dc == 'true' && (needs.detect-changes.outputs.backend == 'true' || github.event_name == 'push')
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Cache NVD database
-        uses: actions/cache@v4
+
+      - uses: actions/setup-java@v4
         with:
-          path: .dc-data
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Restore OWASP NVD cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.dependency-check
           key: dc-nvd-${{ runner.os }}-${{ github.run_id }}
           restore-keys: dc-nvd-${{ runner.os }}-
-      - name: OWASP Dependency-Check
+
+      - name: OWASP Dependency-Check (cached DB, no auto-update)
+        working-directory: backend
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
-          mkdir -p .dc-data backend/target/dc
-          find .dc-data -name "*.lck" -delete 2>/dev/null || true
-          docker run --rm \
-            -e NVD_API_KEY \
-            -v ${{ github.workspace }}/backend:/src \
-            -v ${{ github.workspace }}/.dc-data:/usr/share/dependency-check/data \
-            owasp/dependency-check:latest \
-            --scan /src \
-            --format JSON --format HTML \
-            --out /src/target/dc \
-            --nvdApiKey "$NVD_API_KEY" \
-            --nvdValidForHours 24 \
-            --failOnCVSS 7 \
-            --suppression /src/owasp-suppressions.xml
+          find ~/.dependency-check -name "*.lck" -delete 2>/dev/null || true
+          ./mvnw -B dependency-check:check \
+            -Ddependency-check.autoUpdate=false \
+            -Ddependency-check.skip=false
+
       - name: Upload DC report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: owasp-dc-report
-          path: backend/target/dc/
+          path: backend/target/dependency-check-report.*
+          if-no-files-found: ignore

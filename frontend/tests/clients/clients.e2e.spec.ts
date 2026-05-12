@@ -20,6 +20,27 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 
+// Seed an authenticated session so ProtectedRoute lets the app render.
+// This runs before every test in this file so all routes are accessible.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'it.auth',
+      JSON.stringify({
+        state: {
+          user: {
+            email: 'qa@example.com',
+            displayName: 'QA User',
+            provider: 'password',
+            basicAuthToken: btoa('qa@example.com:Secret1!'),
+          },
+        },
+        version: 0,
+      }),
+    );
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
@@ -468,13 +489,16 @@ test.describe('AC-5 / AC-9: delete client', () => {
   });
 
   test('confirms delete → 204 → success toast → row removed (AC-5)', async ({ page }) => {
-    let listCalls = 0;
+    // Use a deleted flag rather than a call counter so that React StrictMode's
+    // double-invocation of effects (which fires the list API twice on mount) does
+    // not prematurely return an empty list before the delete action occurs.
+    let deleted = false;
     await setupApiMock(page, {
-      onList: () => {
-        listCalls++;
-        return pageOf(listCalls === 1 ? [ACME] : []);
+      onList: () => pageOf(deleted ? [] : [ACME]),
+      onDelete: () => {
+        deleted = true;
+        return { status: 204 };
       },
-      onDelete: () => ({ status: 204 }),
     });
 
     await page.goto('/clients');

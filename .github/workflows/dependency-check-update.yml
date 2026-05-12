@@ -1,0 +1,57 @@
+name: Refresh OWASP NVD Database
+
+# Runs nightly at 21:00 UTC to keep the dependency-check DB up-to-date.
+# PR builds restore this cache and run with autoUpdate=false, so they
+# finish in ~30 s instead of 5–15 min.
+#
+# Trigger manually via workflow_dispatch if you need an immediate refresh
+# (e.g. after a new CVE advisory that affects a blocked PR).
+
+on:
+  schedule:
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh-nvd-db:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      # Restore the most recent cache so update-only does an incremental sync
+      # instead of a full 350 k-record download.
+      - name: Restore existing NVD cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.dependency-check
+          key: dc-nvd-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: dc-nvd-${{ runner.os }}-
+
+      - name: Update NVD database
+        working-directory: backend
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          find ~/.dependency-check -name "*.lck" -delete 2>/dev/null || true
+          ./mvnw -B dependency-check:update-only \
+            -Ddependency-check.autoUpdate=true
+
+      # Save with a run-specific key so the next restore-keys match picks it up.
+      - name: Save refreshed NVD cache
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.dependency-check
+          key: dc-nvd-${{ runner.os }}-${{ github.run_id }}
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::warning::NVD database refresh failed. PR builds will use the last known-good cache."
