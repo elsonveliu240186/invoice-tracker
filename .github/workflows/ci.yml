@@ -106,7 +106,7 @@ jobs:
         if: needs.load-checks.outputs.be_semgrep == 'true'
         uses: returntocorp/semgrep-action@v1
         with:
-          config: p/owasp-top-ten p/java
+          config: auto
 
   # ── Frontend ───────────────────────────────────────────────────────────────
   frontend:
@@ -174,7 +174,7 @@ jobs:
         if: needs.load-checks.outputs.fe_semgrep == 'true'
         uses: returntocorp/semgrep-action@v1
         with:
-          config: p/owasp-top-ten p/typescript p/react
+          config: auto
 
   # ── Secrets (gitleaks) ─────────────────────────────────────────────────────
   gitleaks:
