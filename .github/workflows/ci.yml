@@ -247,6 +247,7 @@ jobs:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
           mkdir -p .dc-data backend/target/dc
+          find .dc-data -name "*.lck" -delete 2>/dev/null || true
           docker run --rm \
             -v ${{ github.workspace }}/backend:/src \
             -v ${{ github.workspace }}/.dc-data:/usr/share/dependency-check/data \
