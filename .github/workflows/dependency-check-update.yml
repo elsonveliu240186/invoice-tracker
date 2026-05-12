@@ -1,6 +1,6 @@
 name: Refresh OWASP NVD Database
 
-# Runs nightly at 02:00 UTC to keep the dependency-check DB up-to-date.
+# Runs nightly at 21:00 UTC to keep the dependency-check DB up-to-date.
 # PR builds restore this cache and run with autoUpdate=false, so they
 # finish in ~30 s instead of 5–15 min.
 #
@@ -9,7 +9,7 @@ name: Refresh OWASP NVD Database
 
 on:
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 21 * * *'
   workflow_dispatch:
 
 jobs:
