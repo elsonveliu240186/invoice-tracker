@@ -14,34 +14,55 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.invoicetracker.application.client.ClientCommand;
 import com.example.invoicetracker.application.client.ClientService;
-import com.example.invoicetracker.config.SecurityConfig;
 import com.example.invoicetracker.domain.client.Client;
 import com.example.invoicetracker.domain.client.ClientEmailTakenException;
 import com.example.invoicetracker.domain.client.ClientNotFoundException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
-@WebMvcTest(ClientController.class)
-@Import(SecurityConfig.class)
+@SpringBootTest(webEnvironment = WebEnvironment.MOCK)
+@Testcontainers
 class ClientControllerTest {
 
+    @Container
+    @ServiceConnection
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
+
     @Autowired
-    MockMvc mvc;
+    WebApplicationContext context;
 
     @MockitoBean
     ClientService clientService;
+
+    MockMvc mvc;
+
+    @BeforeEach
+    void setUp() {
+        mvc = MockMvcBuilders
+            .webAppContextSetup(context)
+            .apply(SecurityMockMvcConfigurers.springSecurity())
+            .build();
+    }
 
     private Client makeClient(UUID id) {
         Instant now = Instant.now();
