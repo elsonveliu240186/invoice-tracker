@@ -1,16 +1,21 @@
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '../api/useClients';
 import { ClientTable } from './ClientTable';
 import { ClientFormModal } from './ClientFormModal';
 import { ClientForm } from './ClientForm';
 import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
 import { useToast } from '@/shared/ui/Toast';
+import { Button } from '@/shared/ui/button';
+import { Input } from '@/shared/ui/input';
+import { PageHeader } from '@/shared/components/PageHeader';
 import type { Client, ClientQuery } from '../model/types';
 import type { CreateClientInput } from '../model/schema';
 
 const PAGE_SIZE = 20;
 
 export function ClientsPage() {
+  const { t } = useTranslation();
   const { show } = useToast();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
@@ -61,26 +66,26 @@ export function ClientsPage() {
       };
       if (editingClient) {
         await updateMutate(editingClient.id, payload);
-        show('Client updated', 'success');
+        show(t('clients.toast.updated'), 'success');
       } else {
         await createMutate(payload);
-        show('Client created', 'success');
+        show(t('clients.toast.created'), 'success');
       }
       closeModal();
       refetch();
     },
-    [editingClient, updateMutate, createMutate, show, refetch],
+    [editingClient, updateMutate, createMutate, show, refetch, t],
   );
 
   async function handleConfirmDelete() {
     if (!deletingClient) return;
     try {
       await deleteMutate(deletingClient.id);
-      show('Client deleted', 'success');
+      show(t('clients.toast.deleted'), 'success');
       setDeletingClient(null);
       refetch();
     } catch {
-      show('Failed to delete client', 'error');
+      show(t('clients.toast.deleteFailed'), 'error');
       setDeletingClient(null);
     }
   }
@@ -90,41 +95,46 @@ export function ClientsPage() {
   const initialForForm: Partial<Client> | undefined = editingClient ?? undefined;
 
   return (
-    <main className="mx-auto max-w-5xl p-6" data-testid="clients-page">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Clients</h1>
-        <button
-          onClick={openCreate}
-          className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-          data-testid="btn-new-client"
-        >
-          New client
-        </button>
-      </div>
+    <div data-testid="clients-page">
+      <PageHeader
+        title={t('clients.title')}
+        actions={
+          <Button onClick={openCreate} data-testid="btn-new-client">
+            {t('clients.newClient')}
+          </Button>
+        }
+      />
 
       <div className="mb-4">
-        <input
+        <Input
           type="search"
-          placeholder="Search by name or email…"
+          placeholder={t('clients.searchPlaceholder')}
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
             setPage(0);
           }}
-          className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:max-w-xs"
+          className="sm:max-w-xs"
           data-testid="search-input"
           aria-label="Search clients"
         />
       </div>
 
       {loading && (
-        <p className="py-8 text-center text-slate-400" data-testid="loading-indicator">
-          Loading…
+        <p
+          className="py-8 text-center text-[var(--color-muted-foreground)]"
+          data-testid="loading-indicator"
+        >
+          {t('common.loading')}
         </p>
       )}
 
       {error && (
-        <p role="alert" className="py-4 text-center text-red-600" data-testid="error-message">
+        <p
+          role="alert"
+          className="py-4 text-center text-[var(--color-destructive)]"
+          data-testid="error-message"
+        >
           {error.message}
         </p>
       )}
@@ -138,7 +148,7 @@ export function ClientsPage() {
           />
 
           {totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
+            <div className="mt-4 flex items-center justify-between text-sm text-[var(--color-muted-foreground)]">
               <span>
                 Page {page + 1} of {totalPages} ({data.totalElements} total)
               </span>
@@ -146,7 +156,7 @@ export function ClientsPage() {
                 <button
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={page === 0}
-                  className="rounded border px-3 py-1 disabled:opacity-40"
+                  className="rounded border border-[var(--color-border)] px-3 py-1 disabled:opacity-40"
                   data-testid="btn-prev-page"
                 >
                   Previous
@@ -154,7 +164,7 @@ export function ClientsPage() {
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
-                  className="rounded border px-3 py-1 disabled:opacity-40"
+                  className="rounded border border-[var(--color-border)] px-3 py-1 disabled:opacity-40"
                   data-testid="btn-next-page"
                 >
                   Next
@@ -166,7 +176,7 @@ export function ClientsPage() {
       )}
 
       <ClientFormModal
-        title={editingClient ? 'Edit client' : 'New client'}
+        title={editingClient ? t('common.edit') + ' client' : t('clients.newClient')}
         open={modalOpen}
         onClose={closeModal}
       >
@@ -175,7 +185,7 @@ export function ClientsPage() {
             initial={initialForForm}
             onSubmit={handleSubmit}
             onCancel={closeModal}
-            submitLabel={editingClient ? 'Update' : 'Create'}
+            submitLabel={editingClient ? 'Update' : t('common.create')}
           />
         )}
       </ClientFormModal>
@@ -183,9 +193,11 @@ export function ClientsPage() {
       <ConfirmDeleteDialog
         open={!!deletingClient}
         clientName={deletingClient?.name ?? ''}
-        onConfirm={() => { void handleConfirmDelete(); }}
+        onConfirm={() => {
+          void handleConfirmDelete();
+        }}
         onCancel={() => setDeletingClient(null)}
       />
-    </main>
+    </div>
   );
 }

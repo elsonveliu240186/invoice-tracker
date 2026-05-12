@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { createClientSchema, type CreateClientInput } from '../model/schema';
 import type { Client } from '../model/types';
 import { ApiError } from '@/shared/lib/http';
+import { Input } from '@/shared/ui/input';
+import { Button } from '@/shared/ui/button';
 
 interface ClientFormProps {
   initial?: Partial<Client> | undefined;
@@ -63,7 +65,13 @@ export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
   }
 
   return (
-    <form onSubmit={(e) => { void handleSubmit(e); }} noValidate data-testid="client-form">
+    <form
+      onSubmit={(e) => {
+        void handleSubmit(e);
+      }}
+      noValidate
+      data-testid="client-form"
+    >
       {serverError && (
         <p role="alert" className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700">
           {serverError}
@@ -71,10 +79,10 @@ export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
       )}
 
       <div className="mb-4">
-        <label htmlFor="client-name" className="block text-sm font-medium text-slate-700 mb-1">
+        <label htmlFor="client-name" className="block text-sm font-medium text-foreground mb-1">
           Name <span className="text-red-500">*</span>
         </label>
-        <input
+        <Input
           id="client-name"
           type="text"
           autoComplete="organization"
@@ -82,7 +90,6 @@ export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
           onChange={(e) => handleChange('name', e.target.value)}
           aria-describedby={fieldErrors.name ? 'name-error' : undefined}
           aria-invalid={!!fieldErrors.name}
-          className="block w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           data-testid="input-name"
         />
         {fieldErrors.name && (
@@ -93,10 +100,10 @@ export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
       </div>
 
       <div className="mb-4">
-        <label htmlFor="client-email" className="block text-sm font-medium text-slate-700 mb-1">
+        <label htmlFor="client-email" className="block text-sm font-medium text-foreground mb-1">
           Email <span className="text-red-500">*</span>
         </label>
-        <input
+        <Input
           id="client-email"
           type="email"
           autoComplete="email"
@@ -104,7 +111,6 @@ export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
           onChange={(e) => handleChange('email', e.target.value)}
           aria-describedby={fieldErrors.email ? 'email-error' : undefined}
           aria-invalid={!!fieldErrors.email}
-          className="block w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           data-testid="input-email"
         />
         {fieldErrors.email && (
@@ -115,10 +121,10 @@ export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
       </div>
 
       <div className="mb-4">
-        <label htmlFor="client-phone" className="block text-sm font-medium text-slate-700 mb-1">
+        <label htmlFor="client-phone" className="block text-sm font-medium text-foreground mb-1">
           Phone
         </label>
-        <input
+        <Input
           id="client-phone"
           type="tel"
           autoComplete="tel"
@@ -126,7 +132,6 @@ export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
           onChange={(e) => handleChange('phone', e.target.value)}
           aria-describedby={fieldErrors.phone ? 'phone-error' : undefined}
           aria-invalid={!!fieldErrors.phone}
-          className="block w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           data-testid="input-phone"
         />
         {fieldErrors.phone && (
@@ -137,7 +142,7 @@ export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
       </div>
 
       <div className="mb-6">
-        <label htmlFor="client-address" className="block text-sm font-medium text-slate-700 mb-1">
+        <label htmlFor="client-address" className="block text-sm font-medium text-foreground mb-1">
           Address
         </label>
         <textarea
@@ -147,7 +152,7 @@ export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
           onChange={(e) => handleChange('address', e.target.value)}
           aria-describedby={fieldErrors.address ? 'address-error' : undefined}
           aria-invalid={!!fieldErrors.address}
-          className="block w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="block w-full rounded border border-input px-3 py-2 text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring bg-transparent"
           data-testid="input-address"
         />
         {fieldErrors.address && (
@@ -158,22 +163,12 @@ export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
       </div>
 
       <div className="flex justify-end gap-3">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded px-4 py-2 text-sm text-slate-600 hover:bg-slate-100"
-          data-testid="btn-cancel"
-        >
+        <Button type="button" variant="ghost" onClick={onCancel} data-testid="btn-cancel">
           Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-          data-testid="btn-submit"
-        >
+        </Button>
+        <Button type="submit" disabled={submitting} data-testid="btn-submit">
           {submitting ? 'Saving…' : submitLabel}
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -1,0 +1,60 @@
+{
+  "common": {
+    "appName": "Invoice Tracker",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "loading": "Loading…",
+    "error": "Error",
+    "retry": "Try again",
+    "close": "Close",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "language": "Language",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "nav": {
+    "home": "Home",
+    "clients": "Clients",
+    "invoices": "Invoices",
+    "settings": "Settings"
+  },
+  "home": {
+    "title": "Welcome to Invoice Tracker",
+    "subtitle": "Scaffolded by the agenticai framework. Drive features with /new-feature.",
+    "ctaClients": "Manage Clients"
+  },
+  "clients": {
+    "title": "Clients",
+    "newClient": "New client",
+    "searchPlaceholder": "Search by name or email…",
+    "empty": {
+      "title": "No clients found",
+      "body": "Get started by creating your first client."
+    },
+    "deleteConfirm": {
+      "title": "Delete client",
+      "body": "Are you sure you want to delete {{name}}? This action cannot be undone."
+    },
+    "toast": {
+      "created": "Client created",
+      "updated": "Client updated",
+      "deleted": "Client deleted",
+      "deleteFailed": "Failed to delete client"
+    }
+  },
+  "errors": {
+    "boundary": {
+      "title": "Something went wrong",
+      "body": "An unexpected error occurred. Please try again.",
+      "action": "Try again"
+    }
+  }
+}

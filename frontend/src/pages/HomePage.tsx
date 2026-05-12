@@ -1,26 +1,31 @@
 import { Link } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import { PageHeader } from '@/shared/components/PageHeader';
+import { Card, CardContent } from '@/shared/ui/card';
 
 export function HomePage() {
+  const { t } = useTranslation();
+
   return (
-    <main className="mx-auto max-w-2xl p-8" data-testid="home-page">
-      <h1 className="text-3xl font-semibold">Welcome</h1>
-      <p className="mt-2 text-slate-600">
-        Scaffolded by the agenticai framework. Drive features with{' '}
-        <code className="rounded bg-slate-200 px-1.5 py-0.5">/new-feature</code>.
-      </p>
-      <nav className="mt-6">
-        <ul className="space-y-2">
-          <li>
-            <Link
-              to="/clients"
-              className="text-blue-600 hover:underline"
-              data-testid="link-clients"
-            >
-              Manage Clients
-            </Link>
-          </li>
-        </ul>
-      </nav>
-    </main>
+    <div data-testid="home-page">
+      <PageHeader title={t('home.title')} description={t('home.subtitle')} />
+      <Card>
+        <CardContent className="pt-6">
+          <nav>
+            <ul className="space-y-2">
+              <li>
+                <Link
+                  to="/clients"
+                  className="text-[var(--color-primary)] hover:underline"
+                  data-testid="link-clients"
+                >
+                  {t('home.ctaClients')}
+                </Link>
+              </li>
+            </ul>
+          </nav>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

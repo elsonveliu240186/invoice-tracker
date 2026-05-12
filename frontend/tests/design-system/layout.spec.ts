@@ -1,0 +1,111 @@
+/**
+ * AC-9: AppShell renders nav and sidebar links; mobile drawer opens/closes.
+ */
+import { test, expect } from '@playwright/test';
+
+test.describe('AppShell layout — desktop', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('AC-9: sidebar is visible on desktop viewport', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('[data-testid="home-page"]');
+
+    const sidebar = page.locator('[data-testid="desktop-sidebar"]');
+    await expect(sidebar).toBeVisible();
+  });
+
+  test('AC-9: sidebar contains navigation links', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('[data-testid="home-page"]');
+
+    await expect(page.getByRole('link', { name: /home/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /clients/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /invoices/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /settings/i }).first()).toBeVisible();
+  });
+
+  test('AC-9: clicking Clients nav link navigates to /clients', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('[data-testid="home-page"]');
+
+    await page
+      .getByRole('link', { name: /clients/i })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/clients/);
+    await expect(page.getByTestId('clients-page')).toBeVisible();
+  });
+
+  test('AC-9: hamburger button is NOT visible on desktop', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('[data-testid="home-page"]');
+
+    // The hamburger has lg:hidden class — should not be visible at 1280px
+    const hamburger = page.getByTestId('hamburger');
+    await expect(hamburger).not.toBeVisible();
+  });
+});
+
+test.describe('AppShell layout — mobile', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test('AC-9: sidebar is collapsed (no desktop-sidebar) on mobile viewport', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('[data-testid="home-page"]');
+
+    const desktopSidebar = page.locator('[data-testid="desktop-sidebar"]');
+    await expect(desktopSidebar).not.toBeVisible();
+  });
+
+  test('AC-9: hamburger button is visible on mobile', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('[data-testid="home-page"]');
+
+    const hamburger = page.getByTestId('hamburger');
+    await expect(hamburger).toBeVisible();
+  });
+
+  test('AC-9: drawer opens when hamburger is clicked', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('[data-testid="home-page"]');
+
+    await page.getByTestId('hamburger').click();
+    await expect(page.getByTestId('drawer-overlay')).toBeVisible();
+    await expect(page.getByTestId('drawer-panel')).toBeVisible();
+  });
+
+  test('AC-9: drawer closes when close button is clicked', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('[data-testid="home-page"]');
+
+    await page.getByTestId('hamburger').click();
+    await expect(page.getByTestId('drawer-overlay')).toBeVisible();
+
+    await page.getByTestId('sidebar-close').click();
+    await expect(page.getByTestId('drawer-overlay')).not.toBeVisible();
+  });
+
+  test('AC-9: drawer closes when backdrop is clicked', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('[data-testid="home-page"]');
+
+    await page.getByTestId('hamburger').click();
+    await expect(page.getByTestId('drawer-overlay')).toBeVisible();
+
+    // The drawer panel is 240px wide; click to the right of it on the exposed backdrop.
+    // Viewport is 375px wide, so click at x=320 (well past the 240px panel edge).
+    await page.mouse.click(320, 400);
+    await expect(page.getByTestId('drawer-overlay')).not.toBeVisible();
+  });
+
+  test('AC-9: drawer closes on Escape key', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('[data-testid="home-page"]');
+
+    await page.getByTestId('hamburger').click();
+    await expect(page.getByTestId('drawer-overlay')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('drawer-overlay')).not.toBeVisible();
+  });
+});

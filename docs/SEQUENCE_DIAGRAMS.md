@@ -58,3 +58,45 @@ sequenceDiagram
     API-->>FE: 409 problem+json { code:"CLIENT_EMAIL_TAKEN" }
     FE-->>U: inline field error on email
 ```
+
+---
+
+### FEAT-20260512-01 — Frontend design system foundation
+
+#### Happy path — theme toggle and i18n hydration on app boot
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant HTML as index.html
+    participant Main as main.tsx
+    participant I18n as i18n init
+    participant TS as useThemeStore
+    participant Doc as <html> classList
+    participant TT as ThemeToggle
+
+    HTML->>Main: load bundle
+    Main->>I18n: i18n.init(en)
+    I18n-->>Main: ready
+    Main->>TS: hydrate from localStorage("it.theme")
+    TS->>Doc: add/remove "dark" class based on persisted or system pref
+    Main-->>U: render AppShell (themed, translated)
+    U->>TT: click toggle
+    TT->>TS: setTheme(next)
+    TS->>localStorage: write "it.theme"
+    TS->>Doc: toggle "dark" class
+    Doc-->>U: instant repaint
+```
+
+#### Edge case — OS colour-scheme changes while in system mode
+
+```mermaid
+sequenceDiagram
+    participant OS as OS
+    participant MM as matchMedia(prefers-color-scheme)
+    participant TS as useThemeStore
+    participant Doc as <html> classList
+    OS->>MM: scheme changed -> dark
+    MM-->>TS: change event (only fired when mode === 'system')
+    TS->>Doc: add "dark" class
+```
