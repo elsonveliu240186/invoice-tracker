@@ -1,136 +1,38 @@
 ---
-status: pass
-iteration: 2
+status: fail
+iteration: 3
 reviewer: claude-sonnet
-generated_at: 2026-05-11T19:00:00Z
+generated_at: 2026-05-12T10:35:00Z
 ---
 
 ## Summary
 
-All four blocking findings from iteration 1 have been resolved in this iteration. The JaCoCo
-coverage gate is re-enabled in CHECKS.yml (backend.coverage: true); the pom.xml plugin-level
-excludes correctly suppress framework-generated synthetic branches so the 90% threshold is
-reachable. The Postman collection now contains a complete Clients folder with all five requests
-(List, Get, Create, Update, Delete), example bodies, and pm.test assertions; the clientId
-environment variable is present in local-dev.environment.json. docs/API.md is fully populated
-with all five endpoint specifications, request/response schemas, error codes, and the RFC 7807
-problem-detail shape. docs/CHANGELOG.md carries the Client management CRUD entry. The Spring
-Boot version correctly remains at 3.5.3 per the authoritative CLAUDE.md and the project decision
-table (Boot 4 removed WebMvcTest/DataJpaTest; 3.5.3 is current stable). Two non-blocking
-recommendations from iteration 1 remain open (backdrop dismiss and _idCounter reset) but do not
-block shipping. The implementation is architecturally sound across all layers. Status: pass.
-
-## Checklist walk-through
-
-### Plan adherence
-
-- [x] Every acceptance criterion in PLAN.md has at least one test. PASS.
-  AC-1 (POST 201+Location): ClientControllerTest create_returns_201_with_location. PASS.
-  AC-2 (paginated list+search): list_returns_page_envelope, search_is_case_insensitive,
-        pagination_returns_expected_slice. PASS.
-  AC-3 (GET by id, 404 on missing): get_returns_404_when_not_found. PASS.
-  AC-4 (PUT updates updatedAt): ClientServiceTest update tests. PASS.
-  AC-5 (soft-delete, GET 404 after): delete_sets_deletedAt, soft_deleted_row_excluded. PASS.
-  AC-6 (field validation): create_returns_400 tests for name/email/phone constraints. PASS.
-  AC-7 (duplicate email 409): create_returns_409_when_email_taken,
-        ClientControllerIT duplicate_email_returns_409. PASS.
-  AC-8 (401 unauthenticated): unauthenticated_returns_401, unauthenticated_request_returns_401. PASS.
-  AC-9 (React UI): ClientsPage implements search, pagination, New/Edit/Delete, toast.
-        ClientsPage.test.tsx covers list render, search, create flow, delete confirmation. PASS.
-  AC-10 (coverage gate): backend.coverage: true; jacoco.minimum=0.90; plugin excludes in place.
-        Frontend Vitest 95/95/95/90 configured. PASS.
-  AC-11 (Postman+OpenAPI): Postman Clients folder has 5 requests with test scripts; @Tag and
-        @Operation on ClientController; docs/API.md fully populated. PASS.
-  AC-12 (Flyway, CI): V1__create_clients.sql present; maven-failsafe runs IT tests. PASS.
-
-- [x] No files modified outside the plan change list (or justified). PASS.
-  Extra files present and justified:
-  CHECKS.yml - quality-gate toggle file, documented in HISTORY.md.
-  backend/checks-flags.sh - Maven flag helper; justified.
-  backend/mvnw, mvnw.cmd, .mvn/ - Maven wrapper; standard artefact.
-  frontend/tsconfig.test.json, tsconfig.tsbuildinfo - minor build artefacts.
-
-- [x] API contract in PLAN.md matches code. PASS.
-  POST 201+Location+ClientResponse, GET list PageResponse envelope, GET/{id} 200/404,
-  PUT 200/400/404/409, DELETE 204. Problem-detail shape (type/title/status/detail/code) matches
-  plan section 6. ClientResponse fields match domain record and controller toResponse() mapping.
-
-### Code quality - backend
-
-- [x] Package layout follows domain / application / adapter convention. PASS.
-- [x] DTOs are records; entities use Lombok only. PASS.
-- [x] No System.out.println; no e.printStackTrace(). PASS. SLF4J used; logs clientId only.
-- [x] Exceptions caught at right boundary; controller advice translates to HTTP. PASS.
-  GlobalExceptionHandler handles 400/404/409/500 via RFC 7807 ProblemDetail.
-- [x] No // TODO in shipped code. PASS.
-- [x] Minimal Javadoc where non-obvious. PASS.
-
-### Code quality - frontend
-
-- [x] TypeScript strict; no any, no @ts-ignore. PASS.
-- [x] Components in correct slice. PASS.
-- [x] Hooks have stable dependencies. PASS. useCallback deps complete; query key stable.
-- [x] No inline secrets, no API keys in bundle. PASS.
-- [x] Accessible: roles and accessible names present throughout. PASS.
-  ClientFormModal: role=dialog, aria-modal, aria-labelledby, close aria-label.
-  Search input has aria-label; error has role=alert. Form inputs have label/for, aria-invalid.
-
-### Testing
-
-- [x] Backend JaCoCo 90% gate enabled (CHECKS.yml backend.coverage: true, jacoco.minimum=0.90).
-  Plugin-level excludes remove framework-generated branches. 34 tests named in the plan present.
-  PASS (gate enabled; threshold achievable given exclusions).
-- [x] Frontend Vitest 95/95/95/90 configured; gate enabled. PASS.
-- [x] Tests assert behaviour, not implementation. No shallow snapshots. PASS.
-- [x] Negative paths tested (409, 404, 400, 401, soft-delete, Zod rejections). PASS.
-
-### Static analysis
-
-- [x] mvn verify: Checkstyle, SpotBugs, PMD, Failsafe all configured. HISTORY reports clean. PASS.
-- [x] pnpm lint: ESLint flat config; frontend.lint: true. No violations in reviewed files. PASS.
-
-### Documentation hooks
-
-- [x] PLAN.md has mermaid architecture flowchart and two sequence diagrams. PASS.
-- [x] Springdoc @Tag and @Operation on all five ClientController handlers. PASS.
-
----
+Gate 1 (test-compile) passes. Gate 2 (backend fast verify) fails with 7 integration-test failures across two classes: all five `ClientRepositoryAdapterIT` tests error because `relation "clients" does not exist`, and two of three `ClientControllerIT` tests fail with `500 INTERNAL_SERVER_ERROR` for the same root cause. The root cause is that Flyway never executes during the IT test phase — no Flyway log line appears even with DEBUG enabled. The `spring.flyway.enabled: true` setting lives only inside the `local` and `docker` profile blocks in `application.yml`. The IT tests activate the `local` profile, and `@ServiceConnection` correctly overrides the datasource URL to point at the Testcontainers Postgres instance, but Flyway's `FlywayAutoConfiguration` does not fire. Gate 3 (frontend) is fully green: TypeScript clean, all 79 Vitest tests pass, coverage Stmts 99.31% / Branch 92.13% / Funcs 100% / Lines 99.31% — all above thresholds.
 
 ## Findings
 
 ### Required (blocking)
 
-None.
+- [ ] `backend/src/main/resources/application.yml` (base stanza, lines 1-21) — `spring.flyway.enabled` is absent from the base configuration block; it only appears inside profile-conditional blocks (`local`, `docker`). During IT test runs with Testcontainers the Spring context activates the `local` profile but `FlywayAutoConfiguration` does not fire, leaving the `clients` table absent and causing all persistence IT tests to error. Fix: add `spring.flyway.enabled: true` to the base (non-profile) block of `application.yml`, or add `src/test/resources/application.yml` with `spring.flyway.enabled: true` so the IT test contexts unconditionally enable Flyway regardless of profile resolution order.
+
+  Evidence:
+  ```
+  ClientRepositoryAdapterIT — 5 errors: relation "clients" does not exist (SQLGrammarException)
+  ClientControllerIT — 2 failures: expected 201 CREATED but was 500 INTERNAL_SERVER_ERROR
+                                    expected 409 CONFLICT but was 500 INTERNAL_SERVER_ERROR
+  ```
 
 ### Recommended (non-blocking)
 
-- [ ] frontend/src/features/clients/ui/ClientFormModal.tsx:34 - Backdrop onClick={onClose}
-  dismisses the modal on outside click. Per project owner preference the modal should only close
-  via the explicit Cancel button or close-X button. Remove the backdrop onClick handler.
-
-- [ ] frontend/src/mocks/handlers.ts:4 - _idCounter module-level mutable is not reset between
-  test suite runs. Default clients use fixed IDs (uuid-1, uuid-2) which partially mitigates the
-  issue, but the Create handler returns incrementing IDs across suite runs. Expose a reset helper
-  or seed per-test via MSW handler overrides.
-
----
+- [ ] `backend/src/main/resources/application.yml` — `spring.jpa.open-in-view` is not explicitly set to `false` in the base block; it logs a WARN on every test context start. Add `spring.jpa.open-in-view: false` to the base stanza to suppress noise and follow best practice.
+- [ ] `backend/src/test/.../ClientRepositoryAdapterIT.java` — tests are not isolated; data written by one test (e.g., `save_then_find_round_trip` seeding "acme@example.com") can affect `search_is_case_insensitive_on_name_and_email` if test ordering changes. Consider `@Transactional` on each test method or a `@BeforeEach` that truncates the table.
 
 ## Coverage check
 
-- Backend JaCoCo: 90% line + branch gate (CHECKS.yml backend.coverage: true,
-  pom.xml jacoco.minimum=0.90); plugin-level excludes for framework branches in place.
-  Gate: PASS (enabled; 34 tests green per HISTORY.md).
-- Frontend Vitest: lines 95 / functions 95 / statements 95 / branches 90 configured;
-  frontend.coverage: true in CHECKS.yml. Gate: PASS (enabled and threshold configured).
-
----
+- Backend JaCoCo: gate check line `[INFO] All coverage checks have been met.` was logged, but the overall `verify` phase failed before the failsafe `verify` goal succeeded — IT test failures mean the coverage numbers only reflect unit test data. Cannot certify ≥ 95% with IT failures present. **fail** (gate not certifiable while IT tests are broken).
+- Frontend Vitest: Stmts 99.31% / Branch 92.13% / Funcs 100% / Lines 99.31% — all above 95/90 thresholds. **pass**
 
 ## Plan adherence
 
-- Every acceptance criterion mapped to code + tests? YES - AC-1 through AC-12 mapped above.
-- Files outside the plan change list:
-  - CHECKS.yml - justified cross-cutting toggle infrastructure
-  - backend/checks-flags.sh - justified helper script
-  - backend/mvnw, backend/mvnw.cmd, backend/.mvn/ - standard Maven wrapper artefacts
-  - frontend/tsconfig.test.json, frontend/tsconfig.tsbuildinfo - minor build artefacts
-  All justified; none affect the feature contract or introduce risk.
+- Every acceptance criterion mapped to code + tests? AC-12 (Flyway migration applied cleanly) is de facto unmet while IT tests error on missing table; all other ACs are implemented.
+- Files outside the plan's change list? None observed.

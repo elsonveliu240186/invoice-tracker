@@ -62,7 +62,7 @@ projects/invoice-tracker/
 
 | Decision | Reason |
 |---|---|
-| Spring Boot `4.0.6` | `spring-boot-test-autoconfigure` must be declared explicitly (no longer transitive). `@MockBean` was removed — use `@MockitoBean` from `org.springframework.test.context.bean.override.mockito`. `TestRestTemplate` was removed — use `RestClient` with `@LocalServerPort` in `@SpringBootTest(RANDOM_PORT)` ITs. |
+| Spring Boot `4.0.6` | `@WebMvcTest` / `@DataJpaTest` / `@MockBean` / `TestRestTemplate` removed. Use `@SpringBootTest` + Testcontainers for all tests. Controllers: `webEnvironment=MOCK` + `MockMvcBuilders.webAppContextSetup` + `@MockitoBean`. ITs: `webEnvironment=RANDOM_PORT` + `RestClient` + `@LocalServerPort`. |
 | `maven-failsafe-plugin` added | Runs `*IT` integration tests in the `integration-test` phase; Surefire only picks up `*Test` by convention. |
 | JaCoCo `merge` + `check` on merged exec | Unit (`jacoco.exec`) and IT (`jacoco-it.exec`) data is merged into `jacoco-merged.exec` before the gate check, so both layers contribute to the 95% threshold. |
 | `com.h2database:h2` test-scoped | The `test` Spring profile (used by `ApplicationTests`) points at an in-memory H2 datasource; H2 is not pulled transitively. |

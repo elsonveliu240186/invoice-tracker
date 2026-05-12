@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Adapter that implements the domain {@link ClientRepository} port using JPA.
@@ -30,6 +31,7 @@ public class ClientRepositoryAdapter implements ClientRepository {
     }
 
     @Override
+    @Transactional
     public Client save(Client client) {
         // If an entity with this ID is already managed in the current session,
         // update its fields in-place to avoid NonUniqueObjectException on merge.
