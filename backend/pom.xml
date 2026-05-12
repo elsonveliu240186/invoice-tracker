@@ -23,6 +23,7 @@
         <testcontainers.version>1.20.4</testcontainers.version>
         <jacoco.minimum>0.90</jacoco.minimum>
         <owasp.failBuildOnCVSS>7</owasp.failBuildOnCVSS>
+        <postgresql.version>42.7.11</postgresql.version>
     </properties>
 
     <dependencies>
