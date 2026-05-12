@@ -1,0 +1,35 @@
+name: Request Copilot Review
+
+# Automatically requests a GitHub Copilot code review whenever a PR is
+# opened or new commits are pushed. Copilot's review comments then trigger
+# the claude-fix-review.yml workflow to apply fixes automatically.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  request-copilot-review:
+    runs-on: ubuntu-latest
+    # Skip if Copilot already reviewed this revision to avoid duplicate requests
+    steps:
+      - name: Check if Copilot already reviewed
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          existing=$(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews \
+            --jq '[.[] | select(.user.login | test("copilot"; "i"))] | length')
+          echo "existing=${existing}" >> $GITHUB_OUTPUT
+
+      - name: Request Copilot review
+        if: steps.check.outputs.existing == '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            --method POST \
+            repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/requested_reviewers \
+            --field 'reviewers[]=copilot-pull-request-reviewer'
