@@ -41,3 +41,8 @@
   - Backend: 52 unit + 13 IT = 65 tests all pass; JaCoCo merged exec BUILD SUCCESS (line+branch >=90%)
   - Static analysis: Checkstyle 0 violations, SpotBugs 0 bugs; ESLint 0 errors
   - No required findings; 3 non-blocking recommendations
+
+2026-05-12T22:10:00Z  Documenting -> Done (by devops agent)
+  - Branch: feat/FEAT-20260512-02-auth-modernization
+  - Commit: d218197 (95 files, 6838 insertions)
+  - PR: https://github.com/elsonveliu240186/invoice-tracker/pull/3
