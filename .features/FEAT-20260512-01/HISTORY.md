@@ -50,3 +50,13 @@
   - localStorage: it.theme + it.lang only (non-sensitive, not credentials)
   - All new Radix and framer-motion packages at current versions
   - CSP not weakened; Inter font self-hosted via @fontsource (no CDN); CI uses --frozen-lockfile
+2026-05-12T20:00:00Z  QA -> Documenting  (by qa-automation agent -- PASS)
+  - 44 Playwright E2E specs pass: theme (6), layout (10), i18n (6), accessibility (9), smoke-regression (9), smoke (4)
+  - All AC static checks pass: @theme block, motion variants, no slate/blue in features/, prefers-reduced-motion block, pnpm audit exit 0, all 11 shadcn/ui components present
+2026-05-12T20:30:00Z  Documenting -> Shipping  (by documentation agent)
+  - Updated: docs/CHANGELOG.md, docs/FEATURES.md, docs/ARCHITECTURE.md (ADR-006/007/008), docs/SEQUENCE_DIAGRAMS.md, docs/SECURITY.md
+  - Unchanged: docs/API.md, postman/collection.json, postman/local-dev.environment.json (no API changes)
+2026-05-12T20:35:00Z  Shipping -> Done  (by devops agent)
+  - Branch: feat/FEAT-20260512-01-frontend-design-system
+  - Commit: feat(frontend): Frontend design system foundation
+  - PR: https://github.com/elsonveliu240186/invoice-tracker/pull/2
