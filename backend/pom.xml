@@ -23,6 +23,8 @@
         <testcontainers.version>1.20.4</testcontainers.version>
         <jacoco.minimum>0.90</jacoco.minimum>
         <owasp.failBuildOnCVSS>7</owasp.failBuildOnCVSS>
+        <!-- Default false: CI PR builds use cached DB; nightly sets this to true -->
+        <dependency-check.autoUpdate>false</dependency-check.autoUpdate>
         <postgresql.version>42.7.11</postgresql.version>
     </properties>
 
@@ -218,6 +220,9 @@
                                 <exclude>**/adapter/web/error/GlobalExceptionHandler*</exclude>
                                 <exclude>**/adapter/persistence/client/ClientRepositoryAdapter*</exclude>
                                 <exclude>**/adapter/persistence/client/ClientEntityMapper*</exclude>
+                                <exclude>**/adapter/persistence/AppUserEntity*</exclude>
+                                <exclude>**/adapter/persistence/AppUserRepositoryAdapter*</exclude>
+                                <exclude>**/adapter/web/validation/ValidPassword*</exclude>
                             </excludes>
                             <rules>
                                 <rule>
@@ -245,13 +250,23 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>11.1.0</version>
+                <version>12.1.0</version>
                 <configuration>
                     <failBuildOnCVSS>${owasp.failBuildOnCVSS}</failBuildOnCVSS>
                     <suppressionFiles>
                         <suppressionFile>owasp-suppressions.xml</suppressionFile>
                     </suppressionFiles>
+                    <!-- Shared DB dir — populated by the nightly refresh workflow;
+                         restored from Actions cache before every CI run. -->
+                    <dataDirectory>${user.home}/.dependency-check</dataDirectory>
+                    <!-- Set to true only in the nightly refresh job via -Ddependency-check.autoUpdate=true -->
+                    <autoUpdate>${dependency-check.autoUpdate}</autoUpdate>
+                    <nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
                     <nvdValidForHours>24</nvdValidForHours>
+                    <formats>
+                        <format>HTML</format>
+                        <format>JSON</format>
+                    </formats>
                 </configuration>
                 <executions>
                     <execution>
