@@ -234,6 +234,7 @@ jobs:
     needs: [load-checks, detect-changes]
     if: needs.load-checks.outputs.be_owasp_dc == 'true' && (needs.detect-changes.outputs.backend == 'true' || github.event_name == 'push')
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Cache NVD database
@@ -249,6 +250,7 @@ jobs:
           mkdir -p .dc-data backend/target/dc
           find .dc-data -name "*.lck" -delete 2>/dev/null || true
           docker run --rm \
+            -e NVD_API_KEY \
             -v ${{ github.workspace }}/backend:/src \
             -v ${{ github.workspace }}/.dc-data:/usr/share/dependency-check/data \
             owasp/dependency-check:latest \
@@ -256,6 +258,7 @@ jobs:
             --format JSON --format HTML \
             --out /src/target/dc \
             --nvdApiKey "$NVD_API_KEY" \
+            --nvdValidForHours 24 \
             --failOnCVSS 7 \
             --suppression /src/owasp-suppressions.xml
       - name: Upload DC report
