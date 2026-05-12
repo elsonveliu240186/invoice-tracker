@@ -4,7 +4,7 @@ You are inside `projects/invoice-tracker/`. This project was scaffolded by the a
 
 ## Stack
 
-- **Backend**: Spring Boot 3.5.3, Java 21, Maven. Package root: `com.example.invoicetracker`.
+- **Backend**: Spring Boot 4.0.6, Java 21, Maven. Package root: `com.example.invoicetracker`.
 - **Frontend**: Vite + React 18 + TypeScript 5 (strict) + Tailwind v4. Package manager: pnpm.
 - **Database**: Postgres 16 (local via `docker-compose.yml`).
 - **Auth**: Spring Security HTTP Basic by default. Switch to OIDC by editing `backend/src/main/java/.../config/SecurityConfig.java` and the matching frontend slice.
@@ -62,7 +62,7 @@ projects/invoice-tracker/
 
 | Decision | Reason |
 |---|---|
-| Spring Boot `3.5.3` (not `4.x`) | Boot 4 removed `@WebMvcTest` / `@DataJpaTest` from `spring-boot-test-autoconfigure`; Boot 3.5 is the current stable release. |
+| Spring Boot `4.0.6` | `spring-boot-test-autoconfigure` must be declared explicitly (no longer transitive). `@MockBean` was removed — use `@MockitoBean` from `org.springframework.test.context.bean.override.mockito`. `TestRestTemplate` was removed — use `RestClient` with `@LocalServerPort` in `@SpringBootTest(RANDOM_PORT)` ITs. |
 | `maven-failsafe-plugin` added | Runs `*IT` integration tests in the `integration-test` phase; Surefire only picks up `*Test` by convention. |
 | JaCoCo `merge` + `check` on merged exec | Unit (`jacoco.exec`) and IT (`jacoco-it.exec`) data is merged into `jacoco-merged.exec` before the gate check, so both layers contribute to the 95% threshold. |
 | `com.h2database:h2` test-scoped | The `test` Spring profile (used by `ApplicationTests`) points at an in-memory H2 datasource; H2 is not pulled transitively. |

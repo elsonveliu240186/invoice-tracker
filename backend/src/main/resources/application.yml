@@ -30,7 +30,7 @@ spring:
     password: app
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     show-sql: false
   flyway:
     enabled: true
@@ -39,14 +39,17 @@ spring:
 spring:
   config:
     activate:
-      on-profile: test
+      on-profile: docker
   datasource:
-    url: jdbc:h2:mem:test;MODE=PostgreSQL
+    url: jdbc:postgresql://postgres:5432/invoice-tracker
+    username: ${POSTGRES_USER:-app}
+    password: ${POSTGRES_PASSWORD:-app}
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: none
+    show-sql: false
   flyway:
-    enabled: false
+    enabled: true
 
 ---
 spring:
