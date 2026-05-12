@@ -32,59 +32,84 @@ C4Container
 
 ## Components — Backend (C4 — level 3)
 
+Updated by FEAT-20260512-02 (authentication modernization).
+
 ```mermaid
 flowchart TB
     subgraph adapter_web["adapter.web"]
-        ctl[Controllers]
+        ctl[ClientController]
+        auth_ctl[AuthController<br/>/api/v1/auth/*]
     end
     subgraph application["application"]
-        svc[Services / Use-cases]
+        svc[ClientService]
+        auth_svc[AuthService<br/>login / register / forgotPassword]
     end
     subgraph domain["domain"]
-        entities[Entities, Value Objects]
-        repos[Repository interfaces]
+        entities[Client, AppUser]
+        repos[ClientRepository, AppUserRepository]
     end
     subgraph adapter_persistence["adapter.persistence"]
-        jpa[JPA implementations]
+        jpa[ClientRepositoryAdapter<br/>AppUserRepositoryAdapter]
+    end
+    subgraph config["config"]
+        sec[SecurityConfig<br/>BCrypt + UserDetailsService<br/>permit /auth/**]
     end
     ctl --> svc
+    auth_ctl --> auth_svc
     svc --> entities
+    auth_svc --> entities
     svc --> repos
+    auth_svc --> repos
     repos -.implemented by.-> jpa
+    sec -.permits.- auth_ctl
 ```
 
 ## Components — Frontend
 
-Updated by FEAT-20260512-01 (design system foundation).
+Updated by FEAT-20260512-02 (authentication modernization). Previous update: FEAT-20260512-01 (design system foundation).
 
 ```mermaid
 flowchart LR
     subgraph Browser
       idx[index.html] --> main[main.tsx]
+      main -->|hydrate| authStore[(useAuthStore<br/>Zustand + localStorage)]
       main --> providers[Providers: I18n + Theme + ErrorBoundary + Router]
       providers --> shell[AppShell]
-      shell --> sidebar[Sidebar]
-      shell --> topnav[TopNav]
-      topnav --> tt[ThemeToggle]
-      topnav --> ls[LanguageSelector]
+      shell --> topnav[TopNav<br/>sign-out]
       shell --> page[PageContainer<br/>Framer Motion]
-      page --> home[HomePage]
-      page --> clients[ClientsPage]
+      page --> guard_p[ProtectedRoute]
+      page --> guard_pub[PublicOnlyRoute]
+      guard_p --> home[HomePage]
+      guard_p --> clients[ClientsPage]
+      guard_pub --> login[LoginPage]
+      guard_pub --> register[RegisterPage]
+      guard_pub --> forgot[ForgotPasswordPage]
+      login --> authStore
+      register --> authStore
+      forgot --> authStore
+      login --> fbase[Firebase Auth<br/>GoogleAuthProvider]
+    end
+    subgraph AuthFeature[src/features/auth]
+      forms[LoginForm / RegisterForm / ForgotPasswordForm]
+      layout[AuthSplitLayout]
+      google[GoogleSignInButton]
+      pwfield[PasswordField]
+      schema[Zod schemas]
+      authApi[authApi.ts]
     end
     subgraph SharedUI[src/shared/ui]
-      btn[Button] --- inp[Input] --- card[Card] --- badge[Badge]
-      dlg[Dialog] --- tbl[Table] --- skl[Skeleton] --- son[Sonner]
-      dd[DropdownMenu] --- av[Avatar] --- sep[Separator]
+      btn[Button] --- inp[Input] --- card[Card]
+      prot[ProtectedRoute] --- pub[PublicOnlyRoute]
     end
     subgraph SharedLib[src/shared/lib]
-      i18n[i18n.ts] --- motion[motion.ts] --- cn[cn.ts]
+      http[http.ts<br/>Basic auth header] --- firebase[firebase.ts]
     end
-    subgraph SharedTheme[src/shared/theme]
-      store[useThemeStore] --- provider[ThemeProvider]
-    end
-    page --> SharedUI
-    providers --> SharedTheme
-    providers --> SharedLib
+    login --> forms
+    login --> layout
+    login --> google
+    forms --> schema
+    forms --> authApi
+    authApi --> http
 ```
 
 ## Decisions log
@@ -144,6 +169,27 @@ flowchart LR
 - **Decision**: Theme state (`light | dark | system`) is managed by a Zustand store (`useThemeStore`) with the `persist` middleware writing to `localStorage` key `it.theme`. A thin `ThemeProvider` component handles the `matchMedia` side-effect and `document.documentElement.classList` updates; no React context is used.
 - **Why**: Zustand's module-level subscribe/getState API lets the theme apply before the first paint without a context provider wrapping the entire tree. The `persist` middleware handles serialisation and rehydration with one line of config.
 - **Trade-offs**: Theme state is global singleton state; tests must reset `localStorage` and the Zustand store between runs (`vi.stubGlobal`, `useThemeStore.setState`).
+
+### ADR-009 — FEAT-20260512-02: localStorage Basic token accepted for v1
+
+- **Date**: 2026-05-12
+- **Decision**: The email/password session is stored in `localStorage` as `auth.session` (JSON containing the base64 Basic token). HttpOnly cookies are deferred to a follow-up feature.
+- **Why**: The backend is stateless HTTP Basic. Wiring a proper session cookie mechanism (Set-Cookie, CSRF re-enable, SameSite) is a larger change tracked as `FEAT-auth-cookies`. For v1 the token is XSS-readable but the attack surface is limited to authenticated users with no elevated privileges beyond their own data.
+- **Trade-offs**: XSS vulnerability. Mitigated for v1 by React's JSX escaping (no dangerouslySetInnerHTML in auth components) and a content-security-policy follow-up. See risk R-1 in FEATURES.md.
+
+### ADR-010 — FEAT-20260512-02: Google OAuth is client-side only in v1
+
+- **Date**: 2026-05-12
+- **Decision**: Firebase `signInWithPopup` issues a Google ID token that is stored client-side but is never verified by the backend. The backend has no OIDC verifier in v1. Google users cannot call protected backend endpoints.
+- **Why**: Full OIDC token verification requires a Firebase Admin SDK or equivalent; this is a significant new dependency. For v1 Google login provides UI gating (protects the SPA shell) while the backend remains HTTP-Basic-only.
+- **Trade-offs**: Google-only users will receive 401 on any backend call. Documented as risk R-2. Follow-up feature adds a Spring Security `JwtDecoder` pointed at Firebase's JWKS endpoint.
+
+### ADR-011 — FEAT-20260512-02: Anti-enumeration on /forgot-password and /login
+
+- **Date**: 2026-05-12
+- **Decision**: `POST /api/v1/auth/forgot-password` always returns `204 No Content` regardless of whether the email exists. `POST /api/v1/auth/login` returns a uniform `401` for both unknown-email and wrong-password cases.
+- **Why**: Distinguishing "email not found" from "wrong password" lets an attacker enumerate registered users. OWASP A04 (Insecure Design) explicitly flags this pattern.
+- **Trade-offs**: Slightly less helpful error messages for legitimate users; acceptable trade-off for security.
 
 ### ADR-008 — FEAT-20260512-01: Dual toast system during transition (sonner + legacy)
 

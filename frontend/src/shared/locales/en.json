@@ -50,6 +50,63 @@
       "deleteFailed": "Failed to delete client"
     }
   },
+  "auth": {
+    "signIn": "Sign in",
+    "signUp": "Create account",
+    "signOut": "Sign out",
+    "forgotPassword": "Forgot password?",
+    "resetPassword": "Reset password",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "displayName": "Full name",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "alreadyHaveAccount": "Already have an account?",
+    "dontHaveAccount": "Don't have an account?",
+    "backToSignIn": "Back to sign in",
+    "signInWithGoogle": "Sign in with Google",
+    "orContinueWith": "or continue with",
+    "brand": {
+      "tagline": "Manage invoices with ease",
+      "description": "Track clients, send invoices, and get paid faster."
+    },
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to your account to continue"
+    },
+    "register": {
+      "title": "Create your account",
+      "subtitle": "Start managing your invoices today"
+    },
+    "forgotPasswordPage": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email and we'll send you a reset link",
+      "submit": "Send reset link"
+    },
+    "errors": {
+      "invalidCredentials": "Invalid email or password. Please try again.",
+      "emailTaken": "An account with this email already exists.",
+      "popupBlocked": "The sign-in popup was blocked. Please allow popups for this site and try again.",
+      "googleSignInFailed": "Google sign-in failed. Please try again.",
+      "generic": "Something went wrong. Please try again.",
+      "emailRequired": "Email is required",
+      "emailInvalid": "Must be a valid email address",
+      "emailTooLong": "Email must be at most 254 characters",
+      "passwordRequired": "Password is required",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "passwordTooWeak": "Password must contain at least one letter and one digit",
+      "confirmPasswordRequired": "Please confirm your password",
+      "passwordsMustMatch": "Passwords do not match",
+      "displayNameRequired": "Full name is required",
+      "displayNameTooLong": "Name must be at most 120 characters"
+    },
+    "success": {
+      "registered": "Account created! You can now sign in.",
+      "passwordResetSent": "If that email is registered, a reset link is on its way.",
+      "signedOut": "You have been signed out."
+    }
+  },
   "errors": {
     "boundary": {
       "title": "Something went wrong",

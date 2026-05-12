@@ -4,7 +4,42 @@
  */
 import { test, expect } from '@playwright/test';
 
+// Seed an authenticated session so ProtectedRoute lets the app render.
+function seedAuth(page: import('@playwright/test').Page) {
+  return page.addInitScript(() => {
+    localStorage.setItem(
+      'it.auth',
+      JSON.stringify({
+        state: {
+          user: {
+            email: 'qa@example.com',
+            displayName: 'QA User',
+            provider: 'password',
+            basicAuthToken: btoa('qa@example.com:Secret1!'),
+          },
+        },
+        version: 0,
+      }),
+    );
+  });
+}
+
+// Stub the clients list API so /clients renders without a live backend.
+function stubClients(page: import('@playwright/test').Page) {
+  return page.route('**/api/v1/clients**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 1 }),
+    }),
+  );
+}
+
 test.describe('smoke', () => {
+  test.beforeEach(async ({ page }) => {
+    await seedAuth(page);
+  });
+
   test('home page renders', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByTestId('home-page')).toBeVisible();
@@ -39,6 +74,7 @@ test.describe('smoke', () => {
   });
 
   test('/clients route is navigable via sidebar', async ({ page }) => {
+    await stubClients(page);
     await page.goto('/');
     await page.waitForSelector('[data-testid="home-page"]');
 

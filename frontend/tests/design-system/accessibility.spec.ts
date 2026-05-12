@@ -4,9 +4,32 @@
  */
 import { test, expect } from '@playwright/test';
 
+// Seed an authenticated session so ProtectedRoute lets the app render.
+function seedAuth(page: import('@playwright/test').Page) {
+  return page.addInitScript(() => {
+    localStorage.setItem(
+      'it.auth',
+      JSON.stringify({
+        state: {
+          user: {
+            email: 'qa@example.com',
+            displayName: 'QA User',
+            provider: 'password',
+            basicAuthToken: btoa('qa@example.com:Secret1!'),
+          },
+        },
+        version: 0,
+      }),
+    );
+  });
+}
+
 test.describe('accessibility', () => {
   test.describe('desktop viewport', () => {
     test.use({ viewport: { width: 1280, height: 800 } });
+    test.beforeEach(async ({ page }) => {
+      await seedAuth(page);
+    });
 
     test('AC-6: ThemeToggle button has aria-label attribute', async ({ page }) => {
       await page.goto('/');
@@ -105,6 +128,9 @@ test.describe('accessibility', () => {
 
   test.describe('mobile viewport — drawer accessibility', () => {
     test.use({ viewport: { width: 375, height: 812 } });
+    test.beforeEach(async ({ page }) => {
+      await seedAuth(page);
+    });
 
     test('AC-9: drawer has role="dialog" and aria-modal when open', async ({ page }) => {
       await page.goto('/');

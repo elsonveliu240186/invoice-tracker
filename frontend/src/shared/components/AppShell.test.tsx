@@ -1,9 +1,20 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/shared/lib/i18n';
+import { AppShell } from './AppShell';
+import { useAuthStore } from '@/features/auth/model/useAuthStore';
+
+vi.mock('firebase/auth', () => ({
+  GoogleAuthProvider: vi.fn(() => ({})),
+  signInWithPopup: vi.fn(),
+}));
+vi.mock('@/shared/lib/firebase', () => ({
+  getFirebaseAuth: vi.fn(() => ({})),
+}));
+vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 // Store the matchMedia mock so tests can simulate mobile vs desktop
 let isMobileMatch = false;
@@ -12,7 +23,6 @@ const mediaListeners: Array<(e: { matches: boolean }) => void> = [];
 function setupMatchMedia(mobile: boolean) {
   isMobileMatch = mobile;
   vi.stubGlobal('matchMedia', (query: string) => {
-    // For the mobile breakpoint query used in AppShell
     const matches = query === '(max-width: 1023px)' ? isMobileMatch : false;
     return {
       matches,
@@ -30,81 +40,94 @@ function setupMatchMedia(mobile: boolean) {
 }
 
 beforeEach(() => {
-  vi.resetModules();
   localStorage.clear();
   document.documentElement.classList.remove('dark');
   mediaListeners.length = 0;
-  setupMatchMedia(false); // desktop by default
+  setupMatchMedia(false);
+  useAuthStore.setState({ user: null, status: 'unauthenticated', error: null });
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function renderShell() {
-  const { AppShell } = await import('./AppShell');
+function renderShell() {
   return render(
     <MemoryRouter initialEntries={['/']}>
       <I18nextProvider i18n={i18n}>
-        <AppShell>
-          <div data-testid="outlet-content">Page content</div>
-        </AppShell>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <AppShell>
+                <div data-testid="outlet-content">Page content</div>
+              </AppShell>
+            }
+          />
+          <Route path="/login" element={<p data-testid="login-page">Login</p>} />
+        </Routes>
       </I18nextProvider>
     </MemoryRouter>,
   );
 }
 
-async function renderShellMobile() {
+function renderShellMobile() {
   setupMatchMedia(true);
-  vi.resetModules();
-  const { AppShell } = await import('./AppShell');
   return render(
     <MemoryRouter initialEntries={['/']}>
       <I18nextProvider i18n={i18n}>
-        <AppShell>
-          <div data-testid="outlet-content">Page content</div>
-        </AppShell>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <AppShell>
+                <div data-testid="outlet-content">Page content</div>
+              </AppShell>
+            }
+          />
+          <Route path="/login" element={<p data-testid="login-page">Login</p>} />
+        </Routes>
       </I18nextProvider>
     </MemoryRouter>,
   );
 }
 
 describe('AppShell', () => {
-  it('renders desktop sidebar on large screens', async () => {
-    await renderShell();
+  it('renders desktop sidebar on large screens', () => {
+    renderShell();
     expect(screen.getByTestId('desktop-sidebar')).toBeInTheDocument();
   });
 
-  it('renders TopNav', async () => {
-    await renderShell();
+  it('renders TopNav', () => {
+    renderShell();
     expect(screen.getByTestId('hamburger')).toBeInTheDocument();
   });
 
-  it('renders outlet/children content', async () => {
-    await renderShell();
+  it('renders outlet/children content', () => {
+    renderShell();
     expect(screen.getByTestId('outlet-content')).toBeInTheDocument();
   });
 
-  it('does not show desktop sidebar on mobile', async () => {
-    await renderShellMobile();
+  it('does not show desktop sidebar on mobile', () => {
+    renderShellMobile();
     expect(screen.queryByTestId('desktop-sidebar')).not.toBeInTheDocument();
   });
 
-  it('does not show drawer initially on mobile', async () => {
-    await renderShellMobile();
+  it('does not show drawer initially on mobile', () => {
+    renderShellMobile();
     expect(screen.queryByTestId('drawer-overlay')).not.toBeInTheDocument();
   });
 
   it('opens drawer when hamburger is clicked on mobile', async () => {
     const user = userEvent.setup();
-    await renderShellMobile();
+    renderShellMobile();
     await user.click(screen.getByTestId('hamburger'));
     expect(screen.getByTestId('drawer-overlay')).toBeInTheDocument();
   });
 
   it('closes drawer when backdrop is clicked', async () => {
     const user = userEvent.setup();
-    await renderShellMobile();
+    renderShellMobile();
     await user.click(screen.getByTestId('hamburger'));
     expect(screen.getByTestId('drawer-overlay')).toBeInTheDocument();
     await user.click(screen.getByTestId('drawer-backdrop'));
@@ -115,7 +138,7 @@ describe('AppShell', () => {
 
   it('closes drawer when Escape is pressed', async () => {
     const user = userEvent.setup();
-    await renderShellMobile();
+    renderShellMobile();
     await user.click(screen.getByTestId('hamburger'));
     expect(screen.getByTestId('drawer-overlay')).toBeInTheDocument();
     await user.keyboard('{Escape}');
@@ -126,7 +149,7 @@ describe('AppShell', () => {
 
   it('closes drawer when sidebar close button is clicked', async () => {
     const user = userEvent.setup();
-    await renderShellMobile();
+    renderShellMobile();
     await user.click(screen.getByTestId('hamburger'));
     expect(screen.getByTestId('drawer-overlay')).toBeInTheDocument();
     await user.click(screen.getByTestId('sidebar-close'));
@@ -137,10 +160,9 @@ describe('AppShell', () => {
 
   it('renders sidebar nav inside drawer when open on mobile', async () => {
     const user = userEvent.setup();
-    await renderShellMobile();
+    renderShellMobile();
     await user.click(screen.getByTestId('hamburger'));
     expect(screen.getByTestId('drawer-panel')).toBeInTheDocument();
-    // Nav items visible inside drawer
     expect(screen.getByText('Home')).toBeInTheDocument();
   });
 });

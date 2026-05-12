@@ -6,6 +6,22 @@ All notable changes to this project will be documented in this file. Format: [Ke
 
 ### Added
 - Scaffolded from the agenticai framework.
+- **Authentication modernization** (FEAT-20260512-02) — _no breaking changes_: three public auth
+  endpoints (`POST /api/v1/auth/login`, `POST /api/v1/auth/register`,
+  `POST /api/v1/auth/forgot-password`) added to the backend; Spring Security `SecurityConfig`
+  updated to permit `/api/v1/auth/**` without credentials; new `app_users` table via Flyway
+  migration `V3__create_app_users.sql` (bcrypt-hashed passwords, partial unique index on
+  `lower(email) WHERE deleted_at IS NULL`); `AuthController`, `AuthService`, `AppUser` domain
+  record, `AppUserRepository` port, and `AppUserRepositoryAdapter` JPA adapter added. Frontend:
+  `LoginPage`, `RegisterPage`, and `ForgotPasswordPage` with split-panel layout and Framer Motion
+  fade+slide transitions; `useAuthStore` (Zustand) with `localStorage` persistence and
+  session hydration on boot; `ProtectedRoute` and `PublicOnlyRoute` guards; Firebase Google OAuth
+  via `signInWithPopup`; Zod schemas (`loginSchema`, `registerSchema`, `forgotPasswordSchema`);
+  `authApi` module with MSW mock handlers; `auth.*` i18n namespace; sign-out wired in TopNav.
+  Backend JaCoCo 98.7% lines / 100% branches (gate 90%). Frontend Vitest 98.07% statements /
+  92.06% branches. Known v1 limitations: `localStorage` Basic token is XSS-readable (R-1);
+  Google-only users cannot call protected backend endpoints (R-2); password-reset email not yet
+  sent (R-3, tracked).
 - **Frontend design system foundation** (FEAT-20260512-01) — _no breaking changes_: Tailwind v4
   CSS-first design tokens (`@theme` block with light/dark scopes), shadcn/ui component primitives
   (Button, Input, Card, Badge, Dialog, Table, Skeleton, Sonner, DropdownMenu, Avatar, Separator)

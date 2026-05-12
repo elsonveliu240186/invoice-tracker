@@ -4,10 +4,31 @@
  */
 import { test, expect } from '@playwright/test';
 
+// Seed an authenticated session so ProtectedRoute lets the app render.
+function seedAuth(page: import('@playwright/test').Page) {
+  return page.addInitScript(() => {
+    localStorage.setItem(
+      'it.auth',
+      JSON.stringify({
+        state: {
+          user: {
+            email: 'qa@example.com',
+            displayName: 'QA User',
+            provider: 'password',
+            basicAuthToken: btoa('qa@example.com:Secret1!'),
+          },
+        },
+        version: 0,
+      }),
+    );
+  });
+}
+
 // Tests that need a clean (no persisted theme) starting state
 test.describe('theme toggle — clean state', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear persisted theme before the initial load
+    // Seed auth and clear persisted theme before the initial load
+    await seedAuth(page);
     await page.addInitScript(() => {
       window.localStorage.removeItem('it.theme');
     });
@@ -80,6 +101,8 @@ test.describe('theme toggle — clean state', () => {
 // Persistence test uses its own isolated context — no addInitScript on reload
 test.describe('theme toggle — persistence', () => {
   test('AC-5: theme preference persists across page reload', async ({ page }) => {
+    // Seed auth so ProtectedRoute passes on every load including reloads
+    await seedAuth(page);
     // First visit: clear any stale state by navigating to the app and evaluating
     await page.goto('/');
     await page.waitForSelector('[data-testid="home-page"]');

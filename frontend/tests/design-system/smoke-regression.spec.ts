@@ -5,8 +5,43 @@
  */
 import { test, expect } from '@playwright/test';
 
+// Seed an authenticated session so ProtectedRoute lets the app render.
+function seedAuth(page: import('@playwright/test').Page) {
+  return page.addInitScript(() => {
+    localStorage.setItem(
+      'it.auth',
+      JSON.stringify({
+        state: {
+          user: {
+            email: 'qa@example.com',
+            displayName: 'QA User',
+            provider: 'password',
+            basicAuthToken: btoa('qa@example.com:Secret1!'),
+          },
+        },
+        version: 0,
+      }),
+    );
+  });
+}
+
+// Stub the clients list API so /clients renders without a live backend.
+function stubClients(page: import('@playwright/test').Page) {
+  return page.route('**/api/v1/clients**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 1 }),
+    }),
+  );
+}
+
 test.describe('smoke regression — clients flow', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
+  test.beforeEach(async ({ page }) => {
+    await seedAuth(page);
+    await stubClients(page);
+  });
 
   test('app loads at / without console errors', async ({ page }) => {
     const errors: string[] = [];

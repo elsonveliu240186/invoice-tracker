@@ -6,6 +6,10 @@ import './shared/lib/i18n';
 import './index.css';
 import { ThemeProvider } from './shared/theme/ThemeProvider';
 import { LoadingSpinner } from './shared/components/LoadingSpinner';
+import { useAuthStore } from './features/auth/model/useAuthStore';
+
+// Rehydrate auth session from localStorage before first render
+useAuthStore.getState().hydrate();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

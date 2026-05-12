@@ -23,6 +23,34 @@ export const defaultClients: Client[] = [
 ];
 
 export const handlers = [
+  // ── Auth endpoints ────────────────────────────────────────────────────────
+
+  http.post('/api/v1/auth/login', async ({ request }) => {
+    const body = (await request.json()) as { email?: string; password?: string };
+    if (!body.email || !body.password) {
+      return HttpResponse.json({ status: 400, detail: 'Missing fields' }, { status: 400 });
+    }
+    return HttpResponse.json({ email: body.email, displayName: 'Test User' });
+  }),
+
+  http.post('/api/v1/auth/register', async ({ request }) => {
+    const body = (await request.json()) as {
+      displayName?: string;
+      email?: string;
+      password?: string;
+    };
+    if (!body.email || !body.password || !body.displayName) {
+      return HttpResponse.json({ status: 400, detail: 'Missing fields' }, { status: 400 });
+    }
+    return HttpResponse.json({ email: body.email, displayName: body.displayName }, { status: 201 });
+  }),
+
+  http.post('/api/v1/auth/forgot-password', () => {
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  // ── Client endpoints ──────────────────────────────────────────────────────
+
   // List clients
   http.get('/api/v1/clients', ({ request }) => {
     const url = new URL(request.url);
@@ -70,10 +98,13 @@ export const handlers = [
 
   // Create client
   http.post('/api/v1/clients', async ({ request }) => {
-    const body = (await request.json()) as { name: string; email: string; phone?: string; address?: string };
-    const existing = defaultClients.find(
-      (c) => c.email.toLowerCase() === body.email.toLowerCase(),
-    );
+    const body = (await request.json()) as {
+      name: string;
+      email: string;
+      phone?: string;
+      address?: string;
+    };
+    const existing = defaultClients.find((c) => c.email.toLowerCase() === body.email.toLowerCase());
     if (existing) {
       return HttpResponse.json(
         {
@@ -105,7 +136,12 @@ export const handlers = [
         { status: 404 },
       );
     }
-    const body = (await request.json()) as { name: string; email: string; phone?: string; address?: string };
+    const body = (await request.json()) as {
+      name: string;
+      email: string;
+      phone?: string;
+      address?: string;
+    };
     const updated: Client = {
       ...defaultClients[idx]!,
       name: body.name,

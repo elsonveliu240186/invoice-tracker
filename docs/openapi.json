@@ -16,6 +16,10 @@
   ],
   "tags": [
     {
+      "name": "Auth",
+      "description": "Authentication — login, register, forgot-password (all public)"
+    },
+    {
       "name": "Clients",
       "description": "Client management CRUD"
     },
@@ -25,6 +29,96 @@
     }
   ],
   "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Authenticate with email and password",
+        "operationId": "login",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" },
+              "example": {
+                "email": "alice@example.com",
+                "password": "s3cr3tP@ss"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Credentials valid — session established",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" },
+                "example": { "email": "alice@example.com", "displayName": "Alice" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationFailed" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Register a new user account",
+        "operationId": "register",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterRequest" },
+              "example": {
+                "displayName": "Alice",
+                "email": "alice@example.com",
+                "password": "s3cr3tP@ss1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" },
+                "example": { "email": "alice@example.com", "displayName": "Alice" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationFailed" },
+          "409": { "$ref": "#/components/responses/UserEmailTaken" }
+        }
+      }
+    },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Request a password reset (anti-enumeration — always 204)",
+        "operationId": "forgotPassword",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ForgotPasswordRequest" },
+              "example": { "email": "alice@example.com" }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Request accepted (whether or not the email exists — anti-enumeration)"
+          },
+          "400": { "$ref": "#/components/responses/ValidationFailed" }
+        }
+      }
+    },
     "/api/v1/ping": {
       "get": {
         "tags": ["Health"],
@@ -288,6 +382,66 @@
           "totalPages": { "type": "integer", "minimum": 0 }
         }
       },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254,
+            "description": "RFC 5322 email address"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User password (strength enforced only on register)"
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["displayName", "email", "password"],
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "User's display name"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254,
+            "description": "RFC 5322 email address; must be unique among active users"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "description": "Password: min 8 chars, at least 1 letter and 1 digit"
+          }
+        }
+      },
+      "ForgotPasswordRequest": {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254,
+            "description": "RFC 5322 email address of the account"
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "required": ["email", "displayName"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "displayName": { "type": "string" }
+        }
+      },
       "ProblemDetail": {
         "type": "object",
         "description": "RFC 7807 Problem Detail",
@@ -298,7 +452,7 @@
           "detail": { "type": "string", "example": "A client with this email already exists." },
           "code": {
             "type": "string",
-            "enum": ["VALIDATION_FAILED", "CLIENT_NOT_FOUND", "CLIENT_EMAIL_TAKEN", "UNAUTHENTICATED", "INTERNAL_ERROR"]
+            "enum": ["VALIDATION_FAILED", "CLIENT_NOT_FOUND", "CLIENT_EMAIL_TAKEN", "USER_EMAIL_TAKEN", "UNAUTHENTICATED", "INTERNAL_ERROR"]
           },
           "instance": { "type": "string", "example": "/api/v1/clients" }
         }
@@ -338,6 +492,15 @@
           "application/problem+json": {
             "schema": { "$ref": "#/components/schemas/ProblemDetail" },
             "example": { "type": "about:blank", "title": "Conflict", "status": 409, "code": "CLIENT_EMAIL_TAKEN" }
+          }
+        }
+      },
+      "UserEmailTaken": {
+        "description": "A user account with this email already exists",
+        "content": {
+          "application/problem+json": {
+            "schema": { "$ref": "#/components/schemas/ProblemDetail" },
+            "example": { "type": "about:blank", "title": "Conflict", "status": 409, "code": "USER_EMAIL_TAKEN" }
           }
         }
       }

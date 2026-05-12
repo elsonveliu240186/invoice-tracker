@@ -3,9 +3,10 @@ import { MemoryRouter } from 'react-router';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/shared/lib/i18n';
+import { useAuthStore } from '@/features/auth/model/useAuthStore';
+import { App } from './App';
 
 beforeEach(() => {
-  vi.resetModules();
   localStorage.clear();
   document.documentElement.classList.remove('dark');
   vi.stubGlobal('matchMedia', (query: string) => ({
@@ -18,14 +19,14 @@ beforeEach(() => {
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   }));
+  useAuthStore.setState({ user: null, status: 'unauthenticated', error: null });
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function renderApp(initialPath = '/') {
-  const { App } = await import('./App');
+function renderApp(initialPath = '/') {
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
       <I18nextProvider i18n={i18n}>
@@ -35,28 +36,86 @@ async function renderApp(initialPath = '/') {
   );
 }
 
-describe('App', () => {
-  it('renders the AppShell nav on the home route', async () => {
-    await renderApp('/');
-    expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument();
+function renderAppAuthenticated(initialPath = '/') {
+  useAuthStore.setState({
+    user: { email: 'u@e.com', displayName: 'Alice', provider: 'password' },
+    status: 'authenticated',
+  });
+  return renderApp(initialPath);
+}
+
+describe('App — unauthenticated', () => {
+  it('redirects unauthenticated user from / to /login', () => {
+    renderApp('/');
+    // Should land on the login page — brand panel is the landmark
+    expect(screen.getByTestId('brand-panel')).toBeInTheDocument();
   });
 
-  it('renders the home page heading at /', async () => {
-    await renderApp('/');
-    expect(
-      screen.getByRole('heading', { name: /welcome to invoice tracker/i }),
-    ).toBeInTheDocument();
+  it('redirects unauthenticated user from /clients to /login', () => {
+    renderApp('/clients');
+    expect(screen.getByTestId('brand-panel')).toBeInTheDocument();
   });
 
-  it('renders the clients page at /clients', async () => {
-    await renderApp('/clients');
+  it('renders login page at /login when unauthenticated', () => {
+    renderApp('/login');
+    expect(screen.getByTestId('brand-panel')).toBeInTheDocument();
+  });
+
+  it('renders register page at /register when unauthenticated', () => {
+    renderApp('/register');
+    expect(screen.getByTestId('brand-panel')).toBeInTheDocument();
+  });
+
+  it('renders forgot-password page at /forgot-password when unauthenticated', () => {
+    renderApp('/forgot-password');
+    expect(screen.getByTestId('brand-panel')).toBeInTheDocument();
+  });
+});
+
+describe('App — authenticated', () => {
+  it('renders home page at / when authenticated', async () => {
+    renderAppAuthenticated('/');
+    await waitFor(() =>
+      expect(
+        screen.getByRole('heading', { name: /welcome to invoice tracker/i }),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it('renders clients page at /clients when authenticated', async () => {
+    renderAppAuthenticated('/clients');
     await waitFor(() => {
       expect(screen.getByTestId('clients-page')).toBeInTheDocument();
     });
   });
 
-  it('renders 404 empty state for unknown routes', async () => {
-    await renderApp('/unknown-route');
+  it('redirects authenticated user from /login to /', async () => {
+    renderAppAuthenticated('/login');
+    await waitFor(() =>
+      expect(
+        screen.getByRole('heading', { name: /welcome to invoice tracker/i }),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it('redirects authenticated user from /register to /', async () => {
+    renderAppAuthenticated('/register');
+    await waitFor(() =>
+      expect(
+        screen.getByRole('heading', { name: /welcome to invoice tracker/i }),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it('renders 404 empty state for unknown protected routes', () => {
+    renderAppAuthenticated('/unknown-route');
     expect(screen.getByText('Page not found')).toBeInTheDocument();
+  });
+
+  it('renders the AppShell nav when authenticated', async () => {
+    renderAppAuthenticated('/');
+    await waitFor(() =>
+      expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument(),
+    );
   });
 });

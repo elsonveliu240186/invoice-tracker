@@ -1,7 +1,13 @@
 {
   "id": "FEAT-20260512-02",
   "title": "Authentication modernization",
-  "state": "AwaitingApproval",
+  "state": "Shipping",
+  "security_scanned_at": "2026-05-12T19:30:00Z",
   "created_at": "2026-05-12T14:00:00Z",
-  "failures": { "review": 0, "security": 0, "qa": 0 }
+  "approved_at": "2026-05-12T17:30:00Z",
+  "developed_at": "2026-05-12T18:35:00Z",
+  "reviewed_at": "2026-05-12T19:24:01Z",
+  "qa_passed_at": "2026-05-12T21:45:00Z",
+  "documented_at": "2026-05-12T22:00:00Z",
+  "failures": { "review": 1, "security": 0, "qa": 0 }
 }

@@ -43,22 +43,44 @@ async function parseErrorResponse(response: Response): Promise<ApiError> {
   return new ApiError({ status: response.status });
 }
 
-export async function http<T>(
-  url: string,
-  options: RequestInit = {},
-): Promise<T> {
+/** Optional callback injected by app bootstrap to handle global 401 (logout + redirect). */
+let _on401: (() => void) | null = null;
+
+export function setOn401Handler(handler: () => void): void {
+  _on401 = handler;
+}
+
+export async function http<T>(url: string, options: RequestInit = {}): Promise<T> {
+  // Lazily read the auth store to avoid circular-import at module load time
+  let authHeaders: Record<string, string> = {};
+  try {
+    const { useAuthStore } = await import('@/features/auth/model/useAuthStore');
+    const token = useAuthStore.getState().user?.basicAuthToken;
+    if (token) {
+      authHeaders = { Authorization: `Basic ${token}` };
+    }
+  } catch {
+    // auth store not yet initialised or not available — continue without header
+  }
+
   const response = await fetch(url, {
     ...options,
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      ...authHeaders,
       ...(options.headers as Record<string, string> | undefined),
     },
   });
 
   if (!response.ok) {
-    throw await parseErrorResponse(response);
+    const error = await parseErrorResponse(response);
+    // Trigger global 401 handler (logout + redirect) for protected resource calls
+    if (response.status === 401 && _on401) {
+      _on401();
+    }
+    throw error;
   }
 
   // 204 No Content

@@ -100,3 +100,45 @@ sequenceDiagram
     MM-->>TS: change event (only fired when mode === 'system')
     TS->>Doc: add "dark" class
 ```
+
+---
+
+### FEAT-20260512-02 — Authentication modernization
+
+#### 4a — Email/password login (happy path)
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant FE as React (LoginPage)
+    participant Z as useAuthStore
+    participant BE as AuthController
+    participant DB as users table
+    U->>FE: submit { email, password }
+    FE->>FE: zod validate (loginSchema)
+    FE->>BE: POST /api/v1/auth/login (Basic email:password)
+    BE->>DB: select where email = ?
+    DB-->>BE: row (passwordHash)
+    BE->>BE: bcrypt.matches
+    BE-->>FE: 200 { email, displayName }
+    FE->>Z: setSession({email, displayName, provider:'password', basicAuthToken})
+    Z->>Z: localStorage.setItem('auth.session', …)
+    FE->>FE: navigate(state.from ?? '/')
+    FE-->>U: success toast
+```
+
+#### 4b — Google OAuth (edge case: popup blocked)
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant FE as LoginPage
+    participant FB as Firebase Auth
+    participant G as Google
+    U->>FE: click "Sign in with Google"
+    FE->>FB: signInWithPopup(GoogleAuthProvider)
+    FB->>G: open popup
+    G-->>FB: auth/popup-blocked
+    FB-->>FE: FirebaseError(code='auth/popup-blocked')
+    FE-->>U: error toast (auth.errors.popupBlocked)
+```
