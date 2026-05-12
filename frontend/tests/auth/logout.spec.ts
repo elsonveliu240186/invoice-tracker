@@ -12,9 +12,7 @@ import { test, expect } from '@playwright/test';
 
 /**
  * Seed an authenticated session in localStorage before the page loads.
- * Uses addInitScript so the session is present on the FIRST navigation only.
- * For tests that do page.goto() after logout, use seedAuthSessionViaEval instead
- * to avoid the initScript re-running on every navigation in the same page context.
+ * Uses addInitScript so the session is present on the first navigation.
  */
 async function seedAuthSession(page: import('@playwright/test').Page) {
   await page.addInitScript(() => {
@@ -30,36 +28,6 @@ async function seedAuthSession(page: import('@playwright/test').Page) {
       version: 0,
     };
     localStorage.setItem('it.auth', JSON.stringify(session));
-  });
-}
-
-/**
- * Seed an authenticated session by evaluating in-page after first navigation.
- * Does NOT re-run on subsequent navigations — safe to use in tests that navigate
- * multiple times and need to verify the session is gone after logout.
- */
-async function seedAuthSessionViaEval(page: import('@playwright/test').Page) {
-  await page.evaluate(() => {
-    const session = {
-      state: {
-        user: {
-          email: 'alice@example.com',
-          displayName: 'Alice',
-          provider: 'password',
-          basicAuthToken: btoa('alice@example.com:Secret1!'),
-        },
-      },
-      version: 0,
-    };
-    localStorage.setItem('it.auth', JSON.stringify(session));
-    // Sync Zustand store state without full reload by dispatching a storage event
-    window.dispatchEvent(
-      new StorageEvent('storage', {
-        key: 'it.auth',
-        newValue: JSON.stringify(session),
-        storageArea: localStorage,
-      }),
-    );
   });
 }
 
