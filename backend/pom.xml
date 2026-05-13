@@ -263,6 +263,8 @@
                     <autoUpdate>${dependency-check.autoUpdate}</autoUpdate>
                     <nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
                     <nvdValidForHours>24</nvdValidForHours>
+                    <!-- OSS Index requires a Sonatype account; disabled in favour of NVD-only scanning -->
+                    <ossindexAnalyzerEnabled>false</ossindexAnalyzerEnabled>
                     <formats>
                         <format>HTML</format>
                         <format>JSON</format>
