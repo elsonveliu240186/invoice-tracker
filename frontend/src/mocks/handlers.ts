@@ -17,10 +17,63 @@ function makeClient(overrides: Partial<Client> = {}): Client {
   };
 }
 
-export const defaultClients: Client[] = [
+export let defaultClients: Client[] = [
   makeClient({ id: 'uuid-1', name: 'Acme Corp', email: 'acme@example.com' }),
   makeClient({ id: 'uuid-2', name: 'Globex', email: 'globex@example.com' }),
 ];
+
+/**
+ * Resets the mock clients array to a deterministic initial state.
+ * Call this in beforeEach to keep tests isolated.
+ */
+export function resetMockClients(initial?: Client[]): void {
+  _idCounter = 100;
+  if (initial !== undefined) {
+    defaultClients = initial;
+  } else {
+    defaultClients = [
+      {
+        id: 'uuid-1',
+        name: 'Acme Corp',
+        email: 'acme@example.com',
+        phone: null,
+        address: null,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+      {
+        id: 'uuid-2',
+        name: 'Globex',
+        email: 'globex@example.com',
+        phone: null,
+        address: null,
+        createdAt: '2024-01-02T00:00:00Z',
+        updatedAt: '2024-01-02T00:00:00Z',
+      },
+    ];
+  }
+}
+
+/**
+ * Seeds n clients for pagination and other tests requiring larger datasets.
+ */
+export function seedMany(n: number): Client[] {
+  _idCounter = 200;
+  const clients: Client[] = [];
+  for (let i = 0; i < n; i++) {
+    clients.push({
+      id: `seed-${i}`,
+      name: `Seed Client ${i}`,
+      email: `seed${i}@example.com`,
+      phone: null,
+      address: null,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+    });
+  }
+  defaultClients = clients;
+  return clients;
+}
 
 export const handlers = [
   // ── Auth endpoints ────────────────────────────────────────────────────────

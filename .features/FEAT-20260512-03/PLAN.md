@@ -2,6 +2,7 @@
 feature_id: FEAT-20260512-03
 title: Dashboard and core UI modernization
 status: AwaitingApproval
+approved_at: 2026-05-13T08:00:00Z
 size: L
 generated_at: 2026-05-12T14:30:00Z
 generated_by: claude-opus

@@ -1,7 +1,1 @@
-{
-  "id": "FEAT-20260512-03",
-  "title": "Dashboard and core UI modernization",
-  "state": "AwaitingApproval",
-  "created_at": "2026-05-12T14:00:00Z",
-  "failures": { "review": 0, "security": 0, "qa": 0 }
-}
+{"id":"FEAT-20260512-03","title":"Dashboard and core UI modernization","state":"Shipping","created_at":"2026-05-12T14:00:00Z","approved_at":"2026-05-13T08:00:00Z","developed_at":"2026-05-13T11:35:00Z","reviewed_at":"2026-05-13T12:30:00Z","security_scanned_at":"2026-05-13T13:00:00Z","qa_passed_at":"2026-05-13T14:30:00Z","documented_at":"2026-05-13T15:00:00Z","failures":{"review":2,"security":0,"qa":0}}

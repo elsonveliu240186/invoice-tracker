@@ -38,6 +38,7 @@ test.describe('AppShell layout — desktop', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
   test.beforeEach(async ({ page }) => {
     await seedAuth(page);
+    await stubClients(page);
   });
 
   test('AC-9: sidebar is visible on desktop viewport', async ({ page }) => {
@@ -49,13 +50,15 @@ test.describe('AppShell layout — desktop', () => {
   });
 
   test('AC-9: sidebar contains navigation links', async ({ page }) => {
+    await stubClients(page);
     await page.goto('/');
     await page.waitForSelector('[data-testid="home-page"]');
 
-    await expect(page.getByRole('link', { name: /home/i }).first()).toBeVisible();
+    // New sidebar: Dashboard, Clients, Invoices (disabled span, not a link)
+    await expect(page.getByRole('link', { name: /dashboard/i }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: /clients/i }).first()).toBeVisible();
-    await expect(page.getByRole('link', { name: /invoices/i }).first()).toBeVisible();
-    await expect(page.getByRole('link', { name: /settings/i }).first()).toBeVisible();
+    // Invoices is a disabled nav item (span with aria-disabled), not a link
+    await expect(page.locator('[aria-disabled="true"]').first()).toBeVisible();
   });
 
   test('AC-9: clicking Clients nav link navigates to /clients', async ({ page }) => {
@@ -85,6 +88,7 @@ test.describe('AppShell layout — mobile', () => {
   test.use({ viewport: { width: 375, height: 812 } });
   test.beforeEach(async ({ page }) => {
     await seedAuth(page);
+    await stubClients(page);
   });
 
   test('AC-9: sidebar is collapsed (no desktop-sidebar) on mobile viewport', async ({ page }) => {

@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router';
 import { HomePage } from '@/pages/HomePage';
 import { ClientsPage } from '@/pages/ClientsPage';
+import { ClientDetailPage } from '@/pages/ClientDetailPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
@@ -34,6 +35,7 @@ export function App() {
           <Route element={<AppShell />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/clients/:id" element={<ClientDetailPage />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Route>

@@ -17,6 +17,19 @@ Most endpoints require **HTTP Basic** authentication. Include a valid `Authoriza
 
 Auth endpoints (`/api/v1/auth/**`) are **public** and do not require credentials.
 
+## Frontend routes (SPA — no backend involvement)
+
+The backend API is unchanged by FEAT-20260512-03. The following frontend-only routes were added or changed:
+
+| Path | Component | Notes |
+|------|-----------|-------|
+| `/` | `DashboardPage` | KPI cards (calls `GET /api/v1/clients?size=1`). Was `HomePage`. |
+| `/clients` | `ClientsPage` | Redesigned with shadcn Table; replaces previous scaffold layout. |
+| `/clients/:id` | `ClientDetailPage` | New route. Calls `GET /api/v1/clients/{id}`. |
+| `/login` | `LoginPage` | Unchanged. |
+| `/register` | `RegisterPage` | Unchanged. |
+| `/forgot-password` | `ForgotPasswordPage` | Unchanged. |
+
 ## Endpoints
 
 | Tag | Method | Path | Auth | Summary |

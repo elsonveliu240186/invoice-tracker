@@ -6,9 +6,9 @@ import { I18nextProvider } from 'react-i18next';
 import i18n from '@/shared/lib/i18n';
 import { Sidebar } from './Sidebar';
 
-function renderSidebar(props: Parameters<typeof Sidebar>[0] = {}) {
+function renderSidebar(props: Parameters<typeof Sidebar>[0] = {}, initialPath = '/') {
   return render(
-    <MemoryRouter initialEntries={['/']}>
+    <MemoryRouter initialEntries={[initialPath]}>
       <I18nextProvider i18n={i18n}>
         <Sidebar {...props} />
       </I18nextProvider>
@@ -17,37 +17,36 @@ function renderSidebar(props: Parameters<typeof Sidebar>[0] = {}) {
 }
 
 describe('Sidebar', () => {
-  it('renders all navigation items', () => {
+  it('renders all navigation items (Dashboard, Clients, Invoices)', () => {
     renderSidebar();
-    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
     expect(screen.getByText('Clients')).toBeInTheDocument();
     expect(screen.getByText('Invoices')).toBeInTheDocument();
-    expect(screen.getByText('Settings')).toBeInTheDocument();
   });
 
-  it('marks the active route with aria-current="page"', () => {
-    render(
-      <MemoryRouter initialEntries={['/clients']}>
-        <I18nextProvider i18n={i18n}>
-          <Sidebar />
-        </I18nextProvider>
-      </MemoryRouter>,
-    );
-    // aria-current is on the inner span rendered by NavLink's render prop
+  it('Invoices item is disabled with aria-disabled="true"', () => {
+    renderSidebar();
+    const invoicesItem = screen.getByTestId('nav-item-disabled');
+    expect(invoicesItem).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('marks the active route with aria-current="page" on Clients', () => {
+    renderSidebar({}, '/clients');
     const clientsSpan = screen.getByText('Clients').closest('span[aria-current]');
     expect(clientsSpan).toHaveAttribute('aria-current', 'page');
   });
 
-  it('home route is active at "/"', () => {
-    renderSidebar();
-    const homeSpan = screen.getByText('Home').closest('span[aria-current]');
-    expect(homeSpan).toHaveAttribute('aria-current', 'page');
+  it('Dashboard route is active at "/"', () => {
+    renderSidebar({}, '/');
+    const dashSpan = screen.getByText('Dashboard').closest('span[aria-current]');
+    expect(dashSpan).toHaveAttribute('aria-current', 'page');
   });
 
   it('hides text labels when collapsed', () => {
     renderSidebar({ collapsed: true });
-    expect(screen.queryByText('Home')).not.toBeInTheDocument();
+    expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
     expect(screen.queryByText('Clients')).not.toBeInTheDocument();
+    expect(screen.queryByText('Invoices')).not.toBeInTheDocument();
   });
 
   it('shows close button in drawer mode', () => {

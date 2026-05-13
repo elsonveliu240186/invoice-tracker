@@ -1,9 +1,14 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/shared/lib/i18n';
+import { resetMockClients } from '@/mocks/handlers';
 import { HomePage } from './HomePage';
+
+beforeEach(() => {
+  resetMockClients();
+});
 
 function renderHomePage() {
   return render(
@@ -15,26 +20,36 @@ function renderHomePage() {
   );
 }
 
-describe('HomePage', () => {
-  it('renders welcome heading', () => {
+describe('HomePage (DashboardPage)', () => {
+  it('renders the dashboard heading', () => {
     renderHomePage();
-    expect(
-      screen.getByRole('heading', { name: /welcome to invoice tracker/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
   });
 
-  it('renders the subtitle from i18n', () => {
+  it('renders KPI cards', () => {
     renderHomePage();
-    expect(screen.getByText(/scaffolded by the agenticai framework/i)).toBeInTheDocument();
+    expect(screen.getAllByTestId('kpi-card').length).toBeGreaterThan(0);
   });
 
-  it('has a link to the clients page', () => {
+  it('renders recent activity section', async () => {
     renderHomePage();
-    expect(screen.getByTestId('link-clients')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('recent-activity')).toBeInTheDocument();
+    });
   });
 
-  it('client link text comes from i18n', () => {
+  it('renders the dashboard page root element with data-testid="home-page"', async () => {
     renderHomePage();
-    expect(screen.getByText('Manage Clients')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('home-page')).toBeInTheDocument();
+    });
+  });
+
+  it('shows kpi values after loading', async () => {
+    renderHomePage();
+    await waitFor(() => {
+      expect(screen.queryAllByTestId('kpi-skeleton')).toHaveLength(0);
+    });
+    expect(screen.getAllByTestId('kpi-value').length).toBeGreaterThan(0);
   });
 });

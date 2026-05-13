@@ -129,6 +129,8 @@ sequenceDiagram
 
 #### 4b — Google OAuth (edge case: popup blocked)
 
+
+
 ```mermaid
 sequenceDiagram
     actor U as User
@@ -141,4 +143,44 @@ sequenceDiagram
     G-->>FB: auth/popup-blocked
     FB-->>FE: FirebaseError(code='auth/popup-blocked')
     FE-->>U: error toast (auth.errors.popupBlocked)
+```
+
+---
+
+### FEAT-20260512-03 — Dashboard and core UI modernization
+
+#### 4a — Edit a client (happy path)
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant L as ClientsListPage
+    participant S as Sheet (ClientForm)
+    participant API as clientsApi.updateClient
+    participant BE as Spring Boot
+    U->>L: click row "Edit" on Acme
+    L->>S: open Sheet with initial=Acme
+    S-->>U: slide-in animation (Framer Motion)
+    U->>S: change email, submit
+    S->>S: zod validate (react-hook-form)
+    S->>API: PUT /api/v1/clients/uuid-1
+    API->>BE: PUT with JSON body
+    BE-->>API: 200 + updated Client
+    API-->>S: Client
+    S->>L: onSubmit resolved → refetch() + show toast
+    L-->>U: row updates with new email, toast "Client updated"
+```
+
+#### 4b — Delete confirmation cancel (edge case)
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant L as ClientsListPage
+    participant D as AlertDialog
+    U->>L: click row "Delete" on Globex
+    L->>D: open AlertDialog (clientName=Globex)
+    U->>D: click Cancel
+    D->>L: onCancel → close, no API call
+    L-->>U: row still present, no toast
 ```

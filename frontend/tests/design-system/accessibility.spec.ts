@@ -24,11 +24,22 @@ function seedAuth(page: import('@playwright/test').Page) {
   });
 }
 
+function stubClients(page: import('@playwright/test').Page) {
+  return page.route('**/api/v1/clients**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 1 }),
+    }),
+  );
+}
+
 test.describe('accessibility', () => {
   test.describe('desktop viewport', () => {
     test.use({ viewport: { width: 1280, height: 800 } });
     test.beforeEach(async ({ page }) => {
       await seedAuth(page);
+      await stubClients(page);
     });
 
     test('AC-6: ThemeToggle button has aria-label attribute', async ({ page }) => {
@@ -119,10 +130,10 @@ test.describe('accessibility', () => {
       const nav = page.getByRole('navigation', { name: /main navigation/i });
       await expect(nav).toBeVisible();
 
-      // All links within sidebar should be accessible
+      // Sidebar has Dashboard + Clients as active links; Invoices is a disabled span
       const links = nav.getByRole('link');
       const count = await links.count();
-      expect(count).toBeGreaterThanOrEqual(4);
+      expect(count).toBeGreaterThanOrEqual(2);
     });
   });
 
@@ -130,6 +141,7 @@ test.describe('accessibility', () => {
     test.use({ viewport: { width: 375, height: 812 } });
     test.beforeEach(async ({ page }) => {
       await seedAuth(page);
+      await stubClients(page);
     });
 
     test('AC-9: drawer has role="dialog" and aria-modal when open', async ({ page }) => {

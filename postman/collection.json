@@ -157,6 +157,44 @@
       "name": "Clients",
       "item": [
         {
+          "name": "Dashboard KPI — Count Clients (size=1)",
+          "description": "Used by DashboardPage to read totalElements for the Total Clients KPI card. Added by FEAT-20260512-03.",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/clients?size=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "clients"],
+              "query": [
+                { "key": "size", "value": "1", "description": "Minimal page to read totalElements only" }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('totalElements is a number', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('totalElements').that.is.a('number');",
+                  "  pm.environment.set('kpiTotalClients', body.totalElements);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "List Clients",
           "request": {
             "method": "GET",

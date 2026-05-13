@@ -4,9 +4,59 @@ Maintained by the **documentation** subagent. One row per feature.
 
 | ID | Title | State | Owner | Plan | Review | Security | QA | PR |
 |----|-------|-------|-------|------|--------|----------|----|----|
+| FEAT-20260512-03 | Dashboard and core UI modernization | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-03/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-03/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-03/SECURITY.md) | [QA.md](.features/FEAT-20260512-03/QA.md) | — |
 | FEAT-20260512-02 | Authentication modernization | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-02/SECURITY.md) | [QA.md](.features/FEAT-20260512-02/QA.md) | — |
 | FEAT-20260512-01 | Frontend design system foundation | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-01/SECURITY.md) | [QA.md](.features/FEAT-20260512-01/QA.md) | — |
 | FEAT-20260511-01 | Client management (CRUD) | Done | elsonveliu | [PLAN.md](.features/FEAT-20260511-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260511-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260511-01/SECURITY.md) | [QA.md](.features/FEAT-20260511-01/QA.md) | — |
+
+## FEAT-20260512-03 — Dashboard and core UI modernization
+
+### Overview
+
+Full SaaS shell retrofit onto the existing React SPA. Delivers a collapsible sidebar, top navigation bar, Dashboard KPI page, and a completely redesigned Clients module — all built on the FEAT-20260512-01 design system primitives without any backend changes.
+
+### Frontend changes (no backend changes)
+
+- **AppShell** (`src/shared/components/AppShell.tsx`) — responsive grid composing `Sidebar` + `TopNav` + `<Outlet/>`. On `<md` the sidebar collapses into a shadcn `Sheet` drawer opened by the hamburger button.
+- **Sidebar** — collapsible desktop sidebar with Dashboard, Clients, and Invoices-disabled nav items; Lucide icons; `aria-current="page"` active state from `useLocation`; uses `useUiStore().sidebarCollapsed` (FEAT-01).
+- **MobileSidebar** — shadcn `Sheet` wrapper rendering the same nav items; closes on nav click.
+- **TopNav** — hamburger (mobile), breadcrumbs, `UserMenu` (`Avatar` + `DropdownMenu` with logout), `ThemeToggle` (FEAT-01), `LanguageSelector` (FEAT-01).
+- **DashboardPage** at `/` — three KPI `Card`s: Total Clients (`totalElements` from `GET /api/v1/clients?size=1`), Active Clients (same value until backend exposes a status field), Invoices (0); `RecentActivity` stub section; `Skeleton` loading states; error state with retry.
+- **ClientsPage** at `/clients` — shadcn `Table` (Name, Email, Phone, Status, Updated, Actions); server-side search via `query` param; client-side status filter (All / Active / Inactive) via `deriveStatus()`; client-side pagination; `Skeleton` rows while loading; `EmptyState` with CTA when `totalElements === 0`.
+- **ClientFormSheet** — slide-in shadcn `Sheet` containing `ClientForm`; replaces the old `ClientFormModal` (Dialog). `ClientForm` migrated to `react-hook-form` + `zodResolver`.
+- **ConfirmDeleteDialog** — migrated to shadcn `AlertDialog`; same prop signature retained.
+- **ClientDetailPage** at `/clients/:id` — `Card` layout with contact info, status `Badge`, `createdAt`/`updatedAt`, Edit + Delete actions.
+- **ClientStatusBadge** — maps derived `ACTIVE`/`INACTIVE` status to a coloured `Badge`.
+- **derive.ts** — pure helpers `deriveStatus(client)` (defaults to `ACTIVE` until backend exposes the field) and `formatDate(iso)`.
+- **PageTransition** — Framer Motion `motion.div` with fade+slide variants; `AnimatePresence` on the route outlet.
+- **i18n** — all new user-visible strings loaded via `useTranslation`; new keys under `nav.*`, `topnav.*`, `dashboard.*`, `clients.*`, `clientDetail.*`, `common.*` in `en.json`.
+- **Responsive breakpoints**: 360 px (mobile drawer), 768 px (collapsed icon sidebar), 1280 px+ (full labelled sidebar).
+- **New deps**: `framer-motion ^11`, `lucide-react ^0.460`, `react-i18next ^15`, `i18next ^24`, `react-hook-form ^7.53`, `@hookform/resolvers ^3.9`.
+- **Deleted**: `ClientFormModal.tsx` (replaced by `ClientFormSheet`).
+- **Layout path change**: layout components reside in `src/shared/components/` (project convention) rather than `src/shared/layout/` as planned.
+
+### Quality gate results
+
+| Gate | Result | Detail |
+|------|--------|--------|
+| Vitest statements | 96.72 % (gate 95 %) | pass |
+| Vitest branches | 91.76 % (gate 90 %) | pass |
+| Vitest functions | 96.45 % (gate 95 %) | pass |
+| Vitest lines | 96.72 % (gate 95 %) | pass |
+| pnpm lint | 0 errors | pass (3 pre-existing warnings in shadcn vendor files) |
+| pnpm audit | 0 high / 0 critical | pass (2 pre-existing moderate CVEs) |
+| Playwright E2E | 56 / 56 passed | pass |
+
+### Known v1 limitations / tracked risks
+
+| Risk | Description | Plan |
+|------|-------------|------|
+| R-4 | `AnimatePresence` on route outlet and staggered `motion.tr` table rows not fully wired (non-blocking reviewer finding) | Wire in follow-up or FEAT-20260512-03 patch |
+| R-5 | Breadcrumbs component not created; TopNav renders route title via other means (non-blocking reviewer finding) | Add `Breadcrumbs.tsx` in follow-up |
+| R-6 | `ConfirmDeleteDialog` and `ClientStatusBadge` still have some hard-coded English strings instead of i18n keys (non-blocking; keys exist in `en.json`) | One-liner swap in follow-up |
+| R-7 | `ClientDetailPage` file-level statement coverage 82.8 % (aggregate gate passes) | Add tests for phone/address conditional branches in follow-up |
+
+---
 
 ## FEAT-20260512-02 — Authentication modernization
 

@@ -163,6 +163,6 @@ describe('AppShell', () => {
     renderShellMobile();
     await user.click(screen.getByTestId('hamburger'));
     expect(screen.getByTestId('drawer-panel')).toBeInTheDocument();
-    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
   });
 });
