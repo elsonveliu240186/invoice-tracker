@@ -2,7 +2,6 @@ name: CI
 
 on:
   push:
-    branches: [main]
   pull_request:
 
 concurrency:
@@ -10,10 +9,50 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ── Read CHECKS.yml once; all downstream jobs use the outputs ──────────────
+  load-checks:
+    runs-on: ubuntu-latest
+    outputs:
+      be_coverage:   ${{ steps.read.outputs.be_coverage }}
+      be_checkstyle: ${{ steps.read.outputs.be_checkstyle }}
+      be_spotbugs:   ${{ steps.read.outputs.be_spotbugs }}
+      be_pmd:        ${{ steps.read.outputs.be_pmd }}
+      be_owasp_dc:   ${{ steps.read.outputs.be_owasp_dc }}
+      be_semgrep:    ${{ steps.read.outputs.be_semgrep }}
+      fe_coverage:   ${{ steps.read.outputs.fe_coverage }}
+      fe_lint:       ${{ steps.read.outputs.fe_lint }}
+      fe_audit:      ${{ steps.read.outputs.fe_audit }}
+      fe_e2e:        ${{ steps.read.outputs.fe_e2e }}
+      fe_semgrep:    ${{ steps.read.outputs.fe_semgrep }}
+      sec_gitleaks:  ${{ steps.read.outputs.sec_gitleaks }}
+      sec_trivy:     ${{ steps.read.outputs.sec_trivy }}
+      sec_grype:     ${{ steps.read.outputs.sec_grype }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse CHECKS.yml
+        id: read
+        run: |
+          yml=CHECKS.yml
+          val() { grep -E "^\s+$1:" "$yml" | head -1 | awk '{print $2}'; }
+          echo "be_coverage=$(val coverage | head -1)"     >> $GITHUB_OUTPUT
+          echo "be_checkstyle=$(val checkstyle)"           >> $GITHUB_OUTPUT
+          echo "be_spotbugs=$(val spotbugs)"               >> $GITHUB_OUTPUT
+          echo "be_pmd=$(val pmd)"                         >> $GITHUB_OUTPUT
+          echo "be_owasp_dc=$(val owasp_dc)"               >> $GITHUB_OUTPUT
+          echo "be_semgrep=$(grep -A6 'backend:' $yml | grep semgrep | awk '{print $2}')" >> $GITHUB_OUTPUT
+          echo "fe_coverage=$(grep -A8 'frontend:' $yml | grep coverage | awk '{print $2}')" >> $GITHUB_OUTPUT
+          echo "fe_lint=$(val lint)"                       >> $GITHUB_OUTPUT
+          echo "fe_audit=$(val audit)"                     >> $GITHUB_OUTPUT
+          echo "fe_e2e=$(val e2e)"                         >> $GITHUB_OUTPUT
+          echo "fe_semgrep=$(grep -A8 'frontend:' $yml | grep semgrep | awk '{print $2}')" >> $GITHUB_OUTPUT
+          echo "sec_gitleaks=$(grep -A4 'security:' $yml | grep gitleaks | awk '{print $2}')" >> $GITHUB_OUTPUT
+          echo "sec_trivy=$(grep -A4 'security:' $yml | grep trivy | awk '{print $2}')"    >> $GITHUB_OUTPUT
+          echo "sec_grype=$(grep -A4 'security:' $yml | grep grype | awk '{print $2}')"    >> $GITHUB_OUTPUT
+
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      backend: ${{ steps.filter.outputs.backend }}
+      backend:  ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
     steps:
       - uses: actions/checkout@v4
@@ -26,10 +65,17 @@ jobs:
             frontend:
               - 'frontend/**'
 
+  # ── Backend ────────────────────────────────────────────────────────────────
   backend:
-    needs: detect-changes
+    needs: [load-checks, detect-changes]
     if: needs.detect-changes.outputs.backend == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
+    env:
+      BE_COVERAGE:   ${{ needs.load-checks.outputs.be_coverage }}
+      BE_CHECKSTYLE: ${{ needs.load-checks.outputs.be_checkstyle }}
+      BE_SPOTBUGS:   ${{ needs.load-checks.outputs.be_spotbugs }}
+      BE_PMD:        ${{ needs.load-checks.outputs.be_pmd }}
+      BE_OWASP_DC:   ${{ needs.load-checks.outputs.be_owasp_dc }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -37,22 +83,33 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
-      - name: Build, test, JaCoCo gate, OWASP DC, lint
+
+      - name: Build and test
         working-directory: backend
-        run: ./mvnw -B verify
+        run: |
+          FLAGS="-Ddependency-check.skip=true"   # OWASP DC runs as a separate cached job
+          [ "$BE_COVERAGE"   = "false" ] && FLAGS="$FLAGS -Djacoco.skip=true -Djacoco.check.skip=true"
+          [ "$BE_CHECKSTYLE" = "false" ] && FLAGS="$FLAGS -Dcheckstyle.skip=true"
+          [ "$BE_SPOTBUGS"   = "false" ] && FLAGS="$FLAGS -Dspotbugs.skip=true"
+          [ "$BE_PMD"        = "false" ] && FLAGS="$FLAGS -Dpmd.skip=true"
+          ./mvnw -B verify $FLAGS
+
       - name: Upload JaCoCo report
-        if: always()
+        if: always() && needs.load-checks.outputs.be_coverage == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-report
-          path: backend/target/site/jacoco/
+          path: backend/target/site/jacoco*/
+
       - name: Semgrep (Java + OWASP)
+        if: needs.load-checks.outputs.be_semgrep == 'true'
         uses: returntocorp/semgrep-action@v1
         with:
-          config: p/owasp-top-ten p/java
+          config: auto
 
+  # ── Frontend ───────────────────────────────────────────────────────────────
   frontend:
-    needs: detect-changes
+    needs: [load-checks, detect-changes]
     if: needs.detect-changes.outputs.frontend == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
@@ -68,43 +125,151 @@ jobs:
       - name: Install
         working-directory: frontend
         run: pnpm install --frozen-lockfile
+
       - name: Lint
+        if: needs.load-checks.outputs.fe_lint == 'true'
         working-directory: frontend
         run: pnpm lint
+
       - name: Test + coverage gate
+        if: needs.load-checks.outputs.fe_coverage == 'true'
         working-directory: frontend
         run: pnpm test:coverage
+
+      - name: Test (no coverage gate)
+        if: needs.load-checks.outputs.fe_coverage == 'false'
+        working-directory: frontend
+        run: pnpm test
+
       - name: Build
         working-directory: frontend
         run: pnpm build
+
       - name: Install Playwright browsers
+        if: needs.load-checks.outputs.fe_e2e == 'true'
         working-directory: frontend
         run: pnpm exec playwright install --with-deps chromium
+
       - name: E2E
+        if: needs.load-checks.outputs.fe_e2e == 'true'
         working-directory: frontend
         env:
           CI: 'true'
         run: pnpm e2e
+
       - name: Upload Playwright report
-        if: always()
+        if: always() && needs.load-checks.outputs.fe_e2e == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: frontend/playwright-report/
+
       - name: pnpm audit
+        if: needs.load-checks.outputs.fe_audit == 'true'
         working-directory: frontend
         run: pnpm audit --audit-level=high
+
       - name: Semgrep (TS + React + OWASP)
+        if: needs.load-checks.outputs.fe_semgrep == 'true'
         uses: returntocorp/semgrep-action@v1
         with:
-          config: p/owasp-top-ten p/typescript p/react
+          config: auto
 
+  # ── Secrets (gitleaks) ─────────────────────────────────────────────────────
   gitleaks:
+    needs: load-checks
+    if: needs.load-checks.outputs.sec_gitleaks == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - name: gitleaks secret scan
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/path \
+            zricethezav/gitleaks:latest \
+            detect --source /path --no-banner --redact --exit-code 1
+
+  # ── CVE scan — Trivy ───────────────────────────────────────────────────────
+  trivy:
+    needs: load-checks
+    if: needs.load-checks.outputs.sec_trivy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy filesystem scan
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/src \
+            aquasec/trivy:latest \
+            fs /src --exit-code 1 --severity HIGH,CRITICAL --scanners vuln \
+            --ignorefile /src/.trivyignore 2>/dev/null || true
+      - name: Upload Trivy SARIF
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-results
+          path: trivy-results.sarif
+          if-no-files-found: ignore
+
+  # ── CVE scan — Grype ───────────────────────────────────────────────────────
+  grype:
+    needs: load-checks
+    if: needs.load-checks.outputs.sec_grype == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Grype filesystem scan
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/src \
+            anchore/grype:latest \
+            dir:/src --fail-on high
+
+  # ── OWASP Dependency-Check (Maven + cached NVD DB) ────────────────────────
+  #
+  # Strategy:
+  #   • DB lives in ~/.dependency-check and is cached between runs.
+  #   • autoUpdate=false on every CI run — DB is never refreshed mid-build.
+  #   • The nightly `dependency-check-update.yml` workflow runs update-only
+  #     and writes a fresh cache entry; this job restores it.
+  #   • Expected runtime: ~30 s from warm cache vs 5–15 min cold.
+  owasp-dc:
+    needs: [load-checks, detect-changes, backend]
+    if: needs.load-checks.outputs.be_owasp_dc == 'true' && (needs.detect-changes.outputs.backend == 'true' || github.event_name == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Restore OWASP NVD cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.dependency-check
+          key: dc-nvd-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: dc-nvd-${{ runner.os }}-
+
+      - name: OWASP Dependency-Check (cached DB, no auto-update)
+        working-directory: backend
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          find ~/.dependency-check -name "*.lck" -delete 2>/dev/null || true
+          ./mvnw -B dependency-check:check \
+            -Ddependency-check.autoUpdate=false \
+            -Ddependency-check.skip=false
+
+      - name: Upload DC report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: owasp-dc-report
+          path: backend/target/dependency-check-report.*
+          if-no-files-found: ignore

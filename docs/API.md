@@ -11,10 +11,295 @@ cd backend
 curl http://localhost:8080/v3/api-docs > ../docs/openapi.json
 ```
 
-## Endpoints
+## Authentication
 
-_No endpoints yet — first feature will populate this._
+Most endpoints require **HTTP Basic** authentication. Include a valid `Authorization: Basic <base64>` header. Unauthenticated requests receive `401 Unauthorized`.
+
+Auth endpoints (`/api/v1/auth/**`) are **public** and do not require credentials.
+
+## Endpoints
 
 | Tag | Method | Path | Auth | Summary |
 |-----|--------|------|------|---------|
-| _ | _ | _ | _ | _ |
+| Auth | POST | `/api/v1/auth/login` | None (public) | Authenticate with email and password |
+| Auth | POST | `/api/v1/auth/register` | None (public) | Register a new user account |
+| Auth | POST | `/api/v1/auth/forgot-password` | None (public) | Request a password reset (anti-enumeration) |
+| Clients | POST | `/api/v1/clients` | Required | Create a new client |
+| Clients | GET | `/api/v1/clients` | Required | List clients (paginated, searchable) |
+| Clients | GET | `/api/v1/clients/{id}` | Required | Get a client by ID |
+| Clients | PUT | `/api/v1/clients/{id}` | Required | Update a client (full replacement) |
+| Clients | DELETE | `/api/v1/clients/{id}` | Required | Soft-delete a client |
+
+---
+
+## Auth
+
+### POST `/api/v1/auth/login`
+
+Authenticates the user with email and password (HTTP Basic semantics). The client must extract `email:password`, base64-encode the pair, and place it in the JSON body (not the `Authorization` header) per the frontend convention. The server verifies the password against the bcrypt hash stored in `app_users`.
+
+**Request body** (`application/json`):
+
+```json
+{
+  "email":    "alice@example.com",
+  "password": "s3cr3tP@ss"
+}
+```
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `email` | string | yes | RFC 5322, max 254 characters |
+| `password` | string | yes | min 1 character (strength enforced on register only) |
+
+**Success response** `200 OK`:
+
+```json
+{
+  "email":       "alice@example.com",
+  "displayName": "Alice"
+}
+```
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `400 Bad Request` | `VALIDATION_FAILED` | Missing or malformed field |
+| `401 Unauthorized` | `UNAUTHENTICATED` | Unknown email or wrong password (uniform — anti-enumeration) |
+
+---
+
+### POST `/api/v1/auth/register`
+
+Creates a new user account. The password is stored as a bcrypt hash (cost 12). Returns `409` if the email (case-insensitive) is already registered and not soft-deleted.
+
+**Request body** (`application/json`):
+
+```json
+{
+  "displayName": "Alice",
+  "email":       "alice@example.com",
+  "password":    "s3cr3tP@ss1"
+}
+```
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `displayName` | string | yes | 1–120 characters |
+| `email` | string | yes | RFC 5322, max 254 characters |
+| `password` | string | yes | min 8 chars, at least 1 letter and 1 digit |
+
+**Success response** `201 Created`:
+
+```json
+{
+  "email":       "alice@example.com",
+  "displayName": "Alice"
+}
+```
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `400 Bad Request` | `VALIDATION_FAILED` | A required field is missing or the password is too weak |
+| `409 Conflict` | `USER_EMAIL_TAKEN` | An active account with that email already exists |
+
+---
+
+### POST `/api/v1/auth/forgot-password`
+
+Initiates a password reset. Always returns `204 No Content` regardless of whether the email exists — prevents user enumeration. In v1, no email is actually sent (tracked as risk R-3 in FEATURES.md).
+
+**Request body** (`application/json`):
+
+```json
+{
+  "email": "alice@example.com"
+}
+```
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `email` | string | yes | RFC 5322, max 254 characters |
+
+**Success response** `204 No Content` (always, including for unknown emails).
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `400 Bad Request` | `VALIDATION_FAILED` | Missing or malformed email field |
+
+---
+
+## Clients
+
+### POST `/api/v1/clients`
+
+Creates a new client.
+
+**Request body** (`application/json`):
+
+```json
+{
+  "name":    "Acme Corp",
+  "email":   "billing@acme.example",
+  "phone":   "+1 555-123-4567",
+  "address": "123 Main St, Springfield"
+}
+```
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `name` | string | yes | 1–120 characters |
+| `email` | string | yes | RFC 5322, max 254 characters |
+| `phone` | string | no | max 32 characters, digits / `+` / `-` / space / `(` / `)` |
+| `address` | string | no | max 500 characters |
+
+**Success response** `201 Created`:
+
+```json
+{
+  "id":        "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "name":      "Acme Corp",
+  "email":     "billing@acme.example",
+  "phone":     "+1 555-123-4567",
+  "address":   "123 Main St, Springfield",
+  "createdAt": "2026-05-11T12:00:00Z",
+  "updatedAt": "2026-05-11T12:00:00Z"
+}
+```
+
+Response also includes a `Location: /api/v1/clients/{id}` header.
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `400 Bad Request` | `VALIDATION_FAILED` | A required field is missing or a constraint is violated |
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `409 Conflict` | `CLIENT_EMAIL_TAKEN` | A non-deleted client with the same email already exists |
+
+---
+
+### GET `/api/v1/clients`
+
+Returns a paginated list of active (non-deleted) clients.
+
+**Query parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `query` | string | — | Case-insensitive substring match on `name` or `email` |
+| `page` | integer | `0` | Zero-based page number |
+| `size` | integer | `20` | Page size (1–100) |
+| `sort` | string | `name,asc` | Sort field and direction |
+
+**Success response** `200 OK`:
+
+```json
+{
+  "content": [
+    {
+      "id":        "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "name":      "Acme Corp",
+      "email":     "billing@acme.example",
+      "phone":     "+1 555-123-4567",
+      "address":   "123 Main St, Springfield",
+      "createdAt": "2026-05-11T12:00:00Z",
+      "updatedAt": "2026-05-11T12:00:00Z"
+    }
+  ],
+  "page":          0,
+  "size":          20,
+  "totalElements": 1,
+  "totalPages":    1
+}
+```
+
+**Error responses**: `400` (bad pagination params), `401`.
+
+---
+
+### GET `/api/v1/clients/{id}`
+
+Retrieves a single active client by UUID.
+
+**Path parameter**: `id` — UUID of the client.
+
+**Success response** `200 OK`: `ClientResponse` (same shape as POST response).
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404 Not Found` | `CLIENT_NOT_FOUND` | No active client with that UUID |
+
+---
+
+### PUT `/api/v1/clients/{id}`
+
+Fully replaces all mutable fields of the client. Bumps `updatedAt`.
+
+**Path parameter**: `id` — UUID of the client.
+
+**Request body**: same shape as `CreateClientRequest`.
+
+**Success response** `200 OK`: updated `ClientResponse`.
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `400 Bad Request` | `VALIDATION_FAILED` | Constraint violated |
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404 Not Found` | `CLIENT_NOT_FOUND` | No active client with that UUID |
+| `409 Conflict` | `CLIENT_EMAIL_TAKEN` | New email collides with another active client |
+
+---
+
+### DELETE `/api/v1/clients/{id}`
+
+Soft-deletes the client (sets `deleted_at`). The record is retained in the database but is invisible to all read operations.
+
+**Path parameter**: `id` — UUID of the client.
+
+**Success response** `204 No Content` (empty body).
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404 Not Found` | `CLIENT_NOT_FOUND` | No active client with that UUID |
+
+---
+
+## Error schema (RFC 7807 Problem Detail)
+
+All error responses use `Content-Type: application/problem+json`:
+
+```json
+{
+  "type":     "about:blank",
+  "title":    "Conflict",
+  "status":   409,
+  "detail":   "A client with this email already exists.",
+  "code":     "CLIENT_EMAIL_TAKEN",
+  "instance": "/api/v1/clients"
+}
+```
+
+**Error codes**:
+
+| Code | Status | Meaning |
+|------|--------|---------|
+| `VALIDATION_FAILED` | 400 | Bean-validation failure; `errors` array lists per-field messages |
+| `CLIENT_NOT_FOUND` | 404 | No active client matching the given UUID |
+| `CLIENT_EMAIL_TAKEN` | 409 | Duplicate email among active clients |
+| `USER_EMAIL_TAKEN` | 409 | An active user account with that email already exists |
+| `UNAUTHENTICATED` | 401 | Missing or invalid HTTP Basic credentials (or unknown email / wrong password on login) |
+| `INTERNAL_ERROR` | 500 | Unexpected server error |

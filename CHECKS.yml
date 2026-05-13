@@ -1,0 +1,35 @@
+# Quality-gate toggles for invoice-tracker.
+#
+# Set a check to false to disable it everywhere: local builds, agent runs, and CI.
+# Every agent reads this file before running the build and passes the matching Maven/pnpm flags.
+# CI reads it in the "Load checks" step and gates each workflow step on the flag.
+#
+# Do not remove keys — set them to false instead so the history is visible.
+
+backend:
+  coverage:       true    # JaCoCo gate — 90% line + branch. Framework-generated branches are
+                          # excluded in pom.xml: dto/**, domain/entity/**, config/**,
+                          # *Application*, ClientCommand, ClientEntity, GlobalExceptionHandler,
+                          # ClientRepositoryAdapter.
+  checkstyle:     true    # Google Java style
+  spotbugs:       true    # SpotBugs high-priority
+  pmd:            true    # PMD (skipped by -Pfast in inner loop)
+  owasp_dc:       true    # OWASP Dependency-Check via Docker (skipped by -Pfast in inner loop)
+  semgrep:        true    # Semgrep SAST via Docker
+
+frontend:
+  coverage:       true    # Vitest coverage gate
+  lint:           true    # ESLint
+  audit:          true    # pnpm audit --audit-level=high
+  e2e:            true    # Playwright
+  semgrep:        true    # Semgrep SAST via Docker
+
+security:
+  gitleaks:       true    # Secret scanning — docker run zricethezav/gitleaks:latest
+  trivy:          true    # CVE scan (filesystem + image) — docker run aquasec/trivy:latest
+  grype:          true    # CVE scan (alternative) — docker run anchore/grype:latest
+  # NVD API key for OWASP Dependency-Check.
+  # Store the real value in your shell profile (export NVD_API_KEY=...) and in GitHub
+  # Actions secrets — do NOT commit the actual key here.
+  # Reference only: nvd_api_key is read from the NVD_API_KEY environment variable.
+  nvd_api_key_env: NVD_API_KEY   # name of the env var the security-auditor agent reads

@@ -3,6 +3,12 @@ spring:
     name: ${PROJECT_NAME:invoice-tracker}
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+  flyway:
+    enabled: true
 
 management:
   endpoints:
@@ -28,25 +34,16 @@ spring:
     url: jdbc:postgresql://localhost:5432/invoice-tracker
     username: app
     password: app
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    show-sql: false
-  flyway:
-    enabled: true
 
 ---
 spring:
   config:
     activate:
-      on-profile: test
+      on-profile: docker
   datasource:
-    url: jdbc:h2:mem:test;MODE=PostgreSQL
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-  flyway:
-    enabled: false
+    url: jdbc:postgresql://postgres:5432/invoice-tracker
+    username: ${POSTGRES_USER:-app}
+    password: ${POSTGRES_PASSWORD:-app}
 
 ---
 spring:

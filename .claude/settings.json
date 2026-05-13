@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd *backend* && JAVA_HOME=* ./mvnw *)",
+      "Bash(JAVA_HOME=* ./mvnw *)",
+      "Bash(cd *frontend* && pnpm *)",
+      "Bash(pnpm --prefix *frontend* *)",
+      "Bash(pnpm dlx *)",
+      "Bash(git -C * diff *)",
+      "Bash(git -C * log *)",
+      "Bash(git -C * status *)",
+      "Bash(ls *)"
+    ]
+  }
+}

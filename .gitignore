@@ -9,7 +9,8 @@ frontend/coverage/
 frontend/playwright-report/
 frontend/test-results/
 
-# OWASP DC cache
+# OWASP DC cache (Docker volume mount)
+.dc-data/
 **/dependency-check-data/
 **/dependency-check-report.*
 
@@ -22,10 +23,10 @@ frontend/test-results/
 Thumbs.db
 .DS_Store
 
-# Env
+# Env — never commit these
+.env
 .env.local
 .env.*.local
 *.log
 
-# Generated docs
-docs/openapi.json
+# Generated docs — openapi.json is committed and maintained by the documentation agent
