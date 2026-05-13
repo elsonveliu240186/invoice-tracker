@@ -191,6 +191,8 @@
                         <suppressionFile>owasp-suppressions.xml</suppressionFile>
                     </suppressionFiles>
                     <nvdValidForHours>24</nvdValidForHours>
+                    <!-- OSS Index requires a Sonatype account; disabled in favour of NVD-only scanning -->
+                    <ossindexAnalyzerEnabled>false</ossindexAnalyzerEnabled>
                 </configuration>
                 <executions>
                     <execution>
