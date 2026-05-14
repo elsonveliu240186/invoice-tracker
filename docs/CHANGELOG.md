@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file. Format: [Ke
 ## [Unreleased]
 
 ### Added
+- **Invoice PDF generation and email delivery to clients** (FEAT-20260513-02) — _no breaking changes_:
+  Introduces the full `Invoice` domain (Flyway `V4__create_invoices.sql` — `invoices` + `invoice_lines`
+  tables with optimistic-lock `version`, soft-delete, partial unique index on `lower(number)`,
+  and `last_sent_at TIMESTAMPTZ`); five REST endpoints at `/api/v1/invoices` (`POST` create,
+  `GET` list with `clientId` filter, `GET /{id}`, `GET /{id}/pdf`, `POST /{id}/send-email`);
+  `OpenPdfInvoiceRenderer` (OpenPDF 2.0.3, BSD/LGPL) renders A4 PDFs with company block, client
+  block, line-items table, subtotal, tax, total, and footer; `JavaMailInvoiceMailer` sends a
+  multipart MIME message with the PDF attached as `invoice-<number>.pdf`, writes `last_sent_at`
+  only on SMTP success, and returns `502 EMAIL_DELIVERY_FAILED` on `MailSendException` without
+  touching `last_sent_at`; `422 INVOICE_HAS_NO_RECIPIENT` guard when client email is blank;
+  CRLF injection guard on `invoice.number` and `client.email` at the service layer; client email
+  logged only as SHA-256 truncated 8 hex chars; SMTP credentials read entirely from env vars
+  (`MAIL_HOST/PORT/USERNAME/PASSWORD/FROM`, `MAIL_STARTTLS`); `local` profile defaults to MailHog
+  (`localhost:1025`, no auth); `mailhog/mailhog:v1.0.1` service added to `docker-compose.yml`
+  (SMTP `:1025`, HTTP UI `:8025`); frontend: `ViewPdfButton` (shadcn `Dialog` + `<iframe>` preview
+  with "Open in new tab" fallback), `SendInvoiceButton` (confirm `AlertDialog` + spinner + Sonner
+  toast), `InvoiceSentBadge` (`Badge` visible when `lastSentAt !== null`), `InvoiceDetailPage`
+  (Card layout with client block + line-items + totals + action row); client email shown in
+  `InvoiceDetailPage`; `invoices.*` i18n namespace added to `en.json`; MSW handlers for all
+  invoice endpoints; new Playwright specs: `tests/invoices/pdf-and-email.spec.ts` (18 tests
+  covering AC-1/2/3/4/5/6), `tests/invoices/smtp-failure.spec.ts` (2 tests). Backend JaCoCo ≥ 90%
+  (180 unit + 27 IT). Frontend Vitest 97.33/91.69/96.53/97.33 (gate 95/90/95/90). 44 invoices
+  Playwright specs, all green. Security: 10 OWASP categories mitigated, 0 required fixes,
+  7 non-blocking recommendations (nginx headers, UNC check, rate limiting, esbuild/vite upgrade).
+  Review required 5 iterations (4 failures — arity mismatch, missing `clientEmail` in DTO,
+  GreenMail port ordering, missing `derive.ts` / `ClientFormSheet.tsx` front-end files).
+
 - **Invoice Sharing — DOCX template rendering, PDF conversion, email delivery** (FEAT-20260513-03) — _no breaking changes_:
   DOCX-template-based invoice rendering via poi-tl (`{{field}}` token substitution and
   `{{#lines}}` table loops); LibreOffice headless PDF conversion with a `Semaphore(2)` process

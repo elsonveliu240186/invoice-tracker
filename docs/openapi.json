@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Invoice Tracker API",
-    "description": "REST API for the invoice-tracker application. Hand-constructed by the documentation agent for FEAT-20260513-03 because the backend cannot start without a running Postgres instance. Regenerate once `docker-compose up` is available: `curl http://localhost:8080/v3/api-docs | python3 -m json.tool > docs/openapi.json`.",
+    "description": "REST API for the invoice-tracker application. Hand-constructed by the documentation agent (FEAT-20260513-02 and FEAT-20260513-03) because the backend cannot start without a running Postgres instance. Regenerate once `docker-compose up` is available: `curl http://localhost:8080/v3/api-docs | python3 -m json.tool > docs/openapi.json`. Covers: Auth, Clients, Invoices (FEAT-20260513-02: OpenPDF renderer + JavaMailSender), Invoice Rendering (FEAT-20260513-03: poi-tl DOCX + LibreOffice), and Settings (template upload/download).",
     "version": "0.0.1"
   },
   "servers": [

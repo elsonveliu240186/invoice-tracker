@@ -32,7 +32,7 @@ C4Container
 
 ## Components — Backend (C4 — level 3)
 
-Updated by FEAT-20260513-03 (Invoice Sharing). Previous update: FEAT-20260512-02 (authentication modernization).
+Updated by FEAT-20260513-03 (Invoice Sharing). FEAT-20260513-02 added InvoiceController, InvoiceService, OpenPdfInvoiceRenderer, JavaMailInvoiceMailer, and InvoiceRepositoryAdapter. Previous update: FEAT-20260512-02 (authentication modernization).
 
 ```mermaid
 flowchart TB
@@ -159,7 +159,7 @@ flowchart LR
 
 ## Components — Frontend
 
-Updated by FEAT-20260513-01 (Design system, dark-mode fixes, responsive layout, form alignment). Previous update: FEAT-20260512-03 (Dashboard and core UI modernization).
+Updated by FEAT-20260513-02 (Invoice PDF + email) and FEAT-20260513-01 (Design system, dark-mode fixes, responsive layout, form alignment). Previous update: FEAT-20260512-03 (Dashboard and core UI modernization).
 
 **Design system** — see [`docs/DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) for the full token reference, primitive component API, dark-mode guide, breakpoint contract, and ESLint enforcement rule.
 
@@ -204,6 +204,21 @@ flowchart LR
       statusBadge[ClientStatusBadge]
       derive[derive.ts<br/>deriveStatus + formatDate]
     end
+    subgraph InvoicesFeature[src/features/invoices]
+      invDetailPage[InvoiceDetailPage]
+      viewPdfBtn[ViewPdfButton<br/>Dialog + iframe]
+      sendInvBtn[SendInvoiceButton<br/>AlertDialog + spinner + toast]
+      sentBadge[InvoiceSentBadge]
+      invApi[invoicesApi.ts<br/>getInvoice / getInvoicePdfUrl / sendInvoiceEmail]
+      useInv[useInvoice / useSendInvoice<br/>React-Query]
+      invSchema[Invoice + InvoiceLine zod schemas]
+      invDetailPage --> viewPdfBtn
+      invDetailPage --> sendInvBtn
+      invDetailPage --> sentBadge
+      invDetailPage --> invApi
+      invDetailPage --> useInv
+      invApi --> invSchema
+    end
     subgraph AuthFeature[src/features/auth]
       forms[LoginForm / RegisterForm / ForgotPasswordForm]
       layout[AuthSplitLayout]
@@ -225,6 +240,8 @@ flowchart LR
       http[http.ts<br/>Basic auth header] --- firebase[firebase.ts]
       motion[motion.ts<br/>Framer variants]
     end
+    guard_p --> invoiceDetail[InvoiceDetailPage /invoices/:id]
+    invoiceDetail --> InvoicesFeature
     dash --> DashboardFeature
     clients --> ClientsFeature
     detail --> ClientsFeature
@@ -347,6 +364,20 @@ flowchart LR
 - **Decision**: The render controller exposes `/api/v1/invoices/{id}/docx-pdf` and `POST /api/v1/invoices/{id}/docx-email` rather than the `/pdf` and `/send-email` paths originally specified in PLAN.md §6.
 - **Why**: `InvoiceController` (from the adjacent FEAT-02) already owns `/api/v1/invoices/{id}/pdf` and `/api/v1/invoices/{id}/send-email`. Using distinct sub-paths avoids a `RequestMappingHandlerMapping` conflict and makes the rendering pipeline's identity explicit in the URL. The `DocxThenPdfInvoicePdfRenderer @Primary` bean transparently upgrades the existing `/pdf` endpoint without any URL change.
 - **Trade-offs**: The frontend's `DownloadInvoiceMenu` must hit `/docx-pdf` for the template-rendered PDF, not `/pdf`, when it needs the DOCX-template pipeline specifically.
+
+### ADR-017 — FEAT-20260513-02: OpenPDF 2.0.3 chosen for invoice rendering
+
+- **Date**: 2026-05-13
+- **Decision**: The default `InvoicePdfRenderer` implementation uses OpenPDF 2.0.3 (BSD/LGPL). iText 7 was rejected due to its AGPL/commercial licence. JasperReports was rejected as heavyweight (requires `.jrxml` tooling and a separate report server). OpenPDF is a maintained fork of iText 5 with an Apache-friendly licence, ~500 KB JAR, and a stable API for programmatic document construction.
+- **Why**: The licence constraint is non-negotiable for an open-distribution product. OpenPDF produces standards-compliant PDFs readable by Adobe Reader and Chrome without warnings.
+- **Trade-offs**: OpenPDF is community-maintained; commercial support is unavailable. FEAT-03's `DocxThenPdfInvoicePdfRenderer @Primary` upgrades the rendering engine transparently when deployed, making OpenPDF a fallback rather than the primary renderer in full deployments.
+
+### ADR-018 — FEAT-20260513-02: MailHog as local SMTP relay; credentials from env vars only
+
+- **Date**: 2026-05-13
+- **Decision**: `mailhog/mailhog:v1.0.1` is added to `docker-compose.yml` for local and E2E-test SMTP. SMTP credentials are supplied exclusively via environment variables (`MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_STARTTLS`). No credential string is present in any YAML or Java source file. The `local` Spring profile binds to `localhost:1025` with `starttls=false` and a justifying comment.
+- **Why**: Hard-coding credentials is a OWASP A02 violation and a gitleaks finding. MailHog provides an HTTP API (`:8025`) for Playwright E2E assertions without requiring a real SMTP relay. The `local` profile STARTTLS exemption is intentional and documented.
+- **Trade-offs**: Production deployments must supply all five `MAIL_*` env vars or the Spring context will fail to start (no default on production profile — fail-fast design). The `docker` profile reads them from `docker-compose.yml` service env section.
 
 ### ADR-008 — FEAT-20260512-01: Dual toast system during transition (sonner + legacy)
 

@@ -187,6 +187,72 @@ sequenceDiagram
 
 ---
 
+### FEAT-20260513-02 — Invoice PDF generation and email delivery to clients
+
+#### 4a Happy path: render PDF + send email
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant FE as InvoiceDetailPage
+    participant BE as InvoiceController
+    participant SVC as InvoiceService
+    participant REPO as InvoiceRepository
+    participant PDF as InvoicePdfRenderer
+    participant MAIL as InvoiceMailer
+    participant SMTP as MailHog
+    U->>FE: click "View PDF"
+    FE->>BE: GET /api/v1/invoices/{id}/pdf
+    BE->>SVC: getPdf(id)
+    SVC->>REPO: findByIdWithLines(id)
+    REPO-->>SVC: Invoice + lines + client
+    SVC->>PDF: render(invoice, client, company)
+    PDF-->>SVC: byte[]
+    SVC-->>BE: byte[]
+    BE-->>FE: 200 application/pdf
+    FE-->>U: iframe preview
+
+    U->>FE: click "Send to Client"
+    FE->>BE: POST /api/v1/invoices/{id}/send-email
+    BE->>SVC: send(id)
+    SVC->>REPO: findByIdWithLines(id)
+    SVC->>PDF: render(...)
+    PDF-->>SVC: byte[]
+    SVC->>MAIL: send(to=client.email, subject, body, pdfBytes)
+    MAIL->>SMTP: SMTP DATA
+    SMTP-->>MAIL: 250 OK
+    SVC->>REPO: updateLastSentAt(id, now)
+    REPO-->>SVC: ok
+    SVC-->>BE: { lastSentAt }
+    BE-->>FE: 200 { lastSentAt }
+    FE-->>U: toast + badge "Sent on …"
+```
+
+#### 4b Edge case: SMTP failure does not persist `last_sent_at`
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant FE as InvoiceDetailPage
+    participant BE as InvoiceController
+    participant SVC as InvoiceService
+    participant MAIL as InvoiceMailer
+    participant SMTP as MailHog (down)
+    U->>FE: click "Send to Client"
+    FE->>BE: POST /send-email
+    BE->>SVC: send(id)
+    SVC->>MAIL: send(...)
+    MAIL->>SMTP: SMTP connect
+    SMTP-->>MAIL: connection refused
+    MAIL-->>SVC: throws MailSendException
+    Note over SVC: NO writes to invoices table<br/>last_sent_at unchanged
+    SVC-->>BE: throws EmailDeliveryFailedException
+    BE-->>FE: 502 problem+json { code: EMAIL_DELIVERY_FAILED }
+    FE-->>U: error toast; lastSentAt badge unchanged
+```
+
+---
+
 ### FEAT-20260513-03 — Invoice Sharing (DOCX template rendering, PDF conversion, email delivery)
 
 #### Happy path: render PDF and email it

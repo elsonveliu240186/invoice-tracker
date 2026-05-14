@@ -5,6 +5,7 @@ Maintained by the **documentation** subagent. One row per feature.
 | ID | Title | State | Owner | Plan | Review | Security | QA | PR |
 |----|-------|-------|-------|------|--------|----------|----|----|
 | FEAT-20260513-03 | Invoice Sharing — DOCX template rendering, PDF via LibreOffice, email delivery | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260513-03/PLAN.md) | [REVIEW.md](.features/FEAT-20260513-03/REVIEW.md) | [SECURITY.md](.features/FEAT-20260513-03/SECURITY.md) | [QA.md](.features/FEAT-20260513-03/QA.md) | — |
+| FEAT-20260513-02 | Invoice PDF generation and email delivery to clients | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260513-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260513-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260513-02/SECURITY.md) | [QA.md](.features/FEAT-20260513-02/QA.md) | — |
 | FEAT-20260513-01 | Design System & UI Standards — dark mode fixes, responsive layout, form alignment, icon visibility | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260513-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260513-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260513-01/SECURITY.md) | [QA.md](.features/FEAT-20260513-01/QA.md) | — |
 | FEAT-20260512-03 | Dashboard and core UI modernization | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-03/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-03/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-03/SECURITY.md) | [QA.md](.features/FEAT-20260512-03/QA.md) | — |
 | FEAT-20260512-02 | Authentication modernization | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-02/SECURITY.md) | [QA.md](.features/FEAT-20260512-02/QA.md) | — |
@@ -63,6 +64,84 @@ Review required 5 iterations (4 failures) before passing. Security scan required
 | R-4 | Docker image +180 MB | Accepted; sidecar pattern documented as follow-up |
 | R-6 | send-email not idempotent | UI guards (disabled + confirm dialog); server-side idempotency-key tracked |
 | R-10 | `uploadedAt` derived from `Files.getLastModifiedTime` | Approximate; precise timestamp requires a `template_metadata` table |
+
+---
+
+## FEAT-20260513-02 — Invoice PDF generation and email delivery to clients
+
+### Overview
+
+Introduces the full `Invoice` aggregate (entity, CRUD endpoints, line-items) and two delivery
+endpoints: `GET /api/v1/invoices/{id}/pdf` (OpenPDF 2.0.3 renderer, streams `application/pdf`)
+and `POST /api/v1/invoices/{id}/send-email` (JavaMailSender, attaches PDF, writes `last_sent_at`
+only on SMTP success). Works independently of FEAT-20260513-03: the `InvoicePdfRenderer` port
+defaults to `OpenPdfInvoiceRenderer`; FEAT-03 registers `DocxThenPdfInvoicePdfRenderer @Primary`
+which transparently upgrades the `/pdf` endpoint when deployed together.
+
+Review required 5 iterations (4 failures). Security scan: 0 required fixes, 7 non-blocking
+recommendations. QA passed on first attempt: 44 invoices Playwright specs (18 + 2 new + 24 pre-existing).
+
+### Backend changes
+
+- **New domain**: `Invoice`, `InvoiceLine`, `InvoiceRepository` port, `InvoiceNotFoundException`
+  (404), `EmailDeliveryFailedException` (502).
+- **New application layer**: `InvoiceService` (create / get / list / renderPdf / sendEmail);
+  `InvoicePdfRenderer` port + `OpenPdfInvoiceRenderer` default impl (A4, 36 pt margins, line-items
+  table, subtotal/tax/total, configurable locale via `app.invoice.locale`); `InvoiceMailer` port +
+  `JavaMailInvoiceMailer` impl; `MailProperties` (`@ConfigurationProperties("app.mail")`);
+  `CompanyProperties` (`@ConfigurationProperties("app.company")`).
+- **New controller**: `InvoiceController` at `/api/v1/invoices` — `POST /`, `GET /`, `GET /{id}`,
+  `GET /{id}/pdf` (produces `application/pdf`, `Content-Disposition: inline`, `Cache-Control: private, no-store`),
+  `POST /{id}/send-email`.
+- **New persistence**: `InvoiceEntity`, `InvoiceLineEntity`, `InvoiceJpaRepository`,
+  `InvoiceRepositoryAdapter`, `InvoiceEntityMapper`.
+- **New Flyway migration**: `V4__create_invoices.sql` — `invoices` + `invoice_lines` tables,
+  partial unique index on `lower(number) WHERE deleted_at IS NULL`, `last_sent_at TIMESTAMPTZ`.
+- **GlobalExceptionHandler extended**: `InvoiceNotFoundException` → 404; `EmailDeliveryFailedException` → 502;
+  `InvoiceHasNoRecipientException` → 422.
+- **Security**: CRLF guard on `invoice.number` and `client.email`; email logged as SHA-256 trunc-8
+  only; SMTP creds from env vars only; `local` profile → MailHog; `mailhog/mailhog:v1.0.1` added
+  to `docker-compose.yml`.
+
+### Frontend changes
+
+- **New feature slice** `src/features/invoices/`:
+  - `model/types.ts`, `model/schema.ts` (zod, ISO dates → `Date`), `model/schema.test.ts`
+  - `api/invoicesApi.ts` (`getInvoice`, `getInvoicePdfUrl`, `sendInvoiceEmail`), tests, `useInvoice`,
+    `useSendInvoice` hooks with React-Query
+  - `ui/InvoiceDetailPage.tsx` — shadcn Card: client block + lines table + totals + action row
+  - `ui/ViewPdfButton.tsx` — shadcn Dialog + `<iframe src={pdfUrl}>` + "Open in new tab" link
+  - `ui/SendInvoiceButton.tsx` — confirm AlertDialog + spinner + Sonner toast
+  - `ui/InvoiceSentBadge.tsx` — Badge visible when `lastSentAt !== null`
+- **Route**: `/invoices/:id` added to `App.tsx`; Sidebar "Invoices" nav item enabled.
+- **i18n**: `invoices.*` namespace (detail, actions, status, confirm, toast, errors) in `en.json`.
+- **MSW**: 5 new handlers for invoice endpoints.
+
+### Quality gate results
+
+| Gate | Result | Detail |
+|------|--------|--------|
+| JaCoCo line + branch | ≥ 90% | pass — 180 unit + 27 IT |
+| Vitest statements | 97.33% (gate 95%) | pass |
+| Vitest branches | 91.69% (gate 90%) | pass |
+| Vitest functions | 96.53% (gate 95%) | pass |
+| Vitest lines | 97.33% (gate 95%) | pass |
+| pnpm lint | 0 errors | pass |
+| pnpm audit | 0 high / 0 critical | pass (2 pre-existing moderate dev-server-only CVEs) |
+| Playwright E2E | 44 / 44 passed | pass |
+| gitleaks | 0 secrets | pass (manual review) |
+| OWASP DC | degraded (no NVD_API_KEY) | non-blocking; owasp-suppressions.xml well-formed |
+
+### Known risks and open items
+
+| Risk | Description | Resolution |
+|------|-------------|------------|
+| R-1 | No rate-limit on `send-email` | Accept for v1; Bucket4j integration tracked as follow-up |
+| R-2 | Concurrent sends can deliver twice | UI button disabled during pending; JPA optimistic-lock on `version` does not guard `last_sent_at` dual-write |
+| R-3 | `overrideRecipient` not in v1 | Removes open-relay risk; tracked as `FEAT-invoice-send-override` |
+| R-4 | Invoice list UI absent | `/invoices` renders `EmptyState`; detail reachable by direct URL |
+| R-5 | FEAT-02 bean-arbitration with FEAT-03 | `DocxThenPdfInvoicePdfRenderer @Primary` in FEAT-03 transparently upgrades `/pdf`; `StandaloneInvoiceMailer @ConditionalOnMissingBean` handles the mailer |
+| R-6 | nginx security headers missing | Tracked recommendation: `X-Frame-Options`, `X-Content-Type-Options`, CSP |
 
 ---
 

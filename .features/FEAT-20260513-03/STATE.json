@@ -1,28 +1,13 @@
 {
   "id": "FEAT-20260513-03",
   "title": "Invoice Sharing - DOCX template-based generation, email delivery, local download",
-  "state": "Shipping",
-  "documented_at": "2026-05-14T11:30:00Z",
-  "qa_completed_at": "2026-05-14T10:45:00Z",
+  "state": "Done",
+  "pr_url": "https://github.com/elsonveliu240186/invoice-tracker/pull/7",
+  "done_at": "2026-05-14T10:30:00Z",
   "security_scan3_completed_at": "2026-05-14T10:15:00Z",
-  "security_scan2_started_at": "2026-05-14T09:30:00Z",
-  "security_scan_completed_at": "2026-05-14T06:30:00Z",
-  "security_scan_started_at": "2026-05-14T09:00:00Z",
   "reviewed_at_iter5": "2026-05-14T09:00:00Z",
-  "reviewing_iter5_at": "2026-05-14T08:20:00Z",
   "backend_developed_at_iter5": "2026-05-14T08:20:00Z",
-  "reviewing_iter4_at": "2026-05-14T07:35:00Z",
-  "backend_developed_at_iter4": "2026-05-14T07:35:00Z",
-  "backend_developed_at_iter3": "2026-05-14T14:00:00Z",
-  "backend_developed_at_iter2": "2026-05-14T12:00:00Z",
-  "backend_developed_at": "2026-05-14T01:45:00Z",
   "approved_at": "2026-05-13T20:15:00Z",
   "created_at": "2026-05-13T18:47:30Z",
-  "frontend_developed_at": "2026-05-14T00:15:00Z",
-  "frontend_developed_at_iter2": "2026-05-14T01:05:00Z",
-  "failures": {
-    "review": 4,
-    "security": 2,
-    "qa": 0
-  }
+  "failures": { "review": 4, "security": 2, "qa": 0 }
 }
