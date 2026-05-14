@@ -29,6 +29,17 @@ Auth endpoints (`/api/v1/auth/**`) are **public** and do not require credentials
 | Clients | GET | `/api/v1/clients/{id}` | Required | Get a client by ID |
 | Clients | PUT | `/api/v1/clients/{id}` | Required | Update a client (full replacement) |
 | Clients | DELETE | `/api/v1/clients/{id}` | Required | Soft-delete a client |
+| Invoices | POST | `/api/v1/invoices` | Required | Create a new invoice |
+| Invoices | GET | `/api/v1/invoices` | Required | List invoices (paginated, filterable by clientId) |
+| Invoices | GET | `/api/v1/invoices/{id}` | Required | Get an invoice by ID |
+| Invoices | GET | `/api/v1/invoices/{id}/pdf` | Required | Download invoice as PDF |
+| Invoices | POST | `/api/v1/invoices/{id}/send-email` | Required | Send invoice PDF by email to client |
+| Invoice Rendering | GET | `/api/v1/invoices/{id}/docx` | Required | Download invoice as merged DOCX (FEAT-20260513-03) |
+| Invoice Rendering | GET | `/api/v1/invoices/{id}/docx-pdf` | Required | Download invoice PDF via DOCX-template + LibreOffice pipeline (FEAT-20260513-03) |
+| Invoice Rendering | POST | `/api/v1/invoices/{id}/docx-email` | Required | Send invoice PDF (DOCX-template pipeline) by email (FEAT-20260513-03) |
+| Settings | POST | `/api/v1/settings/invoice-template` | Required | Upload a new DOCX invoice template |
+| Settings | GET | `/api/v1/settings/invoice-template/preview` | Required | Get active template metadata |
+| Settings | GET | `/api/v1/settings/invoice-template/download` | Required | Download the active invoice template |
 
 ---
 
@@ -278,6 +289,215 @@ Soft-deletes the client (sets `deleted_at`). The record is retained in the datab
 
 ---
 
+---
+
+## Invoices
+
+### POST `/api/v1/invoices`
+
+Creates a new invoice linked to the given client.
+
+**Request body** (`application/json`):
+
+```json
+{
+  "number":    "INV-2026-001",
+  "clientId":  "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "issueDate": "2026-05-14",
+  "dueDate":   "2026-06-13",
+  "taxRate":   0.20,
+  "lines": [
+    { "description": "Web development", "quantity": 10, "unitPrice": 150.00 }
+  ]
+}
+```
+
+**Success response** `201 Created`: `InvoiceResponse` + `Location` header.
+
+**Error responses**: `400 VALIDATION_FAILED`, `401 UNAUTHENTICATED`.
+
+---
+
+### GET `/api/v1/invoices`
+
+Returns a paginated list of invoices.
+
+**Query parameters**: `clientId` (UUID, optional filter), `page` (default 0), `size` (default 20), `sort` (default `createdAt,desc`).
+
+**Success response** `200 OK`: page envelope with `InvoiceResponse` items.
+
+---
+
+### GET `/api/v1/invoices/{id}`
+
+Returns a single invoice.
+
+**Error responses**: `401 UNAUTHENTICATED`, `404 INVOICE_NOT_FOUND`.
+
+---
+
+### GET `/api/v1/invoices/{id}/pdf`
+
+Streams the invoice as a PDF. Uses the `@Primary` renderer — if FEAT-20260513-03 is deployed this will use the poi-tl DOCX-template + LibreOffice pipeline automatically.
+
+**Response headers**: `Content-Disposition: inline; filename="invoice-<number>.pdf"`, `Cache-Control: private, no-store`.
+
+**Error responses**: `401`, `404 INVOICE_NOT_FOUND`, `502 PDF_CONVERSION_FAILED`.
+
+---
+
+### POST `/api/v1/invoices/{id}/send-email`
+
+Renders the invoice as PDF and emails it to `client.email`. Updates `last_sent_at` only on SMTP success.
+
+**Success response** `200 OK`:
+
+```json
+{ "lastSentAt": "2026-05-14T10:45:00Z" }
+```
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404` | `INVOICE_NOT_FOUND` | Unknown invoice UUID |
+| `422` | `INVOICE_HAS_NO_RECIPIENT` | Client has no email address |
+| `502` | `EMAIL_DELIVERY_FAILED` | SMTP relay rejected or timed out |
+| `502` | `PDF_CONVERSION_FAILED` | LibreOffice exited non-zero or timed out |
+
+---
+
+## Invoice Rendering (FEAT-20260513-03)
+
+These endpoints use the poi-tl DOCX-template pipeline explicitly, regardless of which `InvoicePdfRenderer` bean is primary. They are distinct from the `/pdf` and `/send-email` endpoints in `InvoiceController`.
+
+### GET `/api/v1/invoices/{id}/docx`
+
+Merges invoice + client + company data into the active DOCX template via poi-tl and streams the result.
+
+**Response**: `200 application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+
+**Response headers**: `Content-Disposition: attachment; filename="invoice-<number>.docx"`, `Cache-Control: private, no-store`.
+
+**Error responses**: `401`, `404 INVOICE_NOT_FOUND`.
+
+---
+
+### GET `/api/v1/invoices/{id}/docx-pdf`
+
+Renders the DOCX template as above, then converts to PDF using LibreOffice headless (`soffice --headless --convert-to pdf`). A `Semaphore(2)` limits concurrent conversions; the 20 s timeout triggers `destroyForcibly`.
+
+**Response**: `200 application/pdf`
+
+**Response headers**: `Content-Disposition: inline; filename="invoice-<number>.pdf"`, `Cache-Control: private, no-store`.
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404` | `INVOICE_NOT_FOUND` | Unknown invoice UUID |
+| `502` | `PDF_CONVERSION_FAILED` | soffice exited non-zero or timed out (20 s) |
+| `503` | `PDF_CONVERSION_BUSY` | Both semaphore slots occupied |
+
+---
+
+### POST `/api/v1/invoices/{id}/docx-email`
+
+Renders via poi-tl DOCX template, converts to PDF via LibreOffice, and emails the PDF attachment to `client.email`. Updates `last_sent_at` only on SMTP success. Neither `last_sent_at` nor the email is affected if PDF conversion fails.
+
+**Success response** `200 OK`:
+
+```json
+{ "lastSentAt": "2026-05-14T10:45:00Z" }
+```
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404` | `INVOICE_NOT_FOUND` | Unknown invoice UUID |
+| `422` | `INVOICE_HAS_NO_RECIPIENT` | Client has no email address |
+| `502` | `PDF_CONVERSION_FAILED` | LibreOffice failure; no email sent; `last_sent_at` unchanged |
+| `502` | `EMAIL_DELIVERY_FAILED` | SMTP failure; `last_sent_at` unchanged |
+| `503` | `PDF_CONVERSION_BUSY` | Semaphore saturated |
+
+---
+
+## Settings (FEAT-20260513-03)
+
+### POST `/api/v1/settings/invoice-template`
+
+Uploads a new DOCX invoice template. Validates:
+- File extension must be `.docx`
+- File size ≤ 5 MB (`app.invoice.max-template-bytes`)
+- Content-type: `application/vnd.openxmlformats-officedocument.wordprocessingml.document` or `application/octet-stream`
+- ZIP magic bytes (`PK\x03\x04`) and presence of `word/document.xml` entry
+- No external `Relationship Target="http(s)://..."` references (SSRF guard)
+
+The server atomically replaces the file at `app.invoice.template-path` via `Files.move(ATOMIC_MOVE, REPLACE_EXISTING)`. The uploaded filename is ignored — the stored file is always named `invoice-template.docx`.
+
+**Request**: `multipart/form-data`, field name `file`.
+
+**Success response** `200 OK`:
+
+```json
+{
+  "filename":   "invoice-template.docx",
+  "size":       12345,
+  "uploadedAt": "2026-05-14T10:00:00Z"
+}
+```
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `400` | `VALIDATION_FAILED` / `MISSING_REQUEST_PART` | `file` field absent or empty |
+| `401` | `UNAUTHENTICATED` | No / invalid credentials |
+| `413` | `TEMPLATE_TOO_LARGE` | File exceeds 5 MB |
+| `415` | `INVALID_TEMPLATE_TYPE` | Not a valid .docx (wrong extension, content-type, magic bytes, or external refs) |
+
+---
+
+### GET `/api/v1/settings/invoice-template/preview`
+
+Returns metadata of the active template. When no user template has been uploaded, returns the bundled classpath default with `isDefault: true`.
+
+**Success response** `200 OK`:
+
+```json
+{
+  "filename":   "invoice-template.docx",
+  "size":       12345,
+  "uploadedAt": "2026-05-14T10:00:00Z",
+  "isDefault":  false
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `filename` | Always `invoice-template.docx` |
+| `size` | File size in bytes |
+| `uploadedAt` | Derived from `Files.getLastModifiedTime()` — approximate (see ADR-015) |
+| `isDefault` | `true` when the bundled classpath template is active |
+
+---
+
+### GET `/api/v1/settings/invoice-template/download`
+
+Streams the active template (filesystem or classpath default) as a DOCX download.
+
+**Response**: `200 application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+
+**Response headers**: `Content-Disposition: attachment; filename="invoice-template.docx"`, `Cache-Control: private, no-store`.
+
+**Error responses**: `401`, `404 TEMPLATE_NOT_FOUND` (only if the classpath default is also missing — should not occur in normal operation).
+
+---
+
 ## Error schema (RFC 7807 Problem Detail)
 
 All error responses use `Content-Type: application/problem+json`:
@@ -298,8 +518,17 @@ All error responses use `Content-Type: application/problem+json`:
 | Code | Status | Meaning |
 |------|--------|---------|
 | `VALIDATION_FAILED` | 400 | Bean-validation failure; `errors` array lists per-field messages |
+| `MISSING_REQUEST_PART` | 400 | Required multipart field absent (e.g. `file` not provided) |
 | `CLIENT_NOT_FOUND` | 404 | No active client matching the given UUID |
+| `INVOICE_NOT_FOUND` | 404 | No invoice matching the given UUID |
+| `TEMPLATE_NOT_FOUND` | 404 | Template not on filesystem and classpath default is also absent |
 | `CLIENT_EMAIL_TAKEN` | 409 | Duplicate email among active clients |
 | `USER_EMAIL_TAKEN` | 409 | An active user account with that email already exists |
-| `UNAUTHENTICATED` | 401 | Missing or invalid HTTP Basic credentials (or unknown email / wrong password on login) |
+| `TEMPLATE_TOO_LARGE` | 413 | Uploaded template exceeds 5 MB |
+| `INVALID_TEMPLATE_TYPE` | 415 | Not a valid .docx (extension, magic bytes, or external references) |
+| `INVOICE_HAS_NO_RECIPIENT` | 422 | Client linked to the invoice has no email address |
+| `UNAUTHENTICATED` | 401 | Missing or invalid HTTP Basic credentials |
+| `PDF_CONVERSION_FAILED` | 502 | LibreOffice exited non-zero or timed out (20 s) |
+| `EMAIL_DELIVERY_FAILED` | 502 | SMTP relay rejected or timed out |
+| `PDF_CONVERSION_BUSY` | 503 | LibreOffice concurrency semaphore (limit 2) is saturated |
 | `INTERNAL_ERROR` | 500 | Unexpected server error |

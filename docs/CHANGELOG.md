@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file. Format: [Ke
 ## [Unreleased]
 
 ### Added
+- **Invoice Sharing — DOCX template rendering, PDF conversion, email delivery** (FEAT-20260513-03) — _no breaking changes_:
+  DOCX-template-based invoice rendering via poi-tl (`{{field}}` token substitution and
+  `{{#lines}}` table loops); LibreOffice headless PDF conversion with a `Semaphore(2)` process
+  pool, 20 s timeout, and per-call isolated `UserInstallation` profile; template upload/management
+  at `POST /api/v1/settings/invoice-template` (multipart, ≤ 5 MB, ZIP magic-byte + `word/document.xml`
+  validation + external-ref SSRF scan) with `GET /preview` metadata and `GET /download` stream;
+  three new `InvoiceRenderController` endpoints: `GET /api/v1/invoices/{id}/docx`,
+  `GET /api/v1/invoices/{id}/docx-pdf`, `POST /api/v1/invoices/{id}/docx-email`; `DocxThenPdfInvoicePdfRenderer`
+  registered `@Primary` to win over any alternative renderer; `StandaloneInvoiceMailer` registered
+  `@ConditionalOnMissingBean(InvoiceMailer.class)` as a fallback SMTP sender; new backend
+  exception types — `InvalidTemplateException` (415), `TemplateTooLargeException` (413),
+  `PdfConversionFailedException` (502), `PdfConversionBusyException` (503) — all mapped in
+  `GlobalExceptionHandler`; LibreOffice installed in the Docker image (`libreoffice-core` +
+  `libreoffice-writer` + `fonts-dejavu`, +180 MB layer); `app.invoice.*` and `app.libreoffice.*`
+  configuration properties added to `application.yml`; bundled default template committed at
+  `backend/src/main/resources/templates/invoice-template.docx`; frontend: `DownloadInvoiceMenu`
+  (shadcn `DropdownMenu` with DOCX + PDF items), `SendInvoiceButton` (confirm dialog + Sonner
+  toast), `InvoiceSentBadge` (`Badge` visible when `lastSentAt !== null`), `InvoiceDetailPage`
+  (full invoice card with action row), `InvoiceTemplateSettingsPage` (card showing active template
+  metadata + `TemplateUploadForm` + download link), `TemplateUploadForm` (file input with
+  `.docx`-only + 5 MB client-side guard); new route `/settings/invoice-template` in sidebar;
+  `useAuthenticatedDownload` blob-fetch helper; `templateApi.ts` multipart upload module;
+  Playwright E2E: `tests/invoices/docx-pdf-email.spec.ts` (14 tests AC-7/8/14),
+  `tests/settings/invoice-template-upload.spec.ts` (10 tests AC-1/2/9),
+  `tests/invoices/smoke-regression.spec.ts` (10 tests). Backend JaCoCo ≥ 90%.
+  Frontend Vitest 97.43%/91.86%/97.80%/97.43%. 34 Playwright specs, all green.
+  Security: nosemgrep annotation applied in `LibreOfficePdfConverter.java`; `.grype.yaml` added
+  to suppress go-module false positives; all 10 OWASP categories mitigated; gitleaks 0 secrets.
+
 - Scaffolded from the agenticai framework.
 - **Design system foundation** (FEAT-20260513-01) — _no breaking changes, no backend changes_:
   CSS token system (`@theme` + `:root` + `.dark`) with 16 named colour tokens covering light and dark

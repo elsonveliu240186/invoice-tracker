@@ -1,0 +1,11 @@
+Dear {{clientName}},
+
+Please find attached invoice #{{number}} from {{company}}.
+
+Amount Due: {{total}}
+Due Date: {{dueDate}}
+
+Thank you for your business.
+
+Best regards,
+{{company}}

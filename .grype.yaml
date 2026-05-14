@@ -1,0 +1,4 @@
+ignore:
+  - reason: "Go stdlib CVEs detected in npm package flatted@3.4.2 Go source file (node_modules/.pnpm/flatted/.../flatted.go). This is a reference implementation bundled with the flatted npm package, not a compiled application binary. Not exploitable in this application."
+    package:
+      type: go-module

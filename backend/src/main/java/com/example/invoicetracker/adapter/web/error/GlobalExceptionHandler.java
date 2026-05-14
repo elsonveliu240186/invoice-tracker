@@ -1,8 +1,15 @@
 package com.example.invoicetracker.adapter.web.error;
 
+import com.example.invoicetracker.application.template.InvalidTemplateException;
+import com.example.invoicetracker.application.template.TemplateTooLargeException;
 import com.example.invoicetracker.domain.UserEmailTakenException;
 import com.example.invoicetracker.domain.client.ClientEmailTakenException;
 import com.example.invoicetracker.domain.client.ClientNotFoundException;
+import com.example.invoicetracker.domain.invoice.EmailDeliveryFailedException;
+import com.example.invoicetracker.domain.invoice.InvoiceHasNoRecipientException;
+import com.example.invoicetracker.domain.invoice.InvoiceNotFoundException;
+import com.example.invoicetracker.domain.invoice.InvoiceNumberTakenException;
+import com.example.invoicetracker.domain.invoice.PdfConversionFailedException;
 import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,6 +23,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * Translates domain and validation exceptions to RFC 7807 ProblemDetail responses.
@@ -94,6 +102,112 @@ public class GlobalExceptionHandler {
         problem.setTitle("Conflict");
         problem.setDetail("A user with this email already exists.");
         problem.setProperty("code", "USER_EMAIL_TAKEN");
+        return problem;
+    }
+
+    /**
+     * Handles invoice-not-found (404).
+     */
+    @ExceptionHandler(InvoiceNotFoundException.class)
+    public ProblemDetail handleInvoiceNotFound(InvoiceNotFoundException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Not Found");
+        problem.setDetail("Invoice not found.");
+        problem.setProperty("code", "INVOICE_NOT_FOUND");
+        return problem;
+    }
+
+    /**
+     * Handles invoice number already taken (409).
+     */
+    @ExceptionHandler(InvoiceNumberTakenException.class)
+    public ProblemDetail handleInvoiceNumberTaken(InvoiceNumberTakenException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Conflict");
+        problem.setDetail("An invoice with this number already exists.");
+        problem.setProperty("code", "INVOICE_NUMBER_TAKEN");
+        return problem;
+    }
+
+    /**
+     * Handles invoice has no recipient (422).
+     */
+    @ExceptionHandler(InvoiceHasNoRecipientException.class)
+    public ProblemDetail handleInvoiceHasNoRecipient(InvoiceHasNoRecipientException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNPROCESSABLE_ENTITY);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Unprocessable Entity");
+        problem.setDetail("The client associated with this invoice has no email address.");
+        problem.setProperty("code", "INVOICE_HAS_NO_RECIPIENT");
+        return problem;
+    }
+
+    /**
+     * Handles email delivery failures (502).
+     */
+    @ExceptionHandler(EmailDeliveryFailedException.class)
+    public ProblemDetail handleEmailDeliveryFailed(EmailDeliveryFailedException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Bad Gateway");
+        problem.setDetail("Email delivery failed. Please try again later.");
+        problem.setProperty("code", "EMAIL_DELIVERY_FAILED");
+        return problem;
+    }
+
+    /**
+     * Handles invalid template uploads (415).
+     */
+    @ExceptionHandler(InvalidTemplateException.class)
+    public ProblemDetail handleInvalidTemplate(InvalidTemplateException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Invalid Template");
+        problem.setDetail(ex.getMessage());
+        problem.setProperty("code", "INVALID_TEMPLATE_TYPE");
+        return problem;
+    }
+
+    /**
+     * Handles template uploads that exceed the size limit (413).
+     */
+    @ExceptionHandler(TemplateTooLargeException.class)
+    public ProblemDetail handleTemplateTooLarge(TemplateTooLargeException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.PAYLOAD_TOO_LARGE);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Template Too Large");
+        problem.setDetail(ex.getMessage());
+        problem.setProperty("code", "TEMPLATE_TOO_LARGE");
+        return problem;
+    }
+
+    /**
+     * Handles Spring's multipart size exceeded exception (413).
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ProblemDetail handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.PAYLOAD_TOO_LARGE);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Template Too Large");
+        problem.setDetail("Uploaded file exceeds the maximum allowed size.");
+        problem.setProperty("code", "TEMPLATE_TOO_LARGE");
+        return problem;
+    }
+
+    /**
+     * Handles PDF conversion failures (502).
+     */
+    @ExceptionHandler(PdfConversionFailedException.class)
+    public ProblemDetail handlePdfConversionFailed(PdfConversionFailedException ex) {
+        String code = ex.isBusy() ? "PDF_CONVERSION_BUSY" : "PDF_CONVERSION_FAILED";
+        HttpStatus status = ex.isBusy() ? HttpStatus.SERVICE_UNAVAILABLE : HttpStatus.BAD_GATEWAY;
+        ProblemDetail problem = ProblemDetail.forStatus(status);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("PDF Conversion Failed");
+        problem.setDetail(ex.getMessage());
+        problem.setProperty("code", code);
         return problem;
     }
 

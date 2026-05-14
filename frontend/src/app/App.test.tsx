@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/shared/lib/i18n';
 import { useAuthStore } from '@/features/auth/model/useAuthStore';
+import { resetMockClients, resetMockInvoices } from '@/mocks/handlers';
 import { App } from './App';
 
 beforeEach(() => {
@@ -20,6 +21,8 @@ beforeEach(() => {
     dispatchEvent: vi.fn(),
   }));
   useAuthStore.setState({ user: null, status: 'unauthenticated', error: null });
+  resetMockClients();
+  resetMockInvoices();
 });
 
 afterEach(() => {
@@ -47,7 +50,6 @@ function renderAppAuthenticated(initialPath = '/') {
 describe('App — unauthenticated', () => {
   it('redirects unauthenticated user from / to /login', () => {
     renderApp('/');
-    // Should land on the login page — brand panel is the landmark
     expect(screen.getByTestId('brand-panel')).toBeInTheDocument();
   });
 
@@ -73,13 +75,9 @@ describe('App — unauthenticated', () => {
 });
 
 describe('App — authenticated', () => {
-  it('renders home page at / when authenticated', async () => {
+  it('renders dashboard page at / when authenticated', async () => {
     renderAppAuthenticated('/');
-    await waitFor(() =>
-      expect(
-        screen.getByRole('heading', { name: /welcome to invoice tracker/i }),
-      ).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId('home-page')).toBeInTheDocument());
   });
 
   it('renders clients page at /clients when authenticated', async () => {
@@ -89,22 +87,43 @@ describe('App — authenticated', () => {
     });
   });
 
+  it('renders client detail page at /clients/:id when authenticated', async () => {
+    renderAppAuthenticated('/clients/uuid-1');
+    await waitFor(() => {
+      expect(
+        screen.getByTestId('client-detail-loading') ||
+          screen.getByTestId('client-detail-page') ||
+          screen.getByTestId('client-detail-not-found'),
+      ).toBeInTheDocument();
+    });
+  });
+
   it('redirects authenticated user from /login to /', async () => {
     renderAppAuthenticated('/login');
-    await waitFor(() =>
-      expect(
-        screen.getByRole('heading', { name: /welcome to invoice tracker/i }),
-      ).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId('home-page')).toBeInTheDocument());
   });
 
   it('redirects authenticated user from /register to /', async () => {
     renderAppAuthenticated('/register');
-    await waitFor(() =>
+    await waitFor(() => expect(screen.getByTestId('home-page')).toBeInTheDocument());
+  });
+
+  it('renders invoice detail page at /invoices/:id when authenticated', async () => {
+    renderAppAuthenticated('/invoices/inv-uuid-1');
+    await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: /welcome to invoice tracker/i }),
-      ).toBeInTheDocument(),
-    );
+        screen.getByTestId('invoice-detail-loading') ||
+          screen.getByTestId('invoice-detail-page') ||
+          screen.getByTestId('invoice-detail-not-found'),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('renders invoice template settings page at /settings/invoice-template when authenticated', async () => {
+    renderAppAuthenticated('/settings/invoice-template');
+    await waitFor(() => {
+      expect(screen.getByTestId('invoice-template-settings-page')).toBeInTheDocument();
+    });
   });
 
   it('renders 404 empty state for unknown protected routes', () => {

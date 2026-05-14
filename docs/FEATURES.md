@@ -4,11 +4,67 @@ Maintained by the **documentation** subagent. One row per feature.
 
 | ID | Title | State | Owner | Plan | Review | Security | QA | PR |
 |----|-------|-------|-------|------|--------|----------|----|----|
+| FEAT-20260513-03 | Invoice Sharing — DOCX template rendering, PDF via LibreOffice, email delivery | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260513-03/PLAN.md) | [REVIEW.md](.features/FEAT-20260513-03/REVIEW.md) | [SECURITY.md](.features/FEAT-20260513-03/SECURITY.md) | [QA.md](.features/FEAT-20260513-03/QA.md) | — |
 | FEAT-20260513-01 | Design System & UI Standards — dark mode fixes, responsive layout, form alignment, icon visibility | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260513-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260513-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260513-01/SECURITY.md) | [QA.md](.features/FEAT-20260513-01/QA.md) | — |
 | FEAT-20260512-03 | Dashboard and core UI modernization | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-03/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-03/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-03/SECURITY.md) | [QA.md](.features/FEAT-20260512-03/QA.md) | — |
 | FEAT-20260512-02 | Authentication modernization | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-02/SECURITY.md) | [QA.md](.features/FEAT-20260512-02/QA.md) | — |
 | FEAT-20260512-01 | Frontend design system foundation | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-01/SECURITY.md) | [QA.md](.features/FEAT-20260512-01/QA.md) | — |
 | FEAT-20260511-01 | Client management (CRUD) | Done | elsonveliu | [PLAN.md](.features/FEAT-20260511-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260511-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260511-01/SECURITY.md) | [QA.md](.features/FEAT-20260511-01/QA.md) | — |
+
+## FEAT-20260513-03 — Invoice Sharing (DOCX template rendering, PDF conversion, email delivery)
+
+### Overview
+
+Full invoice-sharing pipeline built on a user-supplied DOCX template. An admin uploads an `.docx` file once in Settings → Invoice Template; any invoice can then be downloaded as DOCX, downloaded as PDF (via LibreOffice headless), or emailed to the client as a PDF attachment. The feature works independently of FEAT-20260513-02 thanks to `@Primary` + `@ConditionalOnMissingBean` bean-arbitration.
+
+Review required 5 iterations (4 failures) before passing. Security scan required 3 iterations (2 failures — a Semgrep `nosemgrep` annotation issue and a Grype go-module false positive). QA passed on the first iteration with 34 Playwright specs.
+
+### Backend changes
+
+- **New controllers**:
+  - `InvoiceRenderController` at `/api/v1/invoices/{id}/docx`, `/api/v1/invoices/{id}/docx-pdf`, `POST /api/v1/invoices/{id}/docx-email`
+  - `InvoiceTemplateController` at `/api/v1/settings/invoice-template` (POST upload, GET /preview, GET /download)
+- **New services/components**: `InvoiceRenderService`, `PoiTlInvoiceDocxRenderer`, `LibreOfficePdfConverter`, `LibreOfficePdfCommand`, `DocxThenPdfInvoicePdfRenderer` (`@Primary`), `StandaloneInvoiceMailer` (`@ConditionalOnMissingBean`), `FilesystemInvoiceTemplateStore`, `InvoiceTemplateProperties`
+- **New exception types**: `InvalidTemplateException` (415), `TemplateTooLargeException` (413), `PdfConversionFailedException` (502), `PdfConversionBusyException` (503), `InvoiceHasNoRecipientException` (422)
+- **Infrastructure**: Dockerfile updated with LibreOffice layer (+180 MB); `app.invoice.*` and `app.libreoffice.*` properties in `application.yml`; servlet multipart limits set to 6 MB
+- **Security hardening**: SSRF mitigation via ZIP-entry scan on upload; LibreOffice runs with per-call `UserInstallation` isolation; CRLF guard on `invoice.number` and `client.email` before SMTP calls; Semgrep annotation applied; `.grype.yaml` added
+
+### Frontend changes
+
+- **New feature slices**: `src/features/invoices/` (DownloadInvoiceMenu, SendInvoiceButton, InvoiceSentBadge, InvoiceDetailPage, downloadInvoice.ts, useSendInvoice.ts); `src/features/settings/` (InvoiceTemplateSettingsPage, TemplateUploadForm, templateApi.ts, useTemplateMetadata.ts, types.ts, schema.ts)
+- **Shared lib**: `httpRaw()` helper added to `shared/lib/http.ts` for blob fetches and multipart uploads
+- **Routes**: `/invoices/:id` and `/settings/invoice-template` added; sidebar "Invoice Template" link under Settings
+- **i18n**: `invoices.actions.*`, `invoices.status.*`, `invoices.confirm.*`, `invoices.toast.*`, `settings.invoiceTemplate.*`, `nav.settings*` keys added to `en.json`
+- **MSW handlers**: 7 new mock handlers for all invoice-render and template endpoints
+
+### Quality gate results
+
+| Gate | Result | Detail |
+|------|--------|--------|
+| JaCoCo line + branch | ≥ 90% | pass |
+| Vitest statements | 97.43% (gate 95%) | pass |
+| Vitest branches | 91.86% (gate 90%) | pass |
+| Vitest functions | 97.80% (gate 95%) | pass |
+| Vitest lines | 97.43% (gate 95%) | pass |
+| pnpm lint | 0 errors | pass |
+| pnpm audit | 0 high / 0 critical | pass (2 pre-existing moderate dev-server-only CVEs) |
+| Playwright E2E | 34 / 34 passed | pass |
+| Semgrep | 0 findings | pass (nosemgrep annotation corrected on LibreOfficePdfConverter.java:69) |
+| Grype | 0 HIGH / 0 CRITICAL | pass (.grype.yaml suppresses go-module false positives from node_modules) |
+| gitleaks | 0 secrets | pass |
+
+### Known risks and open items
+
+| Risk | Description | Resolution |
+|------|-------------|------------|
+| R-1 | FEAT-02 bean-arbitration | `DocxThenPdfInvoicePdfRenderer @Primary` + `StandaloneInvoiceMailer @ConditionalOnMissingBean` |
+| R-2 | LibreOffice cold-start ~700 ms | Accepted for v1; warm pool of 2 slots via Semaphore |
+| R-3 | Single template per deployment | Port is parameterless; multi-tenant upgrade is additive |
+| R-4 | Docker image +180 MB | Accepted; sidecar pattern documented as follow-up |
+| R-6 | send-email not idempotent | UI guards (disabled + confirm dialog); server-side idempotency-key tracked |
+| R-10 | `uploadedAt` derived from `Files.getLastModifiedTime` | Approximate; precise timestamp requires a `template_metadata` table |
+
+---
 
 ## FEAT-20260513-01 — Design System & UI Standards
 

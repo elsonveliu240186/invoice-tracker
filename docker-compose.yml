@@ -11,10 +11,17 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-invoice-tracker}"]
       interval: 5s
       timeout: 5s
       retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: ${COMPOSE_PROJECT_NAME:-invoice-tracker}-mailhog
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
 
   backend:
     build:
@@ -27,11 +34,19 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
       SPRING_SECURITY_USER_NAME: ${API_USER:-admin}
       SPRING_SECURITY_USER_PASSWORD: ${API_PASSWORD:-secret}
+      MAIL_HOST: mailhog
+      MAIL_PORT: "1025"
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
+      MAIL_FROM: no-reply@invoice-tracker.local
+      MAIL_STARTTLS: "false"
     ports:
       - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
+      mailhog:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
       interval: 10s

@@ -3,6 +3,23 @@ import { afterEach, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import { server } from './mocks/server';
 
+// ── URL.createObjectURL / revokeObjectURL stubs ───────────────────────────────
+// jsdom does not implement these; without them vi.spyOn(URL, 'createObjectURL') throws.
+if (typeof URL.createObjectURL === 'undefined') {
+  Object.defineProperty(URL, 'createObjectURL', {
+    writable: true,
+    configurable: true,
+    value: (_blob: Blob) => 'blob:mock-url',
+  });
+}
+if (typeof URL.revokeObjectURL === 'undefined') {
+  Object.defineProperty(URL, 'revokeObjectURL', {
+    writable: true,
+    configurable: true,
+    value: (_url: string) => undefined,
+  });
+}
+
 // ── matchMedia global stub ────────────────────────────────────────────────────
 // motion.ts calls window.matchMedia at module-evaluation time (for prefersReducedMotion).
 // We must stub it before any test file imports a component that depends on motion.ts.

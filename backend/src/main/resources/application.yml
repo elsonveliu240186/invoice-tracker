@@ -9,6 +9,42 @@ spring:
     show-sql: false
   flyway:
     enabled: true
+  mail:
+    host: localhost
+    port: 1025
+    username: ""
+    password: ""
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+  servlet:
+    multipart:
+      max-file-size: 6MB
+      max-request-size: 6MB
+
+app:
+  company:
+    name: Invoice Tracker Co
+    address: 123 Business Ave, New York, NY 10001
+    email: billing@invoicetracker.local
+    tax-id: ""
+  mail:
+    from: no-reply@invoicetracker.local
+    subject-template: "Invoice #{{number}} from {{company}}"
+    body-template: ""
+  invoice:
+    locale: en-US
+    currency: USD
+    template-path: ./templates/invoice-template.docx
+    max-template-bytes: 5242880
+    classpath-default: templates/invoice-template.docx
+  libreoffice:
+    binary: ${LIBREOFFICE_BIN:soffice}
+    timeout-seconds: 20
+    concurrency: 2
 
 management:
   endpoints:
@@ -34,6 +70,26 @@ spring:
     url: jdbc:postgresql://localhost:5432/invoice-tracker
     username: app
     password: app
+  mail:
+    host: localhost
+    port: 1025
+    username: ""
+    password: ""
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+app:
+  company:
+    name: Invoice Tracker Co
+    address: 123 Business Ave, New York, NY 10001
+    email: billing@invoicetracker.local
+    tax-id: ""
+  mail:
+    from: no-reply@invoicetracker.local
 
 ---
 spring:
@@ -44,6 +100,26 @@ spring:
     url: jdbc:postgresql://postgres:5432/invoice-tracker
     username: ${POSTGRES_USER:-app}
     password: ${POSTGRES_PASSWORD:-app}
+  mail:
+    host: ${MAIL_HOST:mailhog}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: ${MAIL_STARTTLS:false}
+
+app:
+  company:
+    name: ${COMPANY_NAME:Invoice Tracker Co}
+    address: ${COMPANY_ADDRESS:}
+    email: ${COMPANY_EMAIL:}
+    tax-id: ${COMPANY_TAX_ID:}
+  mail:
+    from: ${MAIL_FROM:no-reply@invoicetracker.local}
 
 ---
 spring:
@@ -54,3 +130,23 @@ spring:
     url: ${DATABASE_URL}
     username: ${DATABASE_USER}
     password: ${DATABASE_PASSWORD}
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: ${MAIL_STARTTLS:false}
+
+app:
+  company:
+    name: ${COMPANY_NAME:Invoice Tracker Co}
+    address: ${COMPANY_ADDRESS:}
+    email: ${COMPANY_EMAIL:}
+    tax-id: ${COMPANY_TAX_ID:}
+  mail:
+    from: ${MAIL_FROM:no-reply@invoicetracker.local}

@@ -32,36 +32,129 @@ C4Container
 
 ## Components — Backend (C4 — level 3)
 
-Updated by FEAT-20260512-02 (authentication modernization).
+Updated by FEAT-20260513-03 (Invoice Sharing). Previous update: FEAT-20260512-02 (authentication modernization).
 
 ```mermaid
 flowchart TB
     subgraph adapter_web["adapter.web"]
         ctl[ClientController]
         auth_ctl[AuthController<br/>/api/v1/auth/*]
+        inv_ctl[InvoiceController<br/>/api/v1/invoices — CRUD + /pdf + /send-email]
+        render_ctl[InvoiceRenderController<br/>/api/v1/invoices/{id}/docx<br/>/docx-pdf  /docx-email]
+        tpl_ctl[InvoiceTemplateController<br/>/api/v1/settings/invoice-template]
     end
     subgraph application["application"]
         svc[ClientService]
-        auth_svc[AuthService<br/>login / register / forgotPassword]
+        auth_svc[AuthService]
+        inv_svc[InvoiceService]
+        render_svc[InvoiceRenderService<br/>renderDocx / renderPdf / sendEmail]
+        tpl_store_port[InvoiceTemplateStore port]
+        docx_port[InvoiceDocxRenderer port]
+        pdf_conv_port[InvoicePdfConverter port]
     end
     subgraph domain["domain"]
-        entities[Client, AppUser]
-        repos[ClientRepository, AppUserRepository]
+        entities[Client, AppUser, Invoice, InvoiceLine]
+        repos[ClientRepository, AppUserRepository, InvoiceRepository]
+        exceptions[InvoiceHasNoRecipientException<br/>PdfConversionFailedException]
     end
     subgraph adapter_persistence["adapter.persistence"]
-        jpa[ClientRepositoryAdapter<br/>AppUserRepositoryAdapter]
+        jpa[ClientRepositoryAdapter<br/>AppUserRepositoryAdapter<br/>InvoiceRepositoryAdapter]
+    end
+    subgraph adapter_template["adapter.template"]
+        fs_store[FilesystemInvoiceTemplateStore<br/>atomic replace / ZIP validation / SSRF scan]
+    end
+    subgraph adapter_rendering["application.invoice (impls)"]
+        poi[PoiTlInvoiceDocxRenderer<br/>poi-tl + LoopRowTableRenderPolicy]
+        lo[LibreOfficePdfConverter<br/>ProcessBuilder soffice / Semaphore-2]
+        composed[DocxThenPdfInvoicePdfRenderer<br/>@Primary — composes poi + lo]
+        mailer[StandaloneInvoiceMailer<br/>@ConditionalOnMissingBean]
     end
     subgraph config["config"]
-        sec[SecurityConfig<br/>BCrypt + UserDetailsService<br/>permit /auth/**]
+        sec[SecurityConfig]
+        mail_cfg[InvoiceMailerAutoConfig<br/>conditional JavaMailSender]
+    end
+    subgraph infra_ext["External"]
+        db[(Postgres)]
+        fs[(FS ./templates/invoice-template.docx)]
+        lo_bin([soffice headless binary])
+        smtp[MailHog / SMTP]
+        cp[(Classpath default template)]
     end
     ctl --> svc
     auth_ctl --> auth_svc
-    svc --> entities
-    auth_svc --> entities
-    svc --> repos
-    auth_svc --> repos
+    inv_ctl --> inv_svc
+    render_ctl --> render_svc
+    tpl_ctl --> tpl_store_port
+    render_svc --> docx_port
+    render_svc --> pdf_conv_port
+    render_svc --> mailer
+    render_svc --> repos
+    tpl_store_port -.implemented by.-> fs_store
+    docx_port -.implemented by.-> poi
+    pdf_conv_port -.implemented by.-> lo
+    composed --> poi
+    composed --> lo
     repos -.implemented by.-> jpa
+    jpa --> db
+    fs_store --> fs
+    fs_store -. fallback .-> cp
+    lo --> lo_bin
+    mailer --> smtp
     sec -.permits.- auth_ctl
+```
+
+## Invoice rendering pipeline (FEAT-20260513-03)
+
+```mermaid
+flowchart LR
+    subgraph FE[React SPA]
+      detail[InvoiceDetailPage]
+      dl[DownloadInvoiceMenu]
+      send[SendInvoiceButton]
+      settings[InvoiceTemplateSettingsPage]
+      upload[TemplateUploadForm]
+      api[invoicesApi.ts / templateApi.ts]
+    end
+    subgraph BE[Spring Boot]
+      invCtl[InvoiceRenderController<br/>/docx, /docx-pdf, /docx-email]
+      setCtl[InvoiceTemplateController<br/>/api/v1/settings/invoice-template]
+      svc[InvoiceRenderService]
+      tplStore[FilesystemInvoiceTemplateStore]
+      docxRen[PoiTlInvoiceDocxRenderer]
+      pdfConv[LibreOfficePdfConverter]
+      pdfRen[DocxThenPdfInvoicePdfRenderer @Primary]
+      mailer[StandaloneInvoiceMailer fallback]
+      repo[InvoiceRepository]
+    end
+    subgraph Infra
+      fs[(Local FS ./templates)]
+      cp[(Classpath default)]
+      lo([soffice headless])
+      db[(Postgres)]
+      smtp[MailHog / SMTP]
+    end
+    detail --> dl
+    detail --> send
+    settings --> upload
+    dl -->|GET /docx, /docx-pdf| api
+    send -->|POST /docx-email| api
+    upload -->|POST multipart| api
+    api --> invCtl
+    api --> setCtl
+    invCtl --> svc
+    setCtl --> tplStore
+    svc --> repo
+    svc --> docxRen
+    svc --> pdfRen
+    svc --> mailer
+    docxRen --> tplStore
+    pdfRen --> docxRen
+    pdfRen --> pdfConv
+    pdfConv --> lo
+    tplStore --> fs
+    tplStore -. fallback .-> cp
+    repo --> db
+    mailer --> smtp
 ```
 
 ## Components — Frontend
@@ -233,6 +326,27 @@ flowchart LR
 - **Decision**: `AppShell`, `Sidebar`, `MobileSidebar`, `TopNav`, `UserMenu`, and `navItems.ts` are placed in `src/shared/components/` rather than `src/shared/layout/` as specified in the plan.
 - **Why**: The project's existing convention (established by FEAT-20260512-01) groups all shared non-domain components under `src/shared/components/`. Deviating would create an inconsistency. The dev agent followed the project convention over the plan's path suggestion.
 - **Trade-offs**: Minor divergence from the plan's file list; no functional impact.
+
+### ADR-014 — FEAT-20260513-03: LibreOffice headless chosen over docx4j+Apache FOP for PDF conversion
+
+- **Date**: 2026-05-13
+- **Decision**: PDF conversion uses LibreOffice headless (`soffice --headless --convert-to pdf`) invoked via `ProcessBuilder`, not docx4j with Apache FOP.
+- **Why**: The product surface is user-supplied DOCX templates with poi-tl table loops, images, and styled cells — exactly the scenarios where Apache FOP produces layout shifts and missing fonts. LibreOffice's rendering engine matches Word's output fidelity. The 180 MB image-layer increase is acceptable; runtime cold-start (~700 ms) is mitigated by capping concurrency at 2 warm slots (`Semaphore(2)`).
+- **Trade-offs**: Larger Docker image; quarterly CVE watch required on the LibreOffice apt package; soffice process crash is surfaced as 502 rather than a Java exception. See PLAN.md §3b for the full evaluation table.
+
+### ADR-015 — FEAT-20260513-03: Template metadata derived from filesystem, not persisted to Postgres
+
+- **Date**: 2026-05-13
+- **Decision**: `TemplateMetadata` (`filename`, `sizeBytes`, `uploadedAt`, `isDefault`) is derived at read-time from `BasicFileAttributes` on the template file rather than stored in a database table.
+- **Why**: There is exactly one active template per deployment. Storing metadata adds a Flyway migration and a table for no functional benefit; the FS attributes are an accurate proxy. If multi-template support is needed later (tracked as `FEAT-template-per-tenant`), a `V5__create_invoice_templates.sql` migration can be added without changing the port contract.
+- **Trade-offs**: `uploadedAt` is derived from `Files.getLastModifiedTime()`, which may equal mtime rather than the original upload instant on some volume drivers (R-10 in PLAN.md).
+
+### ADR-016 — FEAT-20260513-03: InvoiceRenderController uses /docx-pdf and /docx-email paths
+
+- **Date**: 2026-05-14
+- **Decision**: The render controller exposes `/api/v1/invoices/{id}/docx-pdf` and `POST /api/v1/invoices/{id}/docx-email` rather than the `/pdf` and `/send-email` paths originally specified in PLAN.md §6.
+- **Why**: `InvoiceController` (from the adjacent FEAT-02) already owns `/api/v1/invoices/{id}/pdf` and `/api/v1/invoices/{id}/send-email`. Using distinct sub-paths avoids a `RequestMappingHandlerMapping` conflict and makes the rendering pipeline's identity explicit in the URL. The `DocxThenPdfInvoicePdfRenderer @Primary` bean transparently upgrades the existing `/pdf` endpoint without any URL change.
+- **Trade-offs**: The frontend's `DownloadInvoiceMenu` must hit `/docx-pdf` for the template-rendered PDF, not `/pdf`, when it needs the DOCX-template pipeline specifically.
 
 ### ADR-008 — FEAT-20260512-01: Dual toast system during transition (sonner + legacy)
 

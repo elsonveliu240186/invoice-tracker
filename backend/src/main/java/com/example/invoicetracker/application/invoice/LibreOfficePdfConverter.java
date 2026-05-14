@@ -66,11 +66,7 @@ public class LibreOfficePdfConverter implements InvoicePdfConverter {
     ) {
         this.semaphore = new Semaphore(concurrency);
         this.processRunner = cmd -> {
-            // nosemgrep: java.lang.security.audit.command-injection-process-builder
-            // False positive: all args are server-controlled (soBinary from @Value config;
-            // loProfileDir/outDir/inputFile are JVM-generated temp Paths). List-form
-            // ProcessBuilder never invokes a shell, so metacharacter injection is impossible.
-            ProcessBuilder pb = new ProcessBuilder(cmd.toList());
+            ProcessBuilder pb = new ProcessBuilder(cmd.toList()); // nosemgrep: java.lang.security.audit.command-injection-process-builder.command-injection-process-builder -- false positive: all args are server-controlled JVM-generated temp Paths; list-form ProcessBuilder never invokes a shell
             pb.redirectErrorStream(true);
             return pb.start();
         };
@@ -121,7 +117,7 @@ public class LibreOfficePdfConverter implements InvoicePdfConverter {
             int exitCode = process.exitValue();
             if (exitCode != 0) {
                 try (InputStream is = process.getInputStream()) {
-                    String stderr = new String(is.readAllBytes());
+                    String stderr = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
                     log.warn("LibreOffice exited with code {} stderr={}", exitCode, stderr);
                 }
                 throw new PdfConversionFailedException(

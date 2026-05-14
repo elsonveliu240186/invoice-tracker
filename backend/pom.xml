@@ -187,36 +187,6 @@
                 </configuration>
             </plugin>
 
-            <!-- Generate the bundled default DOCX template into target/classes after compile.
-                 systemProperty overrides Xerces lookup so the JDK built-in XML parser is used
-                 in the exec plugin's isolated classloader. -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.3.0</version>
-                <executions>
-                    <execution>
-                        <id>generate-default-template</id>
-                        <phase>process-classes</phase>
-                        <goals><goal>java</goal></goals>
-                        <configuration>
-                            <mainClass>com.example.invoicetracker.tools.GenerateDefaultTemplate</mainClass>
-                            <arguments>
-                                <argument>${project.build.outputDirectory}/templates/invoice-template.docx</argument>
-                            </arguments>
-                            <includeProjectDependencies>true</includeProjectDependencies>
-                            <includePluginDependencies>false</includePluginDependencies>
-                            <systemProperties>
-                                <systemProperty>
-                                    <key>javax.xml.parsers.DocumentBuilderFactory</key>
-                                    <value>com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl</value>
-                                </systemProperty>
-                            </systemProperties>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
             <!-- JaCoCo: 90% line + branch -->
             <plugin>
                 <groupId>org.jacoco</groupId>

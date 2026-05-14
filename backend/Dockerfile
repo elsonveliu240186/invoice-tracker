@@ -13,5 +13,18 @@ RUN addgroup --system app && adduser --system --ingroup app app
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
+
+# Install LibreOffice for headless DOCX→PDF conversion (~180 MB layer)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      libreoffice-core \
+      libreoffice-writer \
+      fonts-dejavu \
+      fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV LIBREOFFICE_BIN=/usr/bin/soffice
+
+RUN mkdir -p /app/templates /app/lo-profiles && chown app:app /app/templates /app/lo-profiles
+
 USER app
 ENTRYPOINT ["java", "-jar", "app.jar"]

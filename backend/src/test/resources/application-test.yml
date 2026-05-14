@@ -1,0 +1,12 @@
+app:
+  invoice:
+    # Override template-path to a non-existent path so tests can control it via tmp dirs
+    template-path: ${java.io.tmpdir}/it-test-templates/invoice-template.docx
+    max-template-bytes: 5242880
+    classpath-default: templates/invoice-template.docx
+    locale: en-US
+    currency: USD
+  libreoffice:
+    binary: ${LIBREOFFICE_BIN:soffice}
+    timeout-seconds: 20
+    concurrency: 2

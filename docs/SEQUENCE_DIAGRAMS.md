@@ -187,6 +187,71 @@ sequenceDiagram
 
 ---
 
+### FEAT-20260513-03 — Invoice Sharing (DOCX template rendering, PDF conversion, email delivery)
+
+#### Happy path: render PDF and email it
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant FE as InvoiceDetailPage
+    participant BE as InvoiceRenderController
+    participant SVC as InvoiceRenderService
+    participant REPO as InvoiceRepository
+    participant DOCX as PoiTlInvoiceDocxRenderer
+    participant TPL as FilesystemInvoiceTemplateStore
+    participant PDF as LibreOfficePdfConverter
+    participant LO as soffice headless
+    participant MAIL as InvoiceMailer
+    participant SMTP as MailHog
+
+    U->>FE: click "Send to Client"
+    FE->>BE: POST /api/v1/invoices/{id}/docx-email
+    BE->>SVC: send(id)
+    SVC->>REPO: findByIdWithLines(id)
+    REPO-->>SVC: Invoice + lines + client
+    SVC->>DOCX: render(invoice, client, company)
+    DOCX->>TPL: openTemplate()
+    TPL-->>DOCX: InputStream (FS or classpath)
+    DOCX-->>SVC: docxBytes
+    SVC->>PDF: convert(docxBytes)
+    PDF->>LO: soffice --headless --convert-to pdf --outdir <tmp>
+    LO-->>PDF: invoice-XXX.pdf
+    PDF-->>SVC: pdfBytes
+    SVC->>MAIL: send(invoice, client.email, pdfBytes, company, clientName)
+    MAIL->>SMTP: SMTP DATA + MIME multipart
+    SMTP-->>MAIL: 250 OK
+    SVC->>REPO: updateLastSentAt(id, now)
+    SVC-->>BE: { lastSentAt }
+    BE-->>FE: 200 { lastSentAt }
+    FE-->>U: toast + badge "Sent on …"
+```
+
+#### Edge case: LibreOffice conversion fails — no last_sent_at write
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant FE as InvoiceDetailPage
+    participant BE as InvoiceRenderController
+    participant SVC as InvoiceRenderService
+    participant PDF as LibreOfficePdfConverter
+    participant LO as soffice (crashes or 20 s timeout)
+    U->>FE: click "Send to Client"
+    FE->>BE: POST /api/v1/invoices/{id}/docx-email
+    BE->>SVC: send(id)
+    SVC->>PDF: convert(docxBytes)
+    PDF->>LO: soffice --headless --convert-to pdf
+    LO-->>PDF: exit 1 / SIGKILL after timeout
+    PDF-->>SVC: throws PdfConversionFailedException
+    Note over SVC: NO call to mailer<br/>NO write to last_sent_at
+    SVC-->>BE: throws PdfConversionFailedException
+    BE-->>FE: 502 problem+json { code: PDF_CONVERSION_FAILED }
+    FE-->>U: error toast; lastSentAt unchanged
+```
+
+---
+
 ### FEAT-20260513-01 — Design System & UI Standards
 
 #### Dark mode — Register form (happy path)
