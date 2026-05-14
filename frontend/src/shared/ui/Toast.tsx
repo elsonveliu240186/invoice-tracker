@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 
 export type ToastVariant = 'success' | 'error' | 'info';
 
@@ -21,6 +15,12 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 let _id = 0;
+
+const variantClass: Record<ToastVariant, string> = {
+  success: 'bg-[var(--color-success,#16a34a)] text-[var(--color-success-foreground,#fff)]',
+  error: 'bg-[var(--color-destructive)] text-[var(--color-destructive-foreground,#fff)]',
+  info: 'bg-[var(--color-secondary)] text-[var(--color-secondary-foreground)]',
+};
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -51,18 +51,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             key={t.id}
             role="status"
             data-testid="toast"
-            className={[
-              'flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg text-white text-sm min-w-[240px]',
-              t.variant === 'success' ? 'bg-green-600' : '',
-              t.variant === 'error' ? 'bg-red-600' : '',
-              t.variant === 'info' ? 'bg-slate-700' : '',
-            ].join(' ')}
+            className={`flex min-w-[240px] items-center gap-3 rounded-lg px-4 py-3 text-sm shadow-lg ${variantClass[t.variant]}`}
           >
             <span className="flex-1">{t.message}</span>
             <button
               onClick={() => dismiss(t.id)}
               aria-label="Dismiss notification"
-              className="text-white/70 hover:text-white"
+              className="opacity-70 hover:opacity-100"
             >
               ×
             </button>
@@ -73,6 +68,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
   if (!ctx) {

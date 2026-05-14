@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router';
-import { Home, Users, FileText, Settings, X } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, X, Settings, FileOutput } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 
@@ -7,13 +7,22 @@ interface NavItem {
   to: string;
   labelKey: string;
   icon: React.ComponentType<{ className?: string | undefined }>;
+  disabled?: boolean;
+  end?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', labelKey: 'nav.home', icon: Home },
+  { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, end: true },
   { to: '/clients', labelKey: 'nav.clients', icon: Users },
   { to: '/invoices', labelKey: 'nav.invoices', icon: FileText },
-  { to: '/settings', labelKey: 'nav.settings', icon: Settings },
+];
+
+const SETTINGS_ITEMS: NavItem[] = [
+  {
+    to: '/settings/invoice-template',
+    labelKey: 'nav.settingsInvoiceTemplate',
+    icon: FileOutput,
+  },
 ];
 
 interface SidebarProps {
@@ -55,27 +64,79 @@ export function Sidebar({ collapsed = false, drawerMode = false, onClose }: Side
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto p-2" aria-label="Main navigation">
         <ul className="space-y-1">
-          {NAV_ITEMS.map(({ to, labelKey, icon: Icon }) => (
+          {NAV_ITEMS.map(({ to, labelKey, icon: Icon, disabled, end }) => (
             <li key={to}>
-              <NavLink to={to} end={to === '/'}>
-                {({ isActive }) => (
-                  <span
-                    aria-current={isActive ? 'page' : undefined}
-                    className={cn(
-                      'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-[var(--color-accent)] text-[var(--color-accent-foreground)]'
-                        : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-accent-foreground)]',
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    {!collapsed && <span>{t(labelKey)}</span>}
-                  </span>
-                )}
-              </NavLink>
+              {disabled ? (
+                <span
+                  aria-disabled="true"
+                  title={t('nav.invoicesComingSoon')}
+                  className={cn(
+                    'flex cursor-not-allowed items-center gap-3 rounded-md px-3 py-2 text-sm font-medium opacity-50',
+                    'text-[var(--color-muted-foreground)]',
+                  )}
+                  data-testid="nav-item-disabled"
+                >
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden={true} />
+                  {!collapsed && <span>{t(labelKey)}</span>}
+                </span>
+              ) : (
+                <NavLink to={to} {...(end !== undefined ? { end } : {})}>
+                  {({ isActive }) => (
+                    <span
+                      aria-current={isActive ? 'page' : undefined}
+                      className={cn(
+                        'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                        isActive
+                          ? 'bg-[var(--color-accent)] text-[var(--color-accent-foreground)]'
+                          : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-accent-foreground)]',
+                      )}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" aria-hidden={true} />
+                      {!collapsed && <span>{t(labelKey)}</span>}
+                    </span>
+                  )}
+                </NavLink>
+              )}
             </li>
           ))}
         </ul>
+
+        {/* Settings section */}
+        <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
+          {!collapsed && (
+            <div className="mb-1 flex items-center gap-2 px-3 py-1">
+              <Settings
+                className="h-3.5 w-3.5 text-[var(--color-muted-foreground)]"
+                aria-hidden={true}
+              />
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                {t('nav.settings')}
+              </span>
+            </div>
+          )}
+          <ul className="space-y-1" data-testid="nav-settings-section">
+            {SETTINGS_ITEMS.map(({ to, labelKey, icon: Icon, end }) => (
+              <li key={to}>
+                <NavLink to={to} {...(end !== undefined ? { end } : {})}>
+                  {({ isActive }) => (
+                    <span
+                      aria-current={isActive ? 'page' : undefined}
+                      className={cn(
+                        'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                        isActive
+                          ? 'bg-[var(--color-accent)] text-[var(--color-accent-foreground)]'
+                          : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-accent-foreground)]',
+                      )}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" aria-hidden={true} />
+                      {!collapsed && <span>{t(labelKey)}</span>}
+                    </span>
+                  )}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </div>
       </nav>
     </aside>
   );

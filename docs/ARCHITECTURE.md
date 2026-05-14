@@ -66,7 +66,9 @@ flowchart TB
 
 ## Components — Frontend
 
-Updated by FEAT-20260512-02 (authentication modernization). Previous update: FEAT-20260512-01 (design system foundation).
+Updated by FEAT-20260513-01 (Design system, dark-mode fixes, responsive layout, form alignment). Previous update: FEAT-20260512-03 (Dashboard and core UI modernization).
+
+**Design system** — see [`docs/DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) for the full token reference, primitive component API, dark-mode guide, breakpoint contract, and ESLint enforcement rule.
 
 ```mermaid
 flowchart LR
@@ -74,13 +76,16 @@ flowchart LR
       idx[index.html] --> main[main.tsx]
       main -->|hydrate| authStore[(useAuthStore<br/>Zustand + localStorage)]
       main --> providers[Providers: I18n + Theme + ErrorBoundary + Router]
-      providers --> shell[AppShell]
-      shell --> topnav[TopNav<br/>sign-out]
-      shell --> page[PageContainer<br/>Framer Motion]
-      page --> guard_p[ProtectedRoute]
-      page --> guard_pub[PublicOnlyRoute]
-      guard_p --> home[HomePage]
-      guard_p --> clients[ClientsPage]
+      providers --> appShell[AppShell]
+      appShell --> sidebar[Sidebar<br/>collapsible desktop]
+      appShell --> mobileSidebar[MobileSidebar<br/>Sheet drawer on mobile]
+      appShell --> topnav[TopNav<br/>UserMenu + ThemeToggle + LanguageSelector]
+      appShell --> outlet[(Routed outlet<br/>AnimatePresence)]
+      outlet --> guard_p[ProtectedRoute]
+      outlet --> guard_pub[PublicOnlyRoute]
+      guard_p --> dash[DashboardPage /]
+      guard_p --> clients[ClientsPage /clients]
+      guard_p --> detail[ClientDetailPage /clients/:id]
       guard_pub --> login[LoginPage]
       guard_pub --> register[RegisterPage]
       guard_pub --> forgot[ForgotPasswordPage]
@@ -88,25 +93,49 @@ flowchart LR
       register --> authStore
       forgot --> authStore
       login --> fbase[Firebase Auth<br/>GoogleAuthProvider]
+      topnav --> userMenu[UserMenu<br/>logout → authStore]
+    end
+    subgraph DashboardFeature[src/features/dashboard]
+      kpi[KpiCard]
+      activity[RecentActivity stub]
+      dashPage[DashboardPage]
+      dashPage --> kpi
+      dashPage --> activity
+    end
+    subgraph ClientsFeature[src/features/clients]
+      table[ClientTable<br/>shadcn Table + motion.tr]
+      skeleton[ClientTableSkeleton]
+      formSheet[ClientFormSheet<br/>Sheet + react-hook-form]
+      delDialog[ConfirmDeleteDialog<br/>AlertDialog]
+      detailPage[ClientDetailPage]
+      statusBadge[ClientStatusBadge]
+      derive[derive.ts<br/>deriveStatus + formatDate]
     end
     subgraph AuthFeature[src/features/auth]
       forms[LoginForm / RegisterForm / ForgotPasswordForm]
       layout[AuthSplitLayout]
       google[GoogleSignInButton]
-      pwfield[PasswordField]
       schema[Zod schemas]
       authApi[authApi.ts]
+    end
+    subgraph SharedComponents[src/shared/components]
+      sidebar2[Sidebar] --- mobileSidebar2[MobileSidebar]
+      topnav2[TopNav] --- userMenu2[UserMenu]
+      navItems[navItems.ts]
     end
     subgraph SharedUI[src/shared/ui]
       btn[Button] --- inp[Input] --- card[Card]
       prot[ProtectedRoute] --- pub[PublicOnlyRoute]
+      emptyState[EmptyState] --- pageTransition[PageTransition]
     end
     subgraph SharedLib[src/shared/lib]
       http[http.ts<br/>Basic auth header] --- firebase[firebase.ts]
+      motion[motion.ts<br/>Framer variants]
     end
+    dash --> DashboardFeature
+    clients --> ClientsFeature
+    detail --> ClientsFeature
     login --> forms
-    login --> layout
-    login --> google
     forms --> schema
     forms --> authApi
     authApi --> http
@@ -190,6 +219,20 @@ flowchart LR
 - **Decision**: `POST /api/v1/auth/forgot-password` always returns `204 No Content` regardless of whether the email exists. `POST /api/v1/auth/login` returns a uniform `401` for both unknown-email and wrong-password cases.
 - **Why**: Distinguishing "email not found" from "wrong password" lets an attacker enumerate registered users. OWASP A04 (Insecure Design) explicitly flags this pattern.
 - **Trade-offs**: Slightly less helpful error messages for legitimate users; acceptable trade-off for security.
+
+### ADR-012 — FEAT-20260512-03: Client status derived client-side, never sent to the API
+
+- **Date**: 2026-05-13
+- **Decision**: `Client.status` does not exist on the backend DTO. A `deriveStatus(client)` helper in `src/features/clients/model/derive.ts` returns `'ACTIVE' | 'INACTIVE'` (defaulting to `'ACTIVE'` for all current records) for UI display. This derived value is never included in `POST` or `PUT` request bodies.
+- **Why**: The backend `clients` table has no `status` column in v1. Deriving locally lets the UI ship the status filter and badge without a backend migration. Adding a real field later requires only a one-line change in `derive.ts`.
+- **Trade-offs**: "Inactive" filter always returns 0 results until the backend exposes the field. UI state and API state can diverge if the backend adds a field and the frontend is not updated in sync.
+
+### ADR-013 — FEAT-20260512-03: Layout components in src/shared/components/ not src/shared/layout/
+
+- **Date**: 2026-05-13
+- **Decision**: `AppShell`, `Sidebar`, `MobileSidebar`, `TopNav`, `UserMenu`, and `navItems.ts` are placed in `src/shared/components/` rather than `src/shared/layout/` as specified in the plan.
+- **Why**: The project's existing convention (established by FEAT-20260512-01) groups all shared non-domain components under `src/shared/components/`. Deviating would create an inconsistency. The dev agent followed the project convention over the plan's path suggestion.
+- **Trade-offs**: Minor divergence from the plan's file list; no functional impact.
 
 ### ADR-008 — FEAT-20260512-01: Dual toast system during transition (sonner + legacy)
 

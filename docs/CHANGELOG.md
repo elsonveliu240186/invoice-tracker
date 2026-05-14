@@ -6,6 +6,52 @@ All notable changes to this project will be documented in this file. Format: [Ke
 
 ### Added
 - Scaffolded from the agenticai framework.
+- **Design system foundation** (FEAT-20260513-01) — _no breaking changes, no backend changes_:
+  CSS token system (`@theme` + `:root` + `.dark`) with 16 named colour tokens covering light and dark
+  mode; typed token map at `src/shared/theme/tokens.ts`; three new primitives — `Icon` (Lucide wrapper
+  enforcing `currentColor` and `aria-hidden`), `FormLabel` (token-bound `<label>`), `FormField`
+  (vertical label + control + error slot with `aria-describedby` wiring); dark-mode CSS token overrides
+  in `index.css`; `ClientsPage` now exposes a Clear (X) icon-button when `search.length > 0`, an
+  Escape key handler on the search input, and a Reset filters button; all hard-coded `text-red-*`,
+  `bg-red-*`, `text-foreground`, and `text-muted-foreground` literals in `ClientForm.tsx`,
+  `ClientTable.tsx`, `ConfirmDeleteDialog.tsx`, `dialog.tsx`, and `Toast.tsx` replaced with
+  `text-[var(--color-destructive)]` / `text-[var(--color-muted-foreground)]` token equivalents;
+  ESLint `no-restricted-syntax` rule banning the seven raw colour utility patterns added to
+  `eslint.config.mjs`; four Playwright E2E suites (dark-mode contrast, responsive layout,
+  form alignment, search-clear); `docs/DESIGN_SYSTEM.md` created.
+
+### Fixed
+- Dark-mode icon/text contrast — icons and form labels now inherit `currentColor` via the `Icon`
+  primitive and foreground tokens rather than falling back to near-black values.
+- Register form `confirmPassword` field was collapsed/misaligned — now rendered via `FormField` in its
+  own full-width row with an independent show/hide toggle.
+- **Dashboard and core UI modernization** (FEAT-20260512-03) — _no breaking changes_:
+  full SaaS shell retrofit over the existing React SPA. New `AppShell` component composes a
+  collapsible desktop `Sidebar` (Dashboard, Clients, Invoices-disabled nav items with Lucide icons
+  and active-state from `useLocation`) with a shadcn `Sheet` drawer for mobile (`<md`). `TopNav`
+  renders a hamburger button on mobile, breadcrumbs derived from the current route, a `UserMenu`
+  (`Avatar` + `DropdownMenu` with logout calling `useAuthStore.logout()`), `ThemeToggle`, and
+  `LanguageSelector`. `DashboardPage` at `/` shows three KPI `Card`s — Total Clients (real
+  `totalElements` from `GET /api/v1/clients?size=1`), Active Clients (same count until backend
+  exposes a status field), and Invoices (hardcoded `0`) — plus a `RecentActivity` stub section.
+  `ClientsPage` rebuilt with shadcn `Table` (Name, Email, Phone, Status, Updated, Actions columns),
+  server-side search via `query` param, client-side status filter (All / Active / Inactive) backed
+  by `deriveStatus()` helper, and client-side pagination. `ClientFormModal` replaced by
+  `ClientFormSheet` (slide-in shadcn `Sheet`); `ClientForm` migrated to `react-hook-form` +
+  `zodResolver`. `ConfirmDeleteDialog` migrated to shadcn `AlertDialog`. New `ClientDetailPage`
+  at `/clients/:id` renders a `Card` with contact info, status `Badge`, timestamps, and
+  Edit/Delete actions. `ClientStatusBadge` maps derived status to a coloured `Badge`. Pure
+  `derive.ts` helpers (`deriveStatus`, `formatDate`) are separated for testability. `PageTransition`
+  wraps routes in a Framer Motion `motion.div`; `AnimatePresence` is wired on the route outlet.
+  All user-visible strings ported to `react-i18next` (`useTranslation`) with new i18n keys under
+  `nav.*`, `topnav.*`, `dashboard.*`, `clients.*`, `clientDetail.*`, and `common.*` namespaces in
+  `en.json`. `EmptyState` CTA shown when `totalElements === 0`. `Skeleton` placeholders cover every
+  async loading state. Layout is responsive at 360 px (mobile drawer), 768 px (collapsed icon
+  sidebar), and 1280 px+ (full labelled sidebar). No backend or API changes. New deps: `framer-motion
+  ^11`, `lucide-react ^0.460`, `react-i18next ^15`, `i18next ^24`, `react-hook-form ^7.53`,
+  `@hookform/resolvers ^3.9`. Frontend Vitest 96.72 % statements / 91.76 % branches / 96.45 %
+  functions / 96.72 % lines (gates 95 / 90 / 95 / 95). 56 Playwright E2E specs across 6 suites,
+  all passing. `pnpm lint` 0 errors. `pnpm audit` 0 high/critical.
 - **Authentication modernization** (FEAT-20260512-02) — _no breaking changes_: three public auth
   endpoints (`POST /api/v1/auth/login`, `POST /api/v1/auth/register`,
   `POST /api/v1/auth/forgot-password`) added to the backend; Spring Security `SecurityConfig`

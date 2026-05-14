@@ -2,10 +2,12 @@
   "common": {
     "appName": "Invoice Tracker",
     "save": "Save",
+    "saving": "Saving…",
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
     "create": "Create",
+    "update": "Update",
     "search": "Search",
     "loading": "Loading…",
     "error": "Error",
@@ -18,30 +20,95 @@
     "theme": "Theme",
     "light": "Light",
     "dark": "Dark",
-    "system": "System"
+    "system": "System",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {{page}} of {{total}}"
   },
   "nav": {
     "home": "Home",
+    "dashboard": "Dashboard",
     "clients": "Clients",
     "invoices": "Invoices",
-    "settings": "Settings"
+    "invoicesComingSoon": "Coming soon",
+    "settings": "Settings",
+    "settingsInvoiceTemplate": "Invoice Template",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "openMenu": "Open navigation menu",
+    "closeMenu": "Close navigation menu"
+  },
+  "topnav": {
+    "profile": "Profile",
+    "logout": "Log out",
+    "userMenuLabel": "User menu"
   },
   "home": {
     "title": "Welcome to Invoice Tracker",
     "subtitle": "Scaffolded by the agenticai framework. Drive features with /new-feature.",
     "ctaClients": "Manage Clients"
   },
+  "dashboard": {
+    "title": "Dashboard",
+    "kpi": {
+      "totalClients": "Total clients",
+      "activeClients": "Active clients",
+      "invoices": "Invoices"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "empty": "Activity will appear here once you start invoicing."
+    }
+  },
   "clients": {
     "title": "Clients",
     "newClient": "New client",
     "searchPlaceholder": "Search by name or email…",
+    "clearSearch": "Clear search",
+    "resetFilters": "Reset filters",
+    "statusFilter": "Status",
+    "status": {
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
     "empty": {
-      "title": "No clients found",
+      "title": "No clients yet",
+      "description": "Create your first client to start tracking invoices.",
+      "cta": "Add client",
       "body": "Get started by creating your first client."
     },
     "deleteConfirm": {
       "title": "Delete client",
       "body": "Are you sure you want to delete {{name}}? This action cannot be undone."
+    },
+    "column": {
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "status": "Status",
+      "updated": "Updated",
+      "actions": "Actions"
+    },
+    "action": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "view": "View"
+    },
+    "form": {
+      "title": {
+        "create": "New client",
+        "edit": "Edit client"
+      },
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "address": "Address",
+      "required": "Required"
+    },
+    "delete": {
+      "title": "Delete client",
+      "description": "Are you sure you want to delete {{name}}? This action cannot be undone."
     },
     "toast": {
       "created": "Client created",
@@ -49,6 +116,13 @@
       "deleted": "Client deleted",
       "deleteFailed": "Failed to delete client"
     }
+  },
+  "clientDetail": {
+    "contactInfo": "Contact information",
+    "createdAt": "Created",
+    "updatedAt": "Updated",
+    "notFound": "Client not found",
+    "backToList": "Back to clients"
   },
   "auth": {
     "signIn": "Sign in",
@@ -105,6 +179,72 @@
       "registered": "Account created! You can now sign in.",
       "passwordResetSent": "If that email is registered, a reset link is on its way.",
       "signedOut": "You have been signed out."
+    }
+  },
+  "invoices": {
+    "detail": {
+      "title": "Invoice",
+      "backToList": "Back to invoices",
+      "issueDate": "Issue date",
+      "dueDate": "Due date"
+    },
+    "actions": {
+      "viewPdf": "View PDF",
+      "sendToClient": "Send to Client",
+      "openInNewTab": "Open in new tab",
+      "download": "Download",
+      "downloadDocx": "Download DOCX",
+      "downloadPdf": "Download PDF"
+    },
+    "lines": {
+      "description": "Description",
+      "quantity": "Qty",
+      "unitPrice": "Unit price",
+      "lineTotal": "Total"
+    },
+    "totals": {
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "total": "Total"
+    },
+    "status": {
+      "sentOn": "Sent on {{date}}"
+    },
+    "confirm": {
+      "send": {
+        "title": "Send invoice to client?",
+        "description": "This will email the invoice PDF to the client's registered email address."
+      }
+    },
+    "toast": {
+      "sendSuccess": "Invoice sent successfully",
+      "sendFailed": "Failed to send invoice",
+      "noRecipient": "Invoice has no recipient email address",
+      "pdfConversionFailed": "PDF conversion failed. Please try again.",
+      "downloadFailed": "Download failed. Please try again."
+    },
+    "errors": {
+      "notFound": "Invoice not found",
+      "deliveryFailed": "Email delivery failed. Please try again."
+    }
+  },
+  "settings": {
+    "invoiceTemplate": {
+      "title": "Invoice Template",
+      "currentFilename": "Current template",
+      "uploadedAt": "Uploaded at",
+      "isDefaultWarning": "Using the default sample template. Upload your own to customise invoices.",
+      "uploadButton": "Upload template",
+      "downloadCurrent": "Download current template",
+      "helpDocx": "Upload a .docx file (max 5 MB) to use as your invoice template.",
+      "errors": {
+        "invalidType": "Only .docx files are accepted.",
+        "tooLarge": "File must be smaller than 5 MB."
+      },
+      "toast": {
+        "uploadSuccess": "Template uploaded successfully",
+        "uploadFailed": "Failed to upload template. Please try again."
+      }
     }
   },
   "errors": {

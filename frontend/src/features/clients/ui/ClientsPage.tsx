@@ -1,24 +1,35 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { X } from 'lucide-react';
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '../api/useClients';
 import { ClientTable } from './ClientTable';
-import { ClientFormModal } from './ClientFormModal';
-import { ClientForm } from './ClientForm';
+import { ClientFormSheet } from './ClientFormSheet';
 import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
 import { useToast } from '@/shared/ui/Toast';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { PageHeader } from '@/shared/components/PageHeader';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/shared/ui/dropdown-menu';
+import { deriveStatus } from '../model/derive';
 import type { Client, ClientQuery } from '../model/types';
+import type { ClientStatus } from '../model/derive';
 import type { CreateClientInput } from '../model/schema';
 
 const PAGE_SIZE = 20;
+
+type StatusFilter = 'ALL' | ClientStatus;
 
 export function ClientsPage() {
   const { t } = useTranslation();
   const { show } = useToast();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
 
   const query: ClientQuery = {
     page,
@@ -30,8 +41,8 @@ export function ClientsPage() {
 
   const { data, loading, error, refetch } = useClients(query);
 
-  // Modal state
-  const [modalOpen, setModalOpen] = useState(false);
+  // Sheet state (replaces modal)
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
   // Confirm delete state
@@ -43,17 +54,28 @@ export function ClientsPage() {
 
   function openCreate() {
     setEditingClient(null);
-    setModalOpen(true);
+    setSheetOpen(true);
   }
 
   function openEdit(client: Client) {
     setEditingClient(client);
-    setModalOpen(true);
+    setSheetOpen(true);
   }
 
-  function closeModal() {
-    setModalOpen(false);
+  function closeSheet() {
+    setSheetOpen(false);
     setEditingClient(null);
+  }
+
+  function clearSearch() {
+    setSearch('');
+    setPage(0);
+  }
+
+  function resetFilters() {
+    setSearch('');
+    setPage(0);
+    setStatusFilter('ALL');
   }
 
   const handleSubmit = useCallback(
@@ -71,7 +93,7 @@ export function ClientsPage() {
         await createMutate(payload);
         show(t('clients.toast.created'), 'success');
       }
-      closeModal();
+      closeSheet();
       refetch();
     },
     [editingClient, updateMutate, createMutate, show, refetch, t],
@@ -92,7 +114,19 @@ export function ClientsPage() {
 
   const totalPages = data?.totalPages ?? 0;
 
-  const initialForForm: Partial<Client> | undefined = editingClient ?? undefined;
+  // Client-side status filter applied to current page content
+  const filteredClients =
+    data?.content.filter((c) => {
+      if (statusFilter === 'ALL') return true;
+      return deriveStatus(c) === statusFilter;
+    }) ?? [];
+
+  const statusFilterLabel =
+    statusFilter === 'ALL'
+      ? t('clients.status.all')
+      : statusFilter === 'ACTIVE'
+        ? t('clients.status.active')
+        : t('clients.status.inactive');
 
   return (
     <div data-testid="clients-page">
@@ -105,19 +139,63 @@ export function ClientsPage() {
         }
       />
 
-      <div className="mb-4">
-        <Input
-          type="search"
-          placeholder={t('clients.searchPlaceholder')}
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(0);
-          }}
-          className="sm:max-w-xs"
-          data-testid="search-input"
-          aria-label="Search clients"
-        />
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="relative flex items-center sm:max-w-xs">
+          <Input
+            type="search"
+            placeholder={t('clients.searchPlaceholder')}
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(0);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                clearSearch();
+              }
+            }}
+            className="pr-8 sm:max-w-xs"
+            data-testid="search-input"
+            aria-label="Search clients"
+          />
+          {search.length > 0 && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              aria-label={t('clients.clearSearch')}
+              data-testid="btn-clear-search"
+              className="absolute right-2 flex items-center justify-center rounded p-0.5 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" data-testid="status-filter-trigger">
+              {t('clients.statusFilter')}: {statusFilterLabel}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent data-testid="status-filter-menu">
+            <DropdownMenuItem onClick={() => setStatusFilter('ALL')} data-testid="filter-all">
+              {t('clients.status.all')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setStatusFilter('ACTIVE')} data-testid="filter-active">
+              {t('clients.status.active')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setStatusFilter('INACTIVE')}
+              data-testid="filter-inactive"
+            >
+              {t('clients.status.inactive')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <Button variant="ghost" size="sm" onClick={resetFilters} data-testid="btn-reset-filters">
+          {t('clients.resetFilters')}
+        </Button>
       </div>
 
       {loading && (
@@ -142,7 +220,7 @@ export function ClientsPage() {
       {!loading && !error && data && (
         <>
           <ClientTable
-            clients={data.content}
+            clients={filteredClients}
             onEdit={openEdit}
             onDelete={(c) => setDeletingClient(c)}
           />
@@ -150,7 +228,8 @@ export function ClientsPage() {
           {totalPages > 1 && (
             <div className="mt-4 flex items-center justify-between text-sm text-[var(--color-muted-foreground)]">
               <span>
-                Page {page + 1} of {totalPages} ({data.totalElements} total)
+                {t('common.page', { page: page + 1, total: totalPages })} ({data.totalElements}{' '}
+                total)
               </span>
               <div className="flex gap-2">
                 <button
@@ -159,7 +238,7 @@ export function ClientsPage() {
                   className="rounded border border-[var(--color-border)] px-3 py-1 disabled:opacity-40"
                   data-testid="btn-prev-page"
                 >
-                  Previous
+                  {t('common.previous')}
                 </button>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
@@ -167,7 +246,7 @@ export function ClientsPage() {
                   className="rounded border border-[var(--color-border)] px-3 py-1 disabled:opacity-40"
                   data-testid="btn-next-page"
                 >
-                  Next
+                  {t('common.next')}
                 </button>
               </div>
             </div>
@@ -175,20 +254,12 @@ export function ClientsPage() {
         </>
       )}
 
-      <ClientFormModal
-        title={editingClient ? t('common.edit') + ' client' : t('clients.newClient')}
-        open={modalOpen}
-        onClose={closeModal}
-      >
-        {modalOpen && (
-          <ClientForm
-            initial={initialForForm}
-            onSubmit={handleSubmit}
-            onCancel={closeModal}
-            submitLabel={editingClient ? 'Update' : t('common.create')}
-          />
-        )}
-      </ClientFormModal>
+      <ClientFormSheet
+        open={sheetOpen}
+        onClose={closeSheet}
+        onSubmit={handleSubmit}
+        editingClient={editingClient}
+      />
 
       <ConfirmDeleteDialog
         open={!!deletingClient}

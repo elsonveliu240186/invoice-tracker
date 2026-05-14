@@ -6,9 +6,9 @@ import { I18nextProvider } from 'react-i18next';
 import i18n from '@/shared/lib/i18n';
 import { Sidebar } from './Sidebar';
 
-function renderSidebar(props: Parameters<typeof Sidebar>[0] = {}) {
+function renderSidebar(props: Parameters<typeof Sidebar>[0] = {}, initialPath = '/') {
   return render(
-    <MemoryRouter initialEntries={['/']}>
+    <MemoryRouter initialEntries={[initialPath]}>
       <I18nextProvider i18n={i18n}>
         <Sidebar {...props} />
       </I18nextProvider>
@@ -17,37 +17,66 @@ function renderSidebar(props: Parameters<typeof Sidebar>[0] = {}) {
 }
 
 describe('Sidebar', () => {
-  it('renders all navigation items', () => {
+  it('renders all navigation items (Dashboard, Clients, Invoices)', () => {
     renderSidebar();
-    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
     expect(screen.getByText('Clients')).toBeInTheDocument();
     expect(screen.getByText('Invoices')).toBeInTheDocument();
-    expect(screen.getByText('Settings')).toBeInTheDocument();
   });
 
-  it('marks the active route with aria-current="page"', () => {
-    render(
-      <MemoryRouter initialEntries={['/clients']}>
-        <I18nextProvider i18n={i18n}>
-          <Sidebar />
-        </I18nextProvider>
-      </MemoryRouter>,
-    );
-    // aria-current is on the inner span rendered by NavLink's render prop
+  it('Invoices nav item is a link (no longer disabled)', () => {
+    renderSidebar();
+    // Now that the Invoices feature is live, the item is a NavLink, not a disabled span
+    expect(screen.queryByTestId('nav-item-disabled')).not.toBeInTheDocument();
+    expect(screen.getByText('Invoices')).toBeInTheDocument();
+  });
+
+  it('marks the active route with aria-current="page" on Clients', () => {
+    renderSidebar({}, '/clients');
     const clientsSpan = screen.getByText('Clients').closest('span[aria-current]');
     expect(clientsSpan).toHaveAttribute('aria-current', 'page');
   });
 
-  it('home route is active at "/"', () => {
-    renderSidebar();
-    const homeSpan = screen.getByText('Home').closest('span[aria-current]');
-    expect(homeSpan).toHaveAttribute('aria-current', 'page');
+  it('Dashboard route is active at "/"', () => {
+    renderSidebar({}, '/');
+    const dashSpan = screen.getByText('Dashboard').closest('span[aria-current]');
+    expect(dashSpan).toHaveAttribute('aria-current', 'page');
   });
 
   it('hides text labels when collapsed', () => {
     renderSidebar({ collapsed: true });
-    expect(screen.queryByText('Home')).not.toBeInTheDocument();
+    expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
     expect(screen.queryByText('Clients')).not.toBeInTheDocument();
+    expect(screen.queryByText('Invoices')).not.toBeInTheDocument();
+  });
+
+  it('renders the Settings section with Invoice Template link', () => {
+    renderSidebar();
+    expect(screen.getByTestId('nav-settings-section')).toBeInTheDocument();
+    expect(screen.getByText('Invoice Template')).toBeInTheDocument();
+  });
+
+  it('Invoice Template link navigates to /settings/invoice-template', () => {
+    renderSidebar();
+    const link = screen.getByText('Invoice Template').closest('a');
+    expect(link).toHaveAttribute('href', '/settings/invoice-template');
+  });
+
+  it('marks Invoice Template as active at /settings/invoice-template', () => {
+    renderSidebar({}, '/settings/invoice-template');
+    const span = screen.getByText('Invoice Template').closest('span[aria-current]');
+    expect(span).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('shows Settings section label when not collapsed', () => {
+    renderSidebar();
+    expect(screen.getByText('Settings')).toBeInTheDocument();
+  });
+
+  it('hides Settings section label when collapsed', () => {
+    renderSidebar({ collapsed: true });
+    expect(screen.queryByText('Settings')).not.toBeInTheDocument();
+    expect(screen.queryByText('Invoice Template')).not.toBeInTheDocument();
   });
 
   it('shows close button in drawer mode', () => {

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,8 @@ export function ConfirmDeleteDialog({
   onConfirm,
   onCancel,
 }: ConfirmDeleteDialogProps) {
+  const { t } = useTranslation();
+
   return (
     <Dialog
       open={open}
@@ -30,15 +33,14 @@ export function ConfirmDeleteDialog({
     >
       <DialogContent data-testid="confirm-delete-dialog">
         <DialogHeader>
-          <DialogTitle>Delete client</DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Are you sure you want to delete <strong>{clientName}</strong>? This action cannot be
-            undone.
+          <DialogTitle>{t('clients.delete.title')}</DialogTitle>
+          <DialogDescription className="text-[var(--color-muted-foreground)]">
+            {t('clients.delete.description', { name: clientName })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onCancel} data-testid="btn-cancel-delete">
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             type="button"
@@ -46,7 +48,7 @@ export function ConfirmDeleteDialog({
             onClick={onConfirm}
             data-testid="btn-confirm-delete"
           >
-            Delete
+            {t('common.delete')}
           </Button>
         </DialogFooter>
       </DialogContent>
