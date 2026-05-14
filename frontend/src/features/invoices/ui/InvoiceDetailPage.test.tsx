@@ -121,6 +121,7 @@ describe('InvoiceDetailPage', () => {
           ],
           subtotal: '100.00',
           total: '121.00',
+          status: 'SENT',
           lastSentAt: '2026-05-13T20:55:00Z',
           createdAt: '2026-05-13T20:00:00Z',
           updatedAt: '2026-05-13T20:00:00Z',
@@ -156,6 +157,7 @@ describe('InvoiceDetailPage', () => {
           ],
           subtotal: '100.00',
           total: '121.00',
+          status: 'DRAFT',
           lastSentAt: null,
           createdAt: '2026-05-13T20:00:00Z',
           updatedAt: '2026-05-13T20:00:00Z',
@@ -192,6 +194,7 @@ describe('InvoiceDetailPage', () => {
           ],
           subtotal: '100.00',
           total: '121.00',
+          status: 'DRAFT',
           lastSentAt: null,
           createdAt: '2026-05-13T20:00:00Z',
           updatedAt: '2026-05-13T20:00:00Z',
@@ -230,5 +233,61 @@ describe('InvoiceDetailPage', () => {
       WAIT_OPTS,
     );
     expect(screen.getByTestId('btn-send-invoice')).not.toBeDisabled();
+  });
+
+  it('shows StatusBadge in the invoice header', async () => {
+    renderPage();
+    await waitFor(
+      () => expect(screen.getByTestId('invoice-detail-page')).toBeInTheDocument(),
+      WAIT_OPTS,
+    );
+    expect(screen.getByTestId('status-badge')).toBeInTheDocument();
+  });
+
+  it('shows MarkAsPaidButton when invoice is not PAID', async () => {
+    renderPage();
+    await waitFor(
+      () => expect(screen.getByTestId('invoice-detail-page')).toBeInTheDocument(),
+      WAIT_OPTS,
+    );
+    // Default mock invoice has status DRAFT
+    expect(screen.getByTestId('mark-as-paid-btn')).toBeInTheDocument();
+  });
+
+  it('hides MarkAsPaidButton when invoice is PAID', async () => {
+    server.use(
+      http.get('/api/v1/invoices/:id', () =>
+        HttpResponse.json({
+          id: 'inv-uuid-1',
+          number: 'INV-2026-0001',
+          clientId: '00000000-0000-0000-0000-000000000003',
+          clientEmail: 'client@example.com',
+          issueDate: '2026-05-13',
+          dueDate: '2026-06-12',
+          taxRate: '0.21',
+          lines: [
+            {
+              id: '00000000-0000-0000-0000-000000000001',
+              description: 'Consulting',
+              quantity: 2,
+              unitPrice: '50.00',
+              lineTotal: '100.00',
+            },
+          ],
+          subtotal: '100.00',
+          total: '121.00',
+          status: 'PAID',
+          lastSentAt: null,
+          createdAt: '2026-05-13T20:00:00Z',
+          updatedAt: '2026-05-13T20:00:00Z',
+        }),
+      ),
+    );
+    renderPage();
+    await waitFor(
+      () => expect(screen.getByTestId('invoice-detail-page')).toBeInTheDocument(),
+      WAIT_OPTS,
+    );
+    expect(screen.queryByTestId('mark-as-paid-btn')).not.toBeInTheDocument();
   });
 });

@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -17,6 +18,7 @@ import com.example.invoicetracker.domain.invoice.EmailDeliveryFailedException;
 import com.example.invoicetracker.domain.invoice.Invoice;
 import com.example.invoicetracker.domain.invoice.InvoiceHasNoRecipientException;
 import com.example.invoicetracker.domain.invoice.InvoiceNotFoundException;
+import com.example.invoicetracker.domain.invoice.InvoiceStatus;
 import com.example.invoicetracker.support.InvoiceFixtures;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -202,7 +204,7 @@ class InvoiceControllerTest {
         Invoice sentInvoice = new Invoice(
             sampleInvoice.id(), sampleInvoice.number(), sampleInvoice.clientId(),
             sampleInvoice.issueDate(), sampleInvoice.dueDate(), sampleInvoice.lines(),
-            sampleInvoice.taxRate(), sentAt, sampleInvoice.createdAt(),
+            sampleInvoice.taxRate(), InvoiceStatus.SENT, sentAt, sampleInvoice.createdAt(),
             sampleInvoice.updatedAt(), null, null);
         when(invoiceService.sendEmail(invoiceId)).thenReturn(sentInvoice);
 
@@ -232,6 +234,33 @@ class InvoiceControllerTest {
         mvc.perform(post("/api/v1/invoices/{id}/send-email", invoiceId))
             .andExpect(status().isUnprocessableEntity())
             .andExpect(jsonPath("$.code").value("INVOICE_HAS_NO_RECIPIENT"));
+    }
+
+    @Test
+    @WithMockUser
+    void markPaid_returns_200_with_paid_status() throws Exception {
+        Invoice paidInvoice = new Invoice(
+            sampleInvoice.id(), sampleInvoice.number(), sampleInvoice.clientId(),
+            sampleInvoice.issueDate(), sampleInvoice.dueDate(), sampleInvoice.lines(),
+            sampleInvoice.taxRate(), InvoiceStatus.PAID, null, sampleInvoice.createdAt(),
+            sampleInvoice.updatedAt(), null, null);
+        when(invoiceService.markAsPaid(invoiceId)).thenReturn(paidInvoice);
+
+        mvc.perform(patch("/api/v1/invoices/{id}/mark-paid", invoiceId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("PAID"))
+            .andExpect(jsonPath("$.id").value(invoiceId.toString()));
+    }
+
+    @Test
+    @WithMockUser
+    void markPaid_returns_404_for_unknown_id() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(invoiceService.markAsPaid(id)).thenThrow(new InvoiceNotFoundException(id));
+
+        mvc.perform(patch("/api/v1/invoices/{id}/mark-paid", id))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("INVOICE_NOT_FOUND"));
     }
 
     @Test

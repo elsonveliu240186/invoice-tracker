@@ -98,6 +98,7 @@ const BASE_INVOICE: Invoice = {
   ],
   subtotal: '100.00',
   total: '121.00',
+  status: 'DRAFT',
   lastSentAt: null,
   createdAt: '2026-05-13T20:00:00Z',
   updatedAt: '2026-05-13T20:00:00Z',
@@ -275,6 +276,21 @@ export const handlers = [
 
   // ── Invoice endpoints ─────────────────────────────────────────────────────
 
+  // List invoices
+  http.get('/api/v1/invoices', ({ request }) => {
+    const url = new URL(request.url);
+    const page = parseInt(url.searchParams.get('page') ?? '0');
+    const size = parseInt(url.searchParams.get('size') ?? '20');
+    const content = defaultInvoices.slice(page * size, page * size + size);
+    return HttpResponse.json({
+      content,
+      page,
+      size,
+      totalElements: defaultInvoices.length,
+      totalPages: Math.ceil(defaultInvoices.length / size),
+    });
+  }),
+
   // Get invoice by id
   http.get('/api/v1/invoices/:id', ({ params }) => {
     const invoice = defaultInvoices.find((inv) => inv.id === params['id']);
@@ -371,6 +387,25 @@ export const handlers = [
     return HttpResponse.json({ lastSentAt });
   }),
 
+  // Mark invoice as paid
+  http.patch('/api/v1/invoices/:id/mark-paid', ({ params }) => {
+    const idx = defaultInvoices.findIndex((inv) => inv.id === params['id']);
+    if (idx === -1) {
+      return HttpResponse.json(
+        {
+          type: 'about:blank',
+          title: 'Not Found',
+          status: 404,
+          detail: 'Invoice not found',
+          code: 'INVOICE_NOT_FOUND',
+        },
+        { status: 404 },
+      );
+    }
+    defaultInvoices[idx] = { ...defaultInvoices[idx]!, status: 'PAID' };
+    return HttpResponse.json(defaultInvoices[idx]);
+  }),
+
   // ── Settings — Invoice Template endpoints ─────────────────────────────────
 
   // GET /api/v1/settings/invoice-template/preview
@@ -410,4 +445,25 @@ export const handlers = [
     };
     return HttpResponse.json(response);
   }),
+
+  // ── Dashboard endpoints ───────────────────────────────────────────────────
+
+  http.get('/api/v1/dashboard/stats', () =>
+    HttpResponse.json({
+      totalInvoices: 12,
+      draftCount: 4,
+      sentCount: 5,
+      paidCount: 3,
+      totalRevenue: 24500,
+      paidRevenue: 8200,
+      pendingRevenue: 16300,
+      revenueByMonth: [
+        { month: '2026-01', revenue: 3200 },
+        { month: '2026-02', revenue: 4100 },
+        { month: '2026-03', revenue: 5800 },
+        { month: '2026-04', revenue: 4400 },
+        { month: '2026-05', revenue: 7000 },
+      ],
+    }),
+  ),
 ];

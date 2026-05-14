@@ -189,7 +189,7 @@ test.describe('Smoke regression: adjacent flows unbroken after FEAT-20260513-03'
     page,
   }) => {
     // Route that never resolves quickly — we check the skeleton is shown
-    let resolveRoute: (() => void) | null = null;
+    let resolveRoute: (() => Promise<void>) | null = null;
     await page.route('**/api/v1/invoices/slow-invoice', (route) => {
       // Delay the response
       resolveRoute = () =>
@@ -220,7 +220,7 @@ test.describe('Smoke regression: adjacent flows unbroken after FEAT-20260513-03'
     await expect(page.getByTestId('invoice-detail-loading')).toBeVisible({ timeout: 5_000 });
 
     // Resolve the route so the page can finish loading
-    resolveRoute?.();
+    void resolveRoute?.();
     await expect(page.getByTestId('invoice-detail-page')).toBeVisible({ timeout: 10_000 });
   });
 });

@@ -20,6 +20,7 @@ public record InvoiceResponse(
     BigDecimal taxRate,
     BigDecimal subtotal,
     BigDecimal total,
+    String status,
     Instant lastSentAt,
     Instant createdAt,
     Instant updatedAt

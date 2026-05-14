@@ -1,8 +1,11 @@
 package com.example.invoicetracker.adapter.persistence.invoice;
 
+import com.example.invoicetracker.domain.invoice.InvoiceStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
@@ -48,6 +51,10 @@ public class InvoiceEntity {
 
     @Column(name = "tax_rate", nullable = false, precision = 5, scale = 4)
     private BigDecimal taxRate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private InvoiceStatus status = InvoiceStatus.DRAFT;
 
     @Column(name = "last_sent_at")
     private Instant lastSentAt;

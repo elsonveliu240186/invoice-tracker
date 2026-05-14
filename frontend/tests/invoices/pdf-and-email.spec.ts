@@ -498,7 +498,7 @@ test.describe('FEAT-20260513-02 smoke regression: adjacent flows', () => {
   test('smoke-reg-5: loading skeleton renders while invoice fetch is in-flight', async ({
     page,
   }) => {
-    let resolveRoute: (() => void) | null = null;
+    let resolveRoute: (() => Promise<void>) | null = null;
     await page.route(`**/api/v1/invoices/slow-${INVOICE_ID}`, (route) => {
       resolveRoute = () =>
         route.fulfill({
@@ -511,7 +511,7 @@ test.describe('FEAT-20260513-02 smoke regression: adjacent flows', () => {
     await page.goto(`/invoices/slow-${INVOICE_ID}`);
     await expect(page.getByTestId('invoice-detail-loading')).toBeVisible({ timeout: 5_000 });
 
-    resolveRoute?.();
+    void resolveRoute?.();
     await expect(page.getByTestId('invoice-detail-page')).toBeVisible({ timeout: 10_000 });
   });
 

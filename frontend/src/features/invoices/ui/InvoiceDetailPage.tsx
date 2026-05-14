@@ -6,6 +6,8 @@ import { ViewPdfButton } from './ViewPdfButton';
 import { DownloadInvoiceMenu } from './DownloadInvoiceMenu';
 import { SendInvoiceButton } from './SendInvoiceButton';
 import { InvoiceSentBadge } from './InvoiceSentBadge';
+import { StatusBadge } from './StatusBadge';
+import { MarkAsPaidButton } from './MarkAsPaidButton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
@@ -66,12 +68,15 @@ export function InvoiceDetailPage() {
 
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
-        <h1
-          className="text-2xl font-bold text-[var(--color-foreground)]"
-          data-testid="invoice-number"
-        >
-          {t('invoices.detail.title')} {invoice.number}
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1
+            className="text-2xl font-bold text-[var(--color-foreground)]"
+            data-testid="invoice-number"
+          >
+            {t('invoices.detail.title')} {invoice.number}
+          </h1>
+          <StatusBadge status={invoice.status} />
+        </div>
       </div>
 
       {/* Meta card */}
@@ -153,6 +158,11 @@ export function InvoiceDetailPage() {
           invoiceId={invoice.id}
           hasRecipient={!!invoice.clientEmail}
           onSent={refetch}
+        />
+        <MarkAsPaidButton
+          invoiceId={invoice.id}
+          status={invoice.status}
+          onPaid={() => void refetch()}
         />
         <InvoiceSentBadge lastSentAt={invoice.lastSentAt} />
       </div>

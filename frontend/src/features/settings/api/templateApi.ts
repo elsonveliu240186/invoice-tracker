@@ -14,6 +14,13 @@ export async function uploadTemplate(file: File): Promise<UploadTemplateResponse
   return response.json() as Promise<UploadTemplateResponse>;
 }
 
-export function getTemplateDownloadUrl(): string {
-  return `${BASE}/download`;
+export async function downloadTemplate(): Promise<void> {
+  const response = await httpRaw(`${BASE}/download`);
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'invoice-template.docx';
+  a.click();
+  URL.revokeObjectURL(url);
 }

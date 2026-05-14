@@ -9,6 +9,7 @@ import com.example.invoicetracker.domain.invoice.InvoiceLine;
 import com.example.invoicetracker.domain.invoice.InvoiceNotFoundException;
 import com.example.invoicetracker.domain.invoice.InvoiceNumberTakenException;
 import com.example.invoicetracker.domain.invoice.InvoiceRepository;
+import com.example.invoicetracker.domain.invoice.InvoiceStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -22,7 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Application service for invoice use-cases: create, get, list, renderPdf, sendEmail.
+ * Application service for invoice use-cases: create, get, list, renderPdf, sendEmail, markAsPaid.
  */
 @Service
 @Transactional
@@ -60,7 +61,7 @@ public class InvoiceService {
     }
 
     /**
-     * Creates a new invoice.
+     * Creates a new invoice with DRAFT status.
      *
      * @param number     the invoice number (must be unique)
      * @param clientId   the client UUID
@@ -92,6 +93,7 @@ public class InvoiceService {
             dueDate,
             lines,
             taxRate,
+            InvoiceStatus.DRAFT,
             null,
             now,
             now,
@@ -120,7 +122,7 @@ public class InvoiceService {
         return new Invoice(
             invoice.id(), invoice.number(), invoice.clientId(),
             invoice.issueDate(), invoice.dueDate(), invoice.lines(),
-            invoice.taxRate(), invoice.lastSentAt(), invoice.createdAt(),
+            invoice.taxRate(), invoice.status(), invoice.lastSentAt(), invoice.createdAt(),
             invoice.updatedAt(), invoice.deletedAt(), email
         );
     }
@@ -155,9 +157,10 @@ public class InvoiceService {
 
     /**
      * Sends the invoice PDF to the client's email address and records the send timestamp.
+     * Sets status to SENT if it was DRAFT.
      *
      * @param id the invoice UUID
-     * @return the invoice with updated lastSentAt
+     * @return the invoice with updated lastSentAt and (possibly) SENT status
      * @throws InvoiceNotFoundException      if not found
      * @throws InvoiceHasNoRecipientException if the client has no email
      * @throws com.example.invoicetracker.domain.invoice.EmailDeliveryFailedException
@@ -181,6 +184,24 @@ public class InvoiceService {
         Instant sentAt = Instant.now();
         Invoice updated = invoiceRepository.markSent(id, sentAt);
         log.info("Invoice {} marked sent at {}", id, sentAt);
+
+        // Transition DRAFT → SENT
+        invoiceRepository.markSentIfDraft(id);
+        log.info("Invoice {} status transitioned to SENT (if it was DRAFT)", id);
+        return invoiceRepository.findByIdWithLines(id)
+            .orElse(updated);
+    }
+
+    /**
+     * Marks an invoice as PAID.
+     *
+     * @param id the invoice UUID
+     * @return the updated invoice with PAID status
+     * @throws InvoiceNotFoundException if not found or soft-deleted
+     */
+    public Invoice markAsPaid(UUID id) {
+        Invoice updated = invoiceRepository.markPaid(id);
+        log.info("Invoice {} marked as PAID", id);
         return updated;
     }
 }

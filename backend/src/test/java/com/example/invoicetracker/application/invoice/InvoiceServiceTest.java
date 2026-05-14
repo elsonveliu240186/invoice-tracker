@@ -18,6 +18,7 @@ import com.example.invoicetracker.domain.invoice.InvoiceLine;
 import com.example.invoicetracker.domain.invoice.InvoiceNotFoundException;
 import com.example.invoicetracker.domain.invoice.InvoiceNumberTakenException;
 import com.example.invoicetracker.domain.invoice.InvoiceRepository;
+import com.example.invoicetracker.domain.invoice.InvoiceStatus;
 import com.example.invoicetracker.support.InvoiceFixtures;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -209,9 +210,12 @@ class InvoiceServiceTest {
         Invoice sentInvoice = new Invoice(
             invoice.id(), invoice.number(), invoice.clientId(),
             invoice.issueDate(), invoice.dueDate(), invoice.lines(),
-            invoice.taxRate(), sentAt, invoice.createdAt(), invoice.updatedAt(), null, null);
+            invoice.taxRate(), InvoiceStatus.SENT, sentAt, invoice.createdAt(),
+            invoice.updatedAt(), null, null);
 
-        when(invoiceRepository.findByIdWithLines(id)).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.findByIdWithLines(id))
+            .thenReturn(Optional.of(invoice))
+            .thenReturn(Optional.of(sentInvoice));
         when(clientRepository.findByIdAndDeletedAtIsNull(clientId)).thenReturn(Optional.of(client));
         when(pdfRenderer.render(eq(invoice), eq(client), any())).thenReturn(pdfBytes);
         when(invoiceRepository.markSent(eq(id), any(Instant.class))).thenReturn(sentInvoice);
@@ -221,6 +225,7 @@ class InvoiceServiceTest {
         assertThat(result.lastSentAt()).isNotNull();
         verify(mailer).send(eq(invoice), eq("acme@example.com"), eq(pdfBytes), any(), eq("Acme"));
         verify(invoiceRepository).markSent(eq(id), any(Instant.class));
+        verify(invoiceRepository).markSentIfDraft(id);
     }
 
     @Test
@@ -330,5 +335,51 @@ class InvoiceServiceTest {
         assertThat(saved.lines()).hasSize(2);
         assertThat(saved.subtotal()).isEqualByComparingTo("250.00");
         assertThat(saved.total()).isEqualByComparingTo("275.00");
+    }
+
+    @Test
+    void create_sets_draft_status() {
+        UUID clientId = UUID.randomUUID();
+        Client client = InvoiceFixtures.client(clientId, "Acme", "acme@example.com");
+        when(clientRepository.findByIdAndDeletedAtIsNull(clientId))
+            .thenReturn(Optional.of(client));
+        when(invoiceRepository.existsByNumberIgnoreCaseAndDeletedAtIsNull("INV-STATUS"))
+            .thenReturn(false);
+        when(invoiceRepository.save(any(Invoice.class)))
+            .thenAnswer(inv -> inv.getArgument(0));
+
+        Invoice result = service.create("INV-STATUS", clientId,
+            LocalDate.now(), LocalDate.now().plusDays(30),
+            List.of(InvoiceFixtures.line("Item", 1, "50.00")), BigDecimal.ZERO);
+
+        assertThat(result.status()).isEqualTo(InvoiceStatus.DRAFT);
+    }
+
+    @Test
+    void markAsPaid_delegates_to_repository() {
+        UUID id = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
+        Invoice paidInvoice = new Invoice(
+            id, "INV-PAID", clientId,
+            java.time.LocalDate.now(), java.time.LocalDate.now().plusDays(30),
+            List.of(InvoiceFixtures.line("Item", 1, "100.00")),
+            BigDecimal.ZERO, InvoiceStatus.PAID, null,
+            java.time.Instant.now(), java.time.Instant.now(), null, null);
+
+        when(invoiceRepository.markPaid(id)).thenReturn(paidInvoice);
+
+        Invoice result = service.markAsPaid(id);
+
+        assertThat(result.status()).isEqualTo(InvoiceStatus.PAID);
+        verify(invoiceRepository).markPaid(id);
+    }
+
+    @Test
+    void markAsPaid_throws_when_invoice_not_found() {
+        UUID id = UUID.randomUUID();
+        when(invoiceRepository.markPaid(id)).thenThrow(new InvoiceNotFoundException(id));
+
+        assertThatThrownBy(() -> service.markAsPaid(id))
+            .isInstanceOf(InvoiceNotFoundException.class);
     }
 }

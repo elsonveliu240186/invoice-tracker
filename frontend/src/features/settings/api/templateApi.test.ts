@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { server } from '@/mocks/server';
 import { http, HttpResponse } from 'msw';
-import { getTemplateMetadata, uploadTemplate, getTemplateDownloadUrl } from './templateApi';
+import { getTemplateMetadata, uploadTemplate, downloadTemplate } from './templateApi';
 import { resetMockTemplateMetadata } from '@/mocks/handlers';
 import { ApiError } from '@/shared/lib/http';
 
@@ -102,9 +102,32 @@ describe('uploadTemplate', () => {
   });
 });
 
-describe('getTemplateDownloadUrl', () => {
-  it('returns the correct URL string', () => {
-    const url = getTemplateDownloadUrl();
-    expect(url).toBe('/api/v1/settings/invoice-template/download');
+describe('downloadTemplate', () => {
+  it('triggers a blob download via authenticated fetch', async () => {
+    server.use(
+      http.get('/api/v1/settings/invoice-template/download', () =>
+        HttpResponse.arrayBuffer(new ArrayBuffer(8), {
+          headers: { 'Content-Type': 'application/octet-stream' },
+        }),
+      ),
+    );
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake');
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const click = vi.fn();
+    const createElement = vi.spyOn(document, 'createElement').mockReturnValue({
+      href: '',
+      download: '',
+      click,
+    } as unknown as HTMLAnchorElement);
+
+    await downloadTemplate();
+
+    expect(createObjectURL).toHaveBeenCalled();
+    expect(click).toHaveBeenCalled();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:fake');
+
+    createObjectURL.mockRestore();
+    revokeObjectURL.mockRestore();
+    createElement.mockRestore();
   });
 });

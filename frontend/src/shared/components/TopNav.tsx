@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageSelector } from './LanguageSelector';
+import { PaletteToggle } from './PaletteToggle';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import {
   DropdownMenu,
@@ -53,6 +54,7 @@ export function TopNav({ onMenuClick, children }: TopNavProps) {
       {/* Right cluster */}
       <div className="flex items-center gap-1">
         <LanguageSelector />
+        <PaletteToggle />
         <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

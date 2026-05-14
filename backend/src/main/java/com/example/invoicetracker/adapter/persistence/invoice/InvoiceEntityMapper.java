@@ -2,6 +2,7 @@ package com.example.invoicetracker.adapter.persistence.invoice;
 
 import com.example.invoicetracker.domain.invoice.Invoice;
 import com.example.invoicetracker.domain.invoice.InvoiceLine;
+import com.example.invoicetracker.domain.invoice.InvoiceStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,6 +34,7 @@ public class InvoiceEntityMapper {
             entity.getDueDate(),
             lines,
             entity.getTaxRate(),
+            entity.getStatus() != null ? entity.getStatus() : InvoiceStatus.DRAFT,
             entity.getLastSentAt(),
             entity.getCreatedAt(),
             entity.getUpdatedAt(),
@@ -55,6 +57,7 @@ public class InvoiceEntityMapper {
         entity.setIssueDate(invoice.issueDate());
         entity.setDueDate(invoice.dueDate());
         entity.setTaxRate(invoice.taxRate());
+        entity.setStatus(invoice.status() != null ? invoice.status() : InvoiceStatus.DRAFT);
         entity.setLastSentAt(invoice.lastSentAt());
         entity.setCreatedAt(invoice.createdAt());
         entity.setUpdatedAt(invoice.updatedAt());
@@ -80,6 +83,7 @@ public class InvoiceEntityMapper {
         entity.setIssueDate(invoice.issueDate());
         entity.setDueDate(invoice.dueDate());
         entity.setTaxRate(invoice.taxRate());
+        entity.setStatus(invoice.status() != null ? invoice.status() : InvoiceStatus.DRAFT);
         entity.setLastSentAt(invoice.lastSentAt());
         entity.setDeletedAt(invoice.deletedAt());
 

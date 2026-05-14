@@ -1,6 +1,7 @@
 package com.example.invoicetracker.domain.invoice;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -44,6 +45,49 @@ public interface InvoiceRepository {
      * @return a page of invoices
      */
     Page<Invoice> findAll(UUID clientId, Pageable pageable);
+
+    /**
+     * Marks an invoice as PAID.
+     *
+     * @param id the invoice UUID
+     * @return the updated invoice
+     * @throws InvoiceNotFoundException if not found or soft-deleted
+     */
+    Invoice markPaid(UUID id);
+
+    /**
+     * Sets the status to SENT only if the current status is DRAFT (no-op otherwise).
+     *
+     * @param id the invoice UUID
+     */
+    void markSentIfDraft(UUID id);
+
+    /**
+     * Returns counts grouped by status for active (non-deleted) invoices.
+     *
+     * @return list of [status, count] pairs
+     */
+    List<Object[]> countByStatus();
+
+    /**
+     * Returns the sum of totals for active invoices by status.
+     *
+     * <p>Each element is an Object[] with [status (String), revenue (BigDecimal)].
+     *
+     * @return list of [status, revenue] pairs
+     */
+    List<Object[]> revenueByStatus();
+
+    /**
+     * Returns the sum of totals for active invoices grouped by month (YYYY-MM) for the last
+     * {@code months} months.
+     *
+     * <p>Each element is an Object[] with [month (String), revenue (BigDecimal)].
+     *
+     * @param months number of months to look back
+     * @return list of [month, revenue] pairs ordered by month ascending
+     */
+    List<Object[]> revenueByMonth(int months);
 
     /**
      * Checks whether a number is already taken by an active invoice.

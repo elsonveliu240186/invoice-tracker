@@ -17,6 +17,7 @@ export interface Invoice {
   lines: InvoiceLine[];
   subtotal: string;
   total: string;
+  status: 'DRAFT' | 'SENT' | 'PAID';
   lastSentAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -24,4 +25,12 @@ export interface Invoice {
 
 export interface SendEmailResponse {
   lastSentAt: string;
+}
+
+export interface InvoicePage {
+  content: Invoice[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
 }

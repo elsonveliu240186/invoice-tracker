@@ -58,7 +58,23 @@
     "activity": {
       "title": "Recent activity",
       "empty": "Activity will appear here once you start invoicing."
-    }
+    },
+    "welcome": {
+      "title": "Welcome back, {{name}}",
+      "subtitle": "Here's an overview of your invoicing activity."
+    },
+    "cards": {
+      "totalInvoices": "Total Invoices",
+      "totalRevenue": "Total Revenue",
+      "paidInvoices": "Paid Invoices",
+      "pending": "Pending",
+      "draft": "{{count}} draft"
+    },
+    "charts": {
+      "revenueByMonth": "Revenue by Month",
+      "invoiceStatus": "Invoice Status"
+    },
+    "error": "Failed to load dashboard data."
   },
   "clients": {
     "title": "Clients",
@@ -182,6 +198,15 @@
     }
   },
   "invoices": {
+    "list": {
+      "empty": "No invoices yet."
+    },
+    "fields": {
+      "number": "Invoice #",
+      "issueDate": "Issue date",
+      "dueDate": "Due date",
+      "total": "Total"
+    },
     "detail": {
       "title": "Invoice",
       "backToList": "Back to invoices",
@@ -194,7 +219,8 @@
       "openInNewTab": "Open in new tab",
       "download": "Download",
       "downloadDocx": "Download DOCX",
-      "downloadPdf": "Download PDF"
+      "downloadPdf": "Download PDF",
+      "markAsPaid": "Mark as Paid"
     },
     "lines": {
       "description": "Description",
@@ -208,7 +234,10 @@
       "total": "Total"
     },
     "status": {
-      "sentOn": "Sent on {{date}}"
+      "sentOn": "Sent on {{date}}",
+      "DRAFT": "Draft",
+      "SENT": "Sent",
+      "PAID": "Paid"
     },
     "confirm": {
       "send": {
@@ -221,7 +250,9 @@
       "sendFailed": "Failed to send invoice",
       "noRecipient": "Invoice has no recipient email address",
       "pdfConversionFailed": "PDF conversion failed. Please try again.",
-      "downloadFailed": "Download failed. Please try again."
+      "downloadFailed": "Download failed. Please try again.",
+      "markPaidSuccess": "Invoice marked as paid.",
+      "markPaidFailed": "Could not mark invoice as paid."
     },
     "errors": {
       "notFound": "Invoice not found",

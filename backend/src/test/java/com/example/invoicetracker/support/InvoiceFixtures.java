@@ -4,6 +4,7 @@ import com.example.invoicetracker.application.invoice.CompanyProperties;
 import com.example.invoicetracker.domain.client.Client;
 import com.example.invoicetracker.domain.invoice.Invoice;
 import com.example.invoicetracker.domain.invoice.InvoiceLine;
+import com.example.invoicetracker.domain.invoice.InvoiceStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -57,6 +58,7 @@ public final class InvoiceFixtures {
             LocalDate.of(2026, 6, 1),
             lines,
             new BigDecimal("0.21"),
+            InvoiceStatus.DRAFT,
             null,
             now,
             now,

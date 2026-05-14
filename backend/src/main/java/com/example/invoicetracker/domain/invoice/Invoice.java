@@ -19,6 +19,7 @@ public record Invoice(
     LocalDate dueDate,
     List<InvoiceLine> lines,
     BigDecimal taxRate,
+    InvoiceStatus status,
     Instant lastSentAt,
     Instant createdAt,
     Instant updatedAt,

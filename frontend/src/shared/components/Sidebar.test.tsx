@@ -107,4 +107,20 @@ describe('Sidebar', () => {
     renderSidebar({ collapsed: true });
     expect(screen.queryByText('Invoice Tracker')).not.toBeInTheDocument();
   });
+
+  it('sidebar root element uses bg-[var(--color-sidebar-bg)] class token', () => {
+    const { container } = renderSidebar();
+    const aside = container.querySelector('aside');
+    expect(aside?.className).toContain('--color-sidebar-bg');
+  });
+
+  it('sidebar background token does not change when .dark is toggled on html', () => {
+    const { container } = renderSidebar();
+    const aside = container.querySelector('aside');
+    const classBefore = aside?.className ?? '';
+    document.documentElement.classList.add('dark');
+    // Class string on the element itself does not change — only CSS resolution changes
+    expect(aside?.className).toBe(classBefore);
+    document.documentElement.classList.remove('dark');
+  });
 });

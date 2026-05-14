@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.invoicetracker.domain.client.Client;
 import com.example.invoicetracker.domain.invoice.Invoice;
 import com.example.invoicetracker.domain.invoice.InvoiceLine;
+import com.example.invoicetracker.domain.invoice.InvoiceStatus;
 import com.example.invoicetracker.support.InvoiceFixtures;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -87,7 +88,7 @@ class OpenPdfInvoiceRendererTest {
         Invoice invoice = new Invoice(
             UUID.randomUUID(), "INV-MULTI", clientId,
             LocalDate.of(2026, 5, 1), LocalDate.of(2026, 6, 1),
-            lines, new BigDecimal("0.10"), null, now, now, null, null);
+            lines, new BigDecimal("0.10"), InvoiceStatus.DRAFT, null, now, now, null, null);
 
         byte[] pdf = renderer.render(invoice, client, company);
         assertThat(pdf).hasSizeGreaterThan(1024);
@@ -127,7 +128,7 @@ class OpenPdfInvoiceRendererTest {
         Invoice invoice = new Invoice(
             UUID.randomUUID(), "INV-NOTAX", clientId,
             LocalDate.now(), LocalDate.now().plusDays(30),
-            lines, BigDecimal.ZERO, null, now, now, null, null);
+            lines, BigDecimal.ZERO, InvoiceStatus.DRAFT, null, now, now, null, null);
 
         byte[] pdf = renderer.render(invoice, client, company);
         assertThat(pdf).hasSizeGreaterThan(1024);

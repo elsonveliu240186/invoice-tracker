@@ -77,7 +77,7 @@ describe('App — unauthenticated', () => {
 describe('App — authenticated', () => {
   it('renders dashboard page at / when authenticated', async () => {
     renderAppAuthenticated('/');
-    await waitFor(() => expect(screen.getByTestId('home-page')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('dashboard-page')).toBeInTheDocument());
   });
 
   it('renders clients page at /clients when authenticated', async () => {
@@ -100,12 +100,12 @@ describe('App — authenticated', () => {
 
   it('redirects authenticated user from /login to /', async () => {
     renderAppAuthenticated('/login');
-    await waitFor(() => expect(screen.getByTestId('home-page')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('dashboard-page')).toBeInTheDocument());
   });
 
   it('redirects authenticated user from /register to /', async () => {
     renderAppAuthenticated('/register');
-    await waitFor(() => expect(screen.getByTestId('home-page')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('dashboard-page')).toBeInTheDocument());
   });
 
   it('renders invoice detail page at /invoices/:id when authenticated', async () => {

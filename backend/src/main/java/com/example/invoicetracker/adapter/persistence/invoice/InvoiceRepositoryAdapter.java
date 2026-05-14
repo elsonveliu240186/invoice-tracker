@@ -5,6 +5,7 @@ import com.example.invoicetracker.domain.invoice.InvoiceNotFoundException;
 import com.example.invoicetracker.domain.invoice.InvoiceRepository;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -65,6 +66,19 @@ public class InvoiceRepositoryAdapter implements InvoiceRepository {
     }
 
     @Override
+    @Transactional
+    public Invoice markPaid(UUID id) {
+        int updated = jpaRepository.markPaid(id);
+        if (updated == 0) {
+            throw new InvoiceNotFoundException(id);
+        }
+        entityManager.clear();
+        return jpaRepository.findByIdWithLinesAndNotDeleted(id)
+            .map(mapper::toDomain)
+            .orElseThrow(() -> new InvoiceNotFoundException(id));
+    }
+
+    @Override
     public Page<Invoice> findAll(UUID clientId, Pageable pageable) {
         return jpaRepository.findAllActive(clientId, pageable).map(mapper::toDomain);
     }
@@ -72,5 +86,26 @@ public class InvoiceRepositoryAdapter implements InvoiceRepository {
     @Override
     public boolean existsByNumberIgnoreCaseAndDeletedAtIsNull(String number) {
         return jpaRepository.existsByNumberIgnoreCaseAndDeletedAtIsNull(number);
+    }
+
+    @Override
+    @Transactional
+    public void markSentIfDraft(UUID id) {
+        jpaRepository.markSentIfDraft(id);
+    }
+
+    @Override
+    public List<Object[]> countByStatus() {
+        return jpaRepository.countByStatus();
+    }
+
+    @Override
+    public List<Object[]> revenueByStatus() {
+        return jpaRepository.revenueByStatus();
+    }
+
+    @Override
+    public List<Object[]> revenueByMonth(int months) {
+        return jpaRepository.revenueByMonth(months);
     }
 }

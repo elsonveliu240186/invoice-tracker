@@ -367,6 +367,62 @@
       ]
     },
     {
+      "name": "Dashboard (FEAT-20260514-01)",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/dashboard/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "dashboard", "stats"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('response has scalar aggregates', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('totalInvoices').that.is.a('number');",
+                  "  pm.expect(body).to.have.property('draftCount').that.is.a('number');",
+                  "  pm.expect(body).to.have.property('sentCount').that.is.a('number');",
+                  "  pm.expect(body).to.have.property('paidCount').that.is.a('number');",
+                  "  pm.expect(body).to.have.property('totalRevenue');",
+                  "  pm.expect(body).to.have.property('paidRevenue');",
+                  "  pm.expect(body).to.have.property('pendingRevenue');",
+                  "});",
+                  "pm.test('revenueByMonth has exactly 6 entries', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.revenueByMonth).to.be.an('array').with.lengthOf(6);",
+                  "  body.revenueByMonth.forEach(entry => {",
+                  "    pm.expect(entry).to.have.property('month').that.matches(/^\\d{4}-\\d{2}$/);",
+                  "    pm.expect(entry).to.have.property('revenue');",
+                  "  });",
+                  "});",
+                  "pm.test('counts sum to totalInvoices', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.draftCount + body.sentCount + body.paidCount).to.eql(body.totalInvoices);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Invoices",
       "item": [
         {
@@ -481,6 +537,45 @@
                   "  pm.expect(body).to.have.property('number');",
                   "  pm.expect(body).to.have.property('clientId');",
                   "  pm.expect(body.lines).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark Invoice as Paid (FEAT-20260514-01)",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/mark-paid",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "mark-paid"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('response has status PAID', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('status').that.eql('PAID');",
+                  "});",
+                  "pm.test('response has invoice fields', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id').that.eql(pm.environment.get('invoiceId'));",
+                  "  pm.expect(body).to.have.property('number');",
+                  "  pm.expect(body).to.have.property('lines').that.is.an('array');",
                   "});"
                 ]
               }

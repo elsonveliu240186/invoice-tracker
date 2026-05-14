@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router';
+import { NavLink, Link } from 'react-router';
 import { LayoutDashboard, Users, FileText, X, Settings, FileOutput } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
@@ -37,15 +37,15 @@ export function Sidebar({ collapsed = false, drawerMode = false, onClose }: Side
   return (
     <aside
       className={cn(
-        'flex h-full flex-col border-r border-[var(--color-border)] bg-[var(--color-card)]',
+        'flex h-full flex-col border-r border-[var(--color-sidebar-border)] bg-[var(--color-sidebar-bg)]',
         collapsed ? 'w-16' : 'w-60',
       )}
       aria-label="Sidebar navigation"
     >
       {/* Header */}
-      <div className="flex h-14 items-center justify-between px-4 border-b border-[var(--color-border)]">
+      <div className="flex h-14 items-center justify-between px-4 border-b border-[var(--color-sidebar-border)]">
         {!collapsed && (
-          <span className="text-sm font-semibold text-[var(--color-foreground)]">
+          <span className="text-sm font-semibold text-[var(--color-sidebar-text)]">
             {t('common.appName')}
           </span>
         )}
@@ -53,10 +53,10 @@ export function Sidebar({ collapsed = false, drawerMode = false, onClose }: Side
           <button
             onClick={onClose}
             aria-label={t('common.close')}
-            className="ml-auto rounded-md p-1 hover:bg-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+            className="ml-auto rounded-md p-1 hover:bg-[var(--color-sidebar-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-sidebar-active-text)]"
             data-testid="sidebar-close"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4 text-[var(--color-sidebar-text)]" />
           </button>
         )}
       </div>
@@ -72,7 +72,7 @@ export function Sidebar({ collapsed = false, drawerMode = false, onClose }: Side
                   title={t('nav.invoicesComingSoon')}
                   className={cn(
                     'flex cursor-not-allowed items-center gap-3 rounded-md px-3 py-2 text-sm font-medium opacity-50',
-                    'text-[var(--color-muted-foreground)]',
+                    'text-[var(--color-sidebar-text)]',
                   )}
                   data-testid="nav-item-disabled"
                 >
@@ -87,8 +87,8 @@ export function Sidebar({ collapsed = false, drawerMode = false, onClose }: Side
                       className={cn(
                         'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                         isActive
-                          ? 'bg-[var(--color-accent)] text-[var(--color-accent-foreground)]'
-                          : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-accent-foreground)]',
+                          ? 'bg-[var(--color-sidebar-active-bg)] text-[var(--color-sidebar-active-text)]'
+                          : 'text-[var(--color-sidebar-text)] hover:bg-[var(--color-sidebar-hover-bg)] hover:text-[var(--color-sidebar-text)]',
                       )}
                     >
                       <Icon className="h-4 w-4 shrink-0" aria-hidden={true} />
@@ -102,17 +102,20 @@ export function Sidebar({ collapsed = false, drawerMode = false, onClose }: Side
         </ul>
 
         {/* Settings section */}
-        <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
+        <div className="mt-4 pt-4 border-t border-[var(--color-sidebar-border)]">
           {!collapsed && (
-            <div className="mb-1 flex items-center gap-2 px-3 py-1">
+            <Link
+              to="/settings/invoice-template"
+              className="mb-1 flex items-center gap-2 px-3 py-1 rounded-md hover:bg-[var(--color-sidebar-hover-bg)] transition-colors"
+            >
               <Settings
-                className="h-3.5 w-3.5 text-[var(--color-muted-foreground)]"
+                className="h-3.5 w-3.5 text-[var(--color-sidebar-muted)]"
                 aria-hidden={true}
               />
-              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-sidebar-muted)]">
                 {t('nav.settings')}
               </span>
-            </div>
+            </Link>
           )}
           <ul className="space-y-1" data-testid="nav-settings-section">
             {SETTINGS_ITEMS.map(({ to, labelKey, icon: Icon, end }) => (
@@ -124,8 +127,8 @@ export function Sidebar({ collapsed = false, drawerMode = false, onClose }: Side
                       className={cn(
                         'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                         isActive
-                          ? 'bg-[var(--color-accent)] text-[var(--color-accent-foreground)]'
-                          : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-accent-foreground)]',
+                          ? 'bg-[var(--color-sidebar-active-bg)] text-[var(--color-sidebar-active-text)]'
+                          : 'text-[var(--color-sidebar-text)] hover:bg-[var(--color-sidebar-hover-bg)] hover:text-[var(--color-sidebar-text)]',
                       )}
                     >
                       <Icon className="h-4 w-4 shrink-0" aria-hidden={true} />

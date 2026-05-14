@@ -32,21 +32,23 @@ C4Container
 
 ## Components — Backend (C4 — level 3)
 
-Updated by FEAT-20260513-03 (Invoice Sharing). FEAT-20260513-02 added InvoiceController, InvoiceService, OpenPdfInvoiceRenderer, JavaMailInvoiceMailer, and InvoiceRepositoryAdapter. Previous update: FEAT-20260512-02 (authentication modernization).
+Updated by FEAT-20260514-01 (Dashboard upgrade). FEAT-20260513-03 added InvoiceRenderController, InvoiceRenderService, PoiTlInvoiceDocxRenderer, LibreOfficePdfConverter, DocxThenPdfInvoicePdfRenderer, and InvoiceTemplateController. FEAT-20260513-02 added InvoiceController, InvoiceService, OpenPdfInvoiceRenderer, JavaMailInvoiceMailer, and InvoiceRepositoryAdapter. Previous update: FEAT-20260512-02 (authentication modernization).
 
 ```mermaid
 flowchart TB
     subgraph adapter_web["adapter.web"]
         ctl[ClientController]
         auth_ctl[AuthController<br/>/api/v1/auth/*]
-        inv_ctl[InvoiceController<br/>/api/v1/invoices — CRUD + /pdf + /send-email]
+        inv_ctl[InvoiceController<br/>/api/v1/invoices — CRUD + /pdf + /send-email<br/>+ PATCH /{id}/mark-paid]
+        dash_ctl[DashboardController<br/>GET /api/v1/dashboard/stats]
         render_ctl[InvoiceRenderController<br/>/api/v1/invoices/{id}/docx<br/>/docx-pdf  /docx-email]
         tpl_ctl[InvoiceTemplateController<br/>/api/v1/settings/invoice-template]
     end
     subgraph application["application"]
         svc[ClientService]
         auth_svc[AuthService]
-        inv_svc[InvoiceService]
+        inv_svc[InvoiceService<br/>markAsPaid / sendEmail / ...]
+        dash_svc[DashboardService<br/>getStats — Clock-injected<br/>zero-fills revenueByMonth]
         render_svc[InvoiceRenderService<br/>renderDocx / renderPdf / sendEmail]
         tpl_store_port[InvoiceTemplateStore port]
         docx_port[InvoiceDocxRenderer port]
@@ -54,11 +56,12 @@ flowchart TB
     end
     subgraph domain["domain"]
         entities[Client, AppUser, Invoice, InvoiceLine]
-        repos[ClientRepository, AppUserRepository, InvoiceRepository]
+        status[InvoiceStatus enum<br/>DRAFT / SENT / PAID]
+        repos[ClientRepository, AppUserRepository, InvoiceRepository<br/>countByStatus / revenueByStatus / revenueByMonth]
         exceptions[InvoiceHasNoRecipientException<br/>PdfConversionFailedException]
     end
     subgraph adapter_persistence["adapter.persistence"]
-        jpa[ClientRepositoryAdapter<br/>AppUserRepositoryAdapter<br/>InvoiceRepositoryAdapter]
+        jpa[ClientRepositoryAdapter<br/>AppUserRepositoryAdapter<br/>InvoiceRepositoryAdapter<br/>markPaid / revenueByMonth JPQL]
     end
     subgraph adapter_template["adapter.template"]
         fs_store[FilesystemInvoiceTemplateStore<br/>atomic replace / ZIP validation / SSRF scan]
@@ -72,9 +75,10 @@ flowchart TB
     subgraph config["config"]
         sec[SecurityConfig]
         mail_cfg[InvoiceMailerAutoConfig<br/>conditional JavaMailSender]
+        app_cfg[AppConfig<br/>Clock.systemUTC bean]
     end
     subgraph infra_ext["External"]
-        db[(Postgres)]
+        db[(Postgres<br/>invoices.status VARCHAR(10)<br/>ix_invoices_status partial index)]
         fs[(FS ./templates/invoice-template.docx)]
         lo_bin([soffice headless binary])
         smtp[MailHog / SMTP]
@@ -83,8 +87,11 @@ flowchart TB
     ctl --> svc
     auth_ctl --> auth_svc
     inv_ctl --> inv_svc
+    dash_ctl --> dash_svc
     render_ctl --> render_svc
     tpl_ctl --> tpl_store_port
+    dash_svc --> repos
+    inv_svc --> repos
     render_svc --> docx_port
     render_svc --> pdf_conv_port
     render_svc --> mailer
@@ -101,6 +108,7 @@ flowchart TB
     lo --> lo_bin
     mailer --> smtp
     sec -.permits.- auth_ctl
+    app_cfg -.provides Clock.-> dash_svc
 ```
 
 ## Invoice rendering pipeline (FEAT-20260513-03)
@@ -159,20 +167,22 @@ flowchart LR
 
 ## Components — Frontend
 
-Updated by FEAT-20260513-02 (Invoice PDF + email) and FEAT-20260513-01 (Design system, dark-mode fixes, responsive layout, form alignment). Previous update: FEAT-20260512-03 (Dashboard and core UI modernization).
+Updated by FEAT-20260514-01 (Dashboard upgrade, palette migration, invoice status). Previous update: FEAT-20260513-02 (Invoice PDF + email) and FEAT-20260513-01 (Design system, dark-mode fixes, responsive layout, form alignment).
 
 **Design system** — see [`docs/DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) for the full token reference, primitive component API, dark-mode guide, breakpoint contract, and ESLint enforcement rule.
+
+**Palette system** — `src/index.css` is the single source of truth for all CSS tokens. Changing `--palette-orange` from `#FCA311` to any other value updates every accented surface site-wide. Switching to `teal-steel` is achieved by toggling `.palette-teal-steel` on `<html>` via `PaletteProvider`.
 
 ```mermaid
 flowchart LR
     subgraph Browser
       idx[index.html] --> main[main.tsx]
       main -->|hydrate| authStore[(useAuthStore<br/>Zustand + localStorage)]
-      main --> providers[Providers: I18n + Theme + ErrorBoundary + Router]
+      main --> providers[Providers: I18n + Theme + PaletteProvider + ErrorBoundary + Router]
       providers --> appShell[AppShell]
-      appShell --> sidebar[Sidebar<br/>collapsible desktop]
+      appShell --> sidebar[Sidebar<br/>--color-sidebar-* tokens<br/>always dark navy]
       appShell --> mobileSidebar[MobileSidebar<br/>Sheet drawer on mobile]
-      appShell --> topnav[TopNav<br/>UserMenu + ThemeToggle + LanguageSelector]
+      appShell --> topnav[TopNav<br/>UserMenu + ThemeToggle + PaletteToggle + LanguageSelector]
       appShell --> outlet[(Routed outlet<br/>AnimatePresence)]
       outlet --> guard_p[ProtectedRoute]
       outlet --> guard_pub[PublicOnlyRoute]
@@ -187,13 +197,18 @@ flowchart LR
       forgot --> authStore
       login --> fbase[Firebase Auth<br/>GoogleAuthProvider]
       topnav --> userMenu[UserMenu<br/>logout → authStore]
+      topnav --> paletteToggle[PaletteToggle<br/>navy-amber / teal-steel]
     end
     subgraph DashboardFeature[src/features/dashboard]
-      kpi[KpiCard]
-      activity[RecentActivity stub]
-      dashPage[DashboardPage]
-      dashPage --> kpi
-      dashPage --> activity
+      dashPage[DashboardPage<br/>welcome banner + 4 stat cards + 2 charts]
+      statCard[StatCard<br/>CSS token accent]
+      revenueChart[RevenueChart<br/>Bar — useThemeColor]
+      donutChart[InvoiceStatusChart<br/>Pie — useThemeColor]
+      dashHook[useDashboardStats<br/>GET /api/v1/dashboard/stats]
+      dashPage --> statCard
+      dashPage --> revenueChart
+      dashPage --> donutChart
+      dashPage --> dashHook
     end
     subgraph ClientsFeature[src/features/clients]
       table[ClientTable<br/>shadcn Table + motion.tr]
@@ -205,16 +220,24 @@ flowchart LR
       derive[derive.ts<br/>deriveStatus + formatDate]
     end
     subgraph InvoicesFeature[src/features/invoices]
-      invDetailPage[InvoiceDetailPage]
+      invDetailPage[InvoiceDetailPage<br/>StatusBadge in header<br/>MarkAsPaidButton in actions]
       viewPdfBtn[ViewPdfButton<br/>Dialog + iframe]
       sendInvBtn[SendInvoiceButton<br/>AlertDialog + spinner + toast]
       sentBadge[InvoiceSentBadge]
+      invStatusBadge[StatusBadge<br/>DRAFT / SENT / PAID<br/>CSS token classes + i18n]
+      markPaidBtn[MarkAsPaidButton<br/>hidden when PAID<br/>toast + onPaid callback]
+      markPaidApi[markInvoicePaid.ts<br/>PATCH /api/v1/invoices/{id}/mark-paid]
+      useMarkPaid[useMarkInvoicePaid<br/>loading / error state]
       invApi[invoicesApi.ts<br/>getInvoice / getInvoicePdfUrl / sendInvoiceEmail]
       useInv[useInvoice / useSendInvoice<br/>React-Query]
       invSchema[Invoice + InvoiceLine zod schemas]
       invDetailPage --> viewPdfBtn
       invDetailPage --> sendInvBtn
       invDetailPage --> sentBadge
+      invDetailPage --> invStatusBadge
+      invDetailPage --> markPaidBtn
+      markPaidBtn --> useMarkPaid
+      useMarkPaid --> markPaidApi
       invDetailPage --> invApi
       invDetailPage --> useInv
       invApi --> invSchema
@@ -230,6 +253,12 @@ flowchart LR
       sidebar2[Sidebar] --- mobileSidebar2[MobileSidebar]
       topnav2[TopNav] --- userMenu2[UserMenu]
       navItems[navItems.ts]
+      palToggle[PaletteToggle]
+    end
+    subgraph SharedTheme[src/shared/theme]
+      paletteStore[paletteStore.ts<br/>Zustand — navy-amber / teal-steel]
+      usePalette[usePalette.ts]
+      palProvider[PaletteProvider.tsx<br/>apply .palette-teal-steel on html]
     end
     subgraph SharedUI[src/shared/ui]
       btn[Button] --- inp[Input] --- card[Card]
@@ -239,6 +268,7 @@ flowchart LR
     subgraph SharedLib[src/shared/lib]
       http[http.ts<br/>Basic auth header] --- firebase[firebase.ts]
       motion[motion.ts<br/>Framer variants]
+      useThemeColor[useThemeColor.ts<br/>getComputedStyle + MutationObserver]
     end
     guard_p --> invoiceDetail[InvoiceDetailPage /invoices/:id]
     invoiceDetail --> InvoicesFeature
@@ -249,6 +279,10 @@ flowchart LR
     forms --> schema
     forms --> authApi
     authApi --> http
+    revenueChart --> useThemeColor
+    donutChart --> useThemeColor
+    paletteToggle --> paletteStore
+    palProvider --> paletteStore
 ```
 
 ## Decisions log
@@ -378,6 +412,34 @@ flowchart LR
 - **Decision**: `mailhog/mailhog:v1.0.1` is added to `docker-compose.yml` for local and E2E-test SMTP. SMTP credentials are supplied exclusively via environment variables (`MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_STARTTLS`). No credential string is present in any YAML or Java source file. The `local` Spring profile binds to `localhost:1025` with `starttls=false` and a justifying comment.
 - **Why**: Hard-coding credentials is a OWASP A02 violation and a gitleaks finding. MailHog provides an HTTP API (`:8025`) for Playwright E2E assertions without requiring a real SMTP relay. The `local` profile STARTTLS exemption is intentional and documented.
 - **Trade-offs**: Production deployments must supply all five `MAIL_*` env vars or the Spring context will fail to start (no default on production profile — fail-fast design). The `docker` profile reads them from `docker-compose.yml` service env section.
+
+### ADR-019 — FEAT-20260514-01: `--color-sidebar-*` tokens defined only in `:root`, never in `.dark`
+
+- **Date**: 2026-05-14
+- **Decision**: The seven `--color-sidebar-*` tokens (`--color-sidebar-bg`, `--color-sidebar-text`, `--color-sidebar-border`, `--color-sidebar-muted`, `--color-sidebar-active-bg`, `--color-sidebar-active-text`, `--color-sidebar-hover-bg`) are declared in the `@theme` / `:root` block and deliberately omitted from the `.dark` override block.
+- **Why**: The design requires the sidebar to always appear dark navy regardless of the user's light/dark mode preference (matching Payfazz's reference UI). Keeping these tokens out of `.dark` means they inherit the `:root` values in both modes. Adding a light sidebar in future requires only inserting `.dark` overrides for those seven tokens — the architecture already supports this without any component changes.
+- **Trade-offs**: Sidebar background will not respond to a future "auto-sidebar" mode if one is ever added. A light-sidebar variant requires an explicit opt-in. This is documented and accepted for v1.
+
+### ADR-020 — FEAT-20260514-01: `useThemeColor` hook reads CSS variables via `getComputedStyle` + `MutationObserver`
+
+- **Date**: 2026-05-14
+- **Decision**: Chart fill colors are resolved at runtime by a `useThemeColor(varName: string): string` hook that calls `window.getComputedStyle(document.documentElement).getPropertyValue(varName)` on mount and re-reads whenever the `<html>` element's `class` attribute mutates. A `MutationObserver` is used rather than a React event handler.
+- **Why**: Recharts SVG `fill` props require a concrete color string — they cannot accept `var(--color-accent)`. The Tailwind dark-mode system and the palette switcher both operate by adding/removing classes on `<html>`. A `MutationObserver` on `<html>` catches both mechanisms with a single listener. `getComputedStyle` is called inline inside the observer callback (not captured in a closure) to avoid stale-closure bugs.
+- **Trade-offs**: The observer adds a small overhead per chart. It is disconnected in the `useEffect` cleanup. If many charts are mounted simultaneously they each maintain their own observer; consolidating into a single context observer is a future optimization.
+
+### ADR-021 — FEAT-20260514-01: Palette switcher uses a CSS class on `<html>`, not a separate stylesheet
+
+- **Date**: 2026-05-14
+- **Decision**: The `teal-steel` palette is implemented as a `.palette-teal-steel` CSS class block in `src/index.css` that overrides `--palette-*` raw tokens. Toggling the palette adds or removes this class on `document.documentElement`, which cascades through all CSS token consumers without any component-level changes.
+- **Why**: A separate stylesheet would require a `<link>` swap (FOUC risk) or a CSS-in-JS runtime injection. A single-class override on `<html>` is instantaneous, requires no network round-trip, and integrates cleanly with the existing `MutationObserver` in `useThemeColor` — chart colors re-resolve automatically on palette change. Adding palette three or more in future requires only one new CSS block and one union type entry.
+- **Trade-offs**: All palette definitions are bundled in a single CSS file even if only one is active. At the scale of five palette raw tokens per palette this is negligible.
+
+### ADR-022 — FEAT-20260514-01: `DashboardService` revenueByMonth zero-fill in Java, not SQL
+
+- **Date**: 2026-05-14
+- **Decision**: The `revenueByMonth` array is always exactly 6 entries (current month + 5 prior, zero-filled). The SQL query returns only months that have invoices; the zero-fill is performed in `DashboardService.buildMonthlyRevenue()` by computing a `List<YearMonth>` for the last 6 months and merging repository rows into it, defaulting missing months to `BigDecimal.ZERO`.
+- **Why**: Zero-filling in SQL via a `generate_series` / calendar join is Postgres-specific and adds complexity to the native query. Doing it in Java keeps the SQL simple, is trivially testable with a mocked repository, and allows the fixed `Clock` injection to drive both the window computation and the test assertions deterministically.
+- **Trade-offs**: A month boundary that falls exactly at midnight UTC could theoretically shift the 6-month window between two sequential calls if the system clock is consulted more than once. The injected `Clock` instance (fixed in tests, `Clock.systemUTC()` in production) is read once per `getStats()` call and shared across the window computation and the merge — there is no inconsistency within a single request.
 
 ### ADR-008 — FEAT-20260512-01: Dual toast system during transition (sonner + legacy)
 

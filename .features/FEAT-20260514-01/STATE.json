@@ -1,0 +1,12 @@
+{
+    "id":  "FEAT-20260514-01",
+    "approved_at":  "2026-05-14T11:45:00Z",
+    "failures":  {
+                     "qa":  0,
+                     "security":  1,
+                     "review":  1
+                 },
+    "created_at":  "2026-05-14T11:00:00Z",
+    "state":  "Shipping",
+    "title":  "Dashboard Upgrade — stats, charts, color palette, invoice status, palette switcher"
+}

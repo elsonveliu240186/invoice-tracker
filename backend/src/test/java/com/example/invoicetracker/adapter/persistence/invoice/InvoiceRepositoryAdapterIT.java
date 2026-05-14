@@ -8,10 +8,13 @@ import com.example.invoicetracker.adapter.persistence.client.ClientJpaRepository
 import com.example.invoicetracker.domain.invoice.Invoice;
 import com.example.invoicetracker.domain.invoice.InvoiceLine;
 import com.example.invoicetracker.domain.invoice.InvoiceNotFoundException;
+import com.example.invoicetracker.domain.invoice.InvoiceStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,6 +71,7 @@ class InvoiceRepositoryAdapterIT {
             LocalDate.of(2026, 6, 1),
             lines,
             new BigDecimal("0.20"),
+            InvoiceStatus.DRAFT,
             null,
             now,
             now,
@@ -133,7 +137,8 @@ class InvoiceRepositoryAdapterIT {
         Invoice deleted = new Invoice(
             saved.id(), saved.number(), saved.clientId(),
             saved.issueDate(), saved.dueDate(), saved.lines(),
-            saved.taxRate(), null, saved.createdAt(), saved.updatedAt(), now, null);
+            saved.taxRate(), InvoiceStatus.DRAFT, null, saved.createdAt(), saved.updatedAt(),
+            now, null);
         adapter.save(deleted);
 
         Optional<Invoice> found = adapter.findByIdWithLines(saved.id());
@@ -148,6 +153,81 @@ class InvoiceRepositoryAdapterIT {
         assertThat(adapter.existsByNumberIgnoreCaseAndDeletedAtIsNull("INV-EXISTS-001")).isTrue();
         assertThat(adapter.existsByNumberIgnoreCaseAndDeletedAtIsNull("inv-exists-001")).isTrue();
         assertThat(adapter.existsByNumberIgnoreCaseAndDeletedAtIsNull("INV-NONEXISTENT")).isFalse();
+    }
+
+    @Test
+    void markPaid_persists_status_paid() {
+        Invoice invoice = buildInvoice("INV-MARKPAID-001");
+        Invoice saved = adapter.save(invoice);
+        assertThat(saved.status()).isEqualTo(InvoiceStatus.DRAFT);
+
+        Invoice paid = adapter.markPaid(saved.id());
+
+        assertThat(paid.status()).isEqualTo(InvoiceStatus.PAID);
+        // Also verify directly via JPA
+        InvoiceEntity entity = jpaRepository.findById(saved.id()).orElseThrow();
+        assertThat(entity.getStatus()).isEqualTo(InvoiceStatus.PAID);
+    }
+
+    @Test
+    void countByStatus_returns_grouped_counts() {
+        // Seed 2 DRAFT invoices (default) and 1 PAID invoice
+        Invoice draft1 = buildInvoice("INV-CNT-DRAFT-1");
+        Invoice draft2 = buildInvoice("INV-CNT-DRAFT-2");
+        Invoice paidSrc = buildInvoice("INV-CNT-PAID-1");
+
+        adapter.save(draft1);
+        adapter.save(draft2);
+        Invoice saved3 = adapter.save(paidSrc);
+        adapter.markPaid(saved3.id());
+
+        List<Object[]> rows = adapter.countByStatus();
+
+        Map<String, Long> map = new HashMap<>();
+        for (Object[] row : rows) {
+            map.put(String.valueOf(row[0]), ((Number) row[1]).longValue());
+        }
+
+        assertThat(map.get("DRAFT")).isGreaterThanOrEqualTo(2L);
+        assertThat(map.get("PAID")).isGreaterThanOrEqualTo(1L);
+    }
+
+    @Test
+    void revenueByMonth_groups_by_yyyy_mm() {
+        // Seed 2 invoices in current month with known line totals
+        // Each invoice: 1 line of quantity=1, unitPrice=100.00, taxRate=0.00 → total=100.00
+        LocalDate today = LocalDate.now();
+        Instant now = Instant.now();
+
+        Invoice inv1 = new Invoice(
+            UUID.randomUUID(), "INV-REV-001", clientId,
+            today, today.plusDays(30),
+            List.of(new InvoiceLine(UUID.randomUUID(), "Svc", 1, new BigDecimal("100.00"), 0)),
+            BigDecimal.ZERO, InvoiceStatus.DRAFT, null, now, now, null, null
+        );
+        Invoice inv2 = new Invoice(
+            UUID.randomUUID(), "INV-REV-002", clientId,
+            today, today.plusDays(30),
+            List.of(new InvoiceLine(UUID.randomUUID(), "Svc", 1, new BigDecimal("150.00"), 0)),
+            BigDecimal.ZERO, InvoiceStatus.DRAFT, null, now, now, null, null
+        );
+        adapter.save(inv1);
+        adapter.save(inv2);
+
+        List<Object[]> rows = adapter.revenueByMonth(6);
+
+        String currentMonth = today.getYear() + "-"
+            + String.format("%02d", today.getMonthValue());
+
+        // Find the current-month entry
+        Optional<Object[]> currentRow = rows.stream()
+            .filter(r -> currentMonth.equals(String.valueOf(r[0])))
+            .findFirst();
+
+        assertThat(currentRow).isPresent();
+        BigDecimal revenue = new BigDecimal(currentRow.get()[1].toString());
+        // At minimum the two invoices we seeded: 100 + 150 = 250
+        assertThat(revenue).isGreaterThanOrEqualTo(new BigDecimal("250.00"));
     }
 
     @Test
@@ -169,7 +249,7 @@ class InvoiceRepositoryAdapterIT {
         Invoice otherInv = new Invoice(UUID.randomUUID(), "INV-OTHER-001", otherClientId,
             LocalDate.now(), LocalDate.now().plusDays(30),
             List.of(new InvoiceLine(UUID.randomUUID(), "Item", 1, new BigDecimal("10.00"), 0)),
-            BigDecimal.ZERO, null, now, now, null, null);
+            BigDecimal.ZERO, InvoiceStatus.DRAFT, null, now, now, null, null);
         adapter.save(otherInv);
 
         org.springframework.data.domain.Page<Invoice> result = adapter.findAll(

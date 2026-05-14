@@ -59,20 +59,6 @@ async function stubTemplatePreview(page: Page, metadata: TemplateMetadata) {
   );
 }
 
-async function stubTemplateDownload(page: Page) {
-  await page.route('**/api/v1/settings/invoice-template/download', (route) => {
-    const magic = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
-    void route.fulfill({
-      status: 200,
-      headers: {
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'Content-Disposition': 'attachment; filename="invoice-template.docx"',
-      },
-      body: magic,
-    });
-  });
-}
-
 async function stubTemplateUploadSuccess(page: Page, resultMetadata: TemplateMetadata) {
   await page.route('**/api/v1/settings/invoice-template', (route) => {
     if (route.request().method() !== 'POST') {
@@ -86,26 +72,6 @@ async function stubTemplateUploadSuccess(page: Page, resultMetadata: TemplateMet
         filename: resultMetadata.filename,
         size: resultMetadata.size,
         uploadedAt: resultMetadata.uploadedAt,
-      }),
-    });
-  });
-}
-
-async function stubTemplateUpload415(page: Page) {
-  await page.route('**/api/v1/settings/invoice-template', (route) => {
-    if (route.request().method() !== 'POST') {
-      void route.continue();
-      return;
-    }
-    void route.fulfill({
-      status: 415,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        type: 'about:blank',
-        title: 'Unsupported Media Type',
-        status: 415,
-        detail: 'Only .docx files are accepted.',
-        code: 'INVALID_TEMPLATE_TYPE',
       }),
     });
   });

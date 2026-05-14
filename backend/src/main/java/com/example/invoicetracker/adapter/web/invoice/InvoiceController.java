@@ -23,6 +23,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -143,11 +144,25 @@ public class InvoiceController {
         return ResponseEntity.ok(new SendEmailResponse(updated.lastSentAt()));
     }
 
+    /**
+     * Marks an invoice as PAID.
+     *
+     * @param id the invoice UUID
+     * @return 200 with the updated invoice response
+     */
+    @PatchMapping("/{id}/mark-paid")
+    @Operation(summary = "Mark an invoice as PAID")
+    public ResponseEntity<InvoiceResponse> markPaid(@PathVariable UUID id) {
+        Invoice updated = invoiceService.markAsPaid(id);
+        return ResponseEntity.ok(toResponse(updated));
+    }
+
     private InvoiceResponse toResponse(Invoice invoice) {
         List<InvoiceLineDto> lineDtos = invoice.lines().stream()
             .map(l -> new InvoiceLineDto(l.id(), l.description(), l.quantity(),
                 l.unitPrice(), l.lineTotal()))
             .toList();
+        String statusName = invoice.status() != null ? invoice.status().name() : null;
         return new InvoiceResponse(
             invoice.id(),
             invoice.number(),
@@ -159,6 +174,7 @@ public class InvoiceController {
             invoice.taxRate(),
             invoice.subtotal(),
             invoice.total(),
+            statusName,
             invoice.lastSentAt(),
             invoice.createdAt(),
             invoice.updatedAt()

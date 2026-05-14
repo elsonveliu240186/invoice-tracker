@@ -29,9 +29,11 @@ Auth endpoints (`/api/v1/auth/**`) are **public** and do not require credentials
 | Clients | GET | `/api/v1/clients/{id}` | Required | Get a client by ID |
 | Clients | PUT | `/api/v1/clients/{id}` | Required | Update a client (full replacement) |
 | Clients | DELETE | `/api/v1/clients/{id}` | Required | Soft-delete a client |
+| Dashboard | GET | `/api/v1/dashboard/stats` | Required | Get dashboard aggregates — counts, revenues, and last-6-months chart data (FEAT-20260514-01) |
 | Invoices | POST | `/api/v1/invoices` | Required | Create a new invoice |
-| Invoices | GET | `/api/v1/invoices` | Required | List invoices (paginated, filterable by clientId) |
-| Invoices | GET | `/api/v1/invoices/{id}` | Required | Get an invoice by ID |
+| Invoices | GET | `/api/v1/invoices` | Required | List invoices (paginated, filterable by clientId) — each item includes `status` |
+| Invoices | GET | `/api/v1/invoices/{id}` | Required | Get an invoice by ID — includes `status` field |
+| Invoices | PATCH | `/api/v1/invoices/{id}/mark-paid` | Required | Transition invoice status to PAID (idempotent) (FEAT-20260514-01) |
 | Invoices | GET | `/api/v1/invoices/{id}/pdf` | Required | Download invoice as PDF |
 | Invoices | POST | `/api/v1/invoices/{id}/send-email` | Required | Send invoice PDF by email to client |
 | Invoice Rendering | GET | `/api/v1/invoices/{id}/docx` | Required | Download invoice as merged DOCX (FEAT-20260513-03) |
@@ -291,6 +293,58 @@ Soft-deletes the client (sets `deleted_at`). The record is retained in the datab
 
 ---
 
+## Dashboard (FEAT-20260514-01)
+
+### GET `/api/v1/dashboard/stats`
+
+Returns aggregated statistics for all non-deleted invoices belonging to the authenticated user. The `revenueByMonth` array always contains exactly 6 entries (current month plus the 5 preceding months), zero-filled for months with no invoices.
+
+**Auth**: HTTP Basic required. Returns `401` when unauthenticated.
+
+**Request**: no body, no query parameters.
+
+**Success response** `200 OK`:
+
+```json
+{
+  "totalInvoices": 12,
+  "draftCount": 4,
+  "sentCount": 5,
+  "paidCount": 3,
+  "totalRevenue": "24500.00",
+  "paidRevenue": "8200.00",
+  "pendingRevenue": "16300.00",
+  "revenueByMonth": [
+    { "month": "2025-12", "revenue": "0.00" },
+    { "month": "2026-01", "revenue": "3200.00" },
+    { "month": "2026-02", "revenue": "4100.00" },
+    { "month": "2026-03", "revenue": "5800.00" },
+    { "month": "2026-04", "revenue": "4400.00" },
+    { "month": "2026-05", "revenue": "7000.00" }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `totalInvoices` | long | Count of all non-deleted invoices |
+| `draftCount` | long | Count with `status = 'DRAFT'` |
+| `sentCount` | long | Count with `status = 'SENT'` |
+| `paidCount` | long | Count with `status = 'PAID'` |
+| `totalRevenue` | BigDecimal | Sum of `(subtotal + tax)` across all statuses |
+| `paidRevenue` | BigDecimal | Sum for `status = 'PAID'` invoices only |
+| `pendingRevenue` | BigDecimal | `totalRevenue − paidRevenue` |
+| `revenueByMonth` | array | Exactly 6 `{ month: "YYYY-MM", revenue: BigDecimal }` entries, zero-filled |
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `500 Internal Server Error` | `INTERNAL_ERROR` | Unexpected server error |
+
+---
+
 ## Invoices
 
 ### POST `/api/v1/invoices`
@@ -330,9 +384,51 @@ Returns a paginated list of invoices.
 
 ### GET `/api/v1/invoices/{id}`
 
-Returns a single invoice.
+Returns a single invoice. The response includes the `status` field (`"DRAFT"`, `"SENT"`, or `"PAID"`).
 
 **Error responses**: `401 UNAUTHENTICATED`, `404 INVOICE_NOT_FOUND`.
+
+---
+
+### PATCH `/api/v1/invoices/{id}/mark-paid` (FEAT-20260514-01)
+
+Transitions the invoice's status to `PAID`. The operation is **idempotent**: calling it on an already-paid invoice returns `200` with the existing `InvoiceResponse` unchanged. Soft-deleted invoices return `404`.
+
+**Auth**: HTTP Basic required.
+
+**Path parameter**: `id` — UUID of the invoice.
+
+**Request**: no body.
+
+**Success response** `200 OK` — `InvoiceResponse` with `status: "PAID"`:
+
+```json
+{
+  "id":          "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "number":      "INV-2026-001",
+  "clientId":    "a1b2c3d4-...",
+  "issueDate":   "2026-05-14",
+  "dueDate":     "2026-06-13",
+  "taxRate":     0.20,
+  "status":      "PAID",
+  "subtotal":    "1500.00",
+  "tax":         "300.00",
+  "total":       "1800.00",
+  "lastSentAt":  "2026-05-14T10:45:00Z",
+  "createdAt":   "2026-05-14T09:00:00Z",
+  "updatedAt":   "2026-05-14T11:00:00Z",
+  "lines": [
+    { "description": "Web development", "quantity": 10, "unitPrice": 150.00 }
+  ]
+}
+```
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404 Not Found` | `INVOICE_NOT_FOUND` | No active (non-deleted) invoice with that UUID |
 
 ---
 

@@ -103,7 +103,7 @@ async function stubInvoiceDocx(page: Page, invoiceId: string, invoiceNumber: str
   await page.route(`**/api/v1/invoices/${invoiceId}/docx`, (route) => {
     // Minimal ZIP magic + 5 KB padding
     const magic = [0x50, 0x4b, 0x03, 0x04];
-    const padding = new Array(5200).fill(0x00);
+    const padding: number[] = new Array(5200).fill(0x00) as number[];
     const body = Buffer.from([...magic, ...padding]);
     void route.fulfill({
       status: 200,
@@ -128,49 +128,6 @@ async function stubInvoicePdf(page: Page, invoiceId: string, invoiceNumber: stri
         'Cache-Control': 'private, no-store',
       },
       body: pdfContent,
-    });
-  });
-}
-
-async function stubSendEmail(page: Page, invoiceId: string, lastSentAt: string) {
-  await page.route(`**/api/v1/invoices/${invoiceId}/send-email`, (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ lastSentAt }),
-    }),
-  );
-}
-
-async function stubTemplatePreview(page: Page, isDefault = true) {
-  await page.route('**/api/v1/settings/invoice-template/preview', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        filename: 'invoice-template.docx',
-        size: 8192,
-        uploadedAt: '2026-01-01T00:00:00Z',
-        isDefault,
-      }),
-    }),
-  );
-}
-
-async function stubTemplateUpload(page: Page) {
-  await page.route('**/api/v1/settings/invoice-template', (route) => {
-    if (route.request().method() !== 'POST') {
-      void route.continue();
-      return;
-    }
-    void route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        filename: 'invoice-template.docx',
-        size: 6144,
-        uploadedAt: new Date().toISOString(),
-      }),
     });
   });
 }
@@ -249,7 +206,7 @@ test.describe('AC-7 + AC-8 + AC-14: Invoice Sharing — Download & Email', () =>
     await page.route(`**/api/v1/invoices/${invoice.id}/docx`, (route) => {
       docxRequested = true;
       const magic = [0x50, 0x4b, 0x03, 0x04];
-      const padding = new Array(5200).fill(0x00);
+      const padding: number[] = new Array(5200).fill(0x00) as number[];
       void route.fulfill({
         status: 200,
         headers: {

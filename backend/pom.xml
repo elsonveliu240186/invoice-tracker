@@ -275,6 +275,7 @@
                                 <exclude>**/adapter/persistence/invoice/InvoiceRepositoryAdapter*</exclude>
                                 <exclude>**/adapter/persistence/invoice/InvoiceEntityMapper*</exclude>
                                 <exclude>**/adapter/web/settings/dto/**</exclude>
+                                <exclude>**/adapter/web/dashboard/dto/**</exclude>
                                 <exclude>**/adapter/template/FilesystemInvoiceTemplateStore$*</exclude>
                                 <exclude>**/tools/**</exclude>
                             </excludes>

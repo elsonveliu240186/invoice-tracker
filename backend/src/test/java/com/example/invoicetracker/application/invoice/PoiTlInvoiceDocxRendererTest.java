@@ -8,6 +8,7 @@ import com.example.invoicetracker.application.template.InvoiceTemplateStore;
 import com.example.invoicetracker.application.template.TemplateMetadata;
 import com.example.invoicetracker.domain.invoice.Invoice;
 import com.example.invoicetracker.domain.invoice.InvoiceLine;
+import com.example.invoicetracker.domain.invoice.InvoiceStatus;
 import com.example.invoicetracker.support.InvoiceFixtures;
 import com.example.invoicetracker.support.TemplateFixtures;
 import java.io.ByteArrayInputStream;
@@ -105,6 +106,7 @@ class PoiTlInvoiceDocxRendererTest {
             LocalDate.now().plusDays(30),
             Collections.emptyList(),
             BigDecimal.ZERO,
+            InvoiceStatus.DRAFT,
             null,
             Instant.now(),
             Instant.now(),
@@ -133,6 +135,7 @@ class PoiTlInvoiceDocxRendererTest {
             LocalDate.now().plusDays(30),
             lines,
             new BigDecimal("0.10"),
+            InvoiceStatus.DRAFT,
             null,
             Instant.now(),
             Instant.now(),
@@ -245,8 +248,8 @@ class PoiTlInvoiceDocxRendererTest {
             UUID.randomUUID(), "INV-NODATES", UUID.randomUUID(),
             null, null,
             Collections.emptyList(),
-            java.math.BigDecimal.ZERO, null,
-            Instant.now(), Instant.now(), null, null
+            java.math.BigDecimal.ZERO, InvoiceStatus.DRAFT,
+            null, Instant.now(), Instant.now(), null, null
         );
         var client = InvoiceFixtures.client();
 

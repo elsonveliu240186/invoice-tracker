@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file. Format: [Ke
 ## [Unreleased]
 
 ### Added
+- **Dashboard upgrade — stats, charts, centralized Coolors palette, invoice status, palette switcher** (FEAT-20260514-01) — _no breaking changes_:
+  Full dashboard overhaul replacing the placeholder KPI page. Backend: `GET /api/v1/dashboard/stats`
+  returns `{ totalInvoices, draftCount, sentCount, paidCount, totalRevenue, paidRevenue,
+  pendingRevenue, revenueByMonth[6] }` with exactly 6 zero-filled monthly slots computed by a
+  `java.time.Clock`-injected `DashboardService`; `PATCH /api/v1/invoices/{id}/mark-paid` transitions
+  any status to `PAID` and returns the updated `InvoiceResponse` (idempotent — PAID → PAID returns
+  200); new Flyway migration `V7__add_invoice_status_index.sql` adds a partial index
+  `ix_invoices_status ON invoices (status) WHERE deleted_at IS NULL`; `DashboardServiceTest` (4
+  unit tests covering zero-fill, mixed statuses, null revenues), `DashboardControllerTest`
+  (`@WithMockUser` + 401 anonymous), `DashboardControllerIT` (Testcontainers Postgres — seeds 3
+  invoices, asserts 6-entry `revenueByMonth`), `InvoiceRepositoryAdapterIT` (3 new tests:
+  `markPaid`, `countByStatus`, `revenueByMonth` grouping). Frontend: `DashboardPage` redesigned
+  with welcome banner (always dark navy using `--color-sidebar-bg`), 4 stat cards (`StatCard`),
+  revenue bar chart (`RevenueChart`, 6-month window), and status donut chart (`InvoiceStatusChart`);
+  centralized Coolors palette (`#000000 #14213D #FCA311 #E5E5E5 #FFFFFF`) baked into `src/index.css`
+  `@theme` + `:root` + `.dark` blocks; dedicated `--color-sidebar-*` tokens that are identical in
+  light and dark so the sidebar stays dark navy in both modes; `--color-chart-*` and
+  `--color-status-{draft,sent,paid}-{bg,fg}` tokens added; `useThemeColor` hook reads CSS variables
+  via `getComputedStyle` + `MutationObserver` on `<html>` class flips (enables recharts SVG `fill`
+  to respond to theme and palette changes); new `StatusBadge` shared component maps
+  `DRAFT | SENT | PAID` to CSS token classes and i18n labels; new `MarkAsPaidButton` on
+  `InvoiceDetailPage` (hidden when `status === 'PAID'`, shows loading + toast, triggers refetch);
+  `InvoicesListPage` migrated from inline `STATUS_CLASSES` (forbidden Tailwind palette classes) to
+  shared `StatusBadge`; palette switcher system: `paletteStore` (Zustand), `usePalette` hook,
+  `PaletteProvider`, `PaletteToggle` in TopNav — two built-in palettes (`navy-amber` default,
+  `teal-steel`) switchable at runtime without page reload via `.palette-teal-steel` CSS class on
+  `<html>`; `DashboardPage` and `Sidebar` fully token-driven, no hardcoded hex in any component
+  outside `index.css`; all user-visible dashboard strings use `t()` i18n keys
+  (`dashboard.welcome.*`, `dashboard.cards.*`, `dashboard.charts.*`,
+  `invoices.status.DRAFT/SENT/PAID`, `invoices.actions.markAsPaid`,
+  `invoices.toast.markPaidSuccess/Failed`); MSW handlers for `PATCH /api/v1/invoices/:id/mark-paid`
+  added; 595 Vitest tests pass, coverage 98.11%/92.43%/95.12%/98.11% (gate 95/95/95/90); ESLint 0
+  errors; 15 Playwright E2E specs authored (skipped pending live stack — remove `test.skip` to
+  run). Security: all OWASP Top 10 items mitigated; nginx.conf updated with CSP, X-Frame-Options,
+  X-Content-Type-Options, Referrer-Policy, Permissions-Policy; `.grype.yaml` added to suppress
+  Go-stdlib false positives from node_modules tooling. Review required 2 iterations (1 failure —
+  missing StatusBadge/MarkAsPaidButton/i18n keys). Security required 2 iterations (1 failure —
+  missing nginx headers and `.grype.yaml`).
+
 - **Invoice PDF generation and email delivery to clients** (FEAT-20260513-02) — _no breaking changes_:
   Introduces the full `Invoice` domain (Flyway `V4__create_invoices.sql` — `invoices` + `invoice_lines`
   tables with optimistic-lock `version`, soft-delete, partial unique index on `lower(number)`,

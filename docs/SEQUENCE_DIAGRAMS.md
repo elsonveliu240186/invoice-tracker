@@ -359,3 +359,51 @@ sequenceDiagram
     API-->>CP: full unfiltered page
     CP-->>U: input is empty, table re-renders
 ```
+
+---
+
+### FEAT-20260514-01 — Dashboard upgrade (stats, charts, palette, invoice status)
+
+#### 4.1 Happy path — load dashboard
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant FE as DashboardPage
+    participant Hook as useDashboardStats
+    participant API as fetch /api/v1/dashboard/stats
+    participant BE as DashboardController
+    participant SVC as DashboardService
+    participant DB as Postgres
+    U->>FE: navigate to /
+    FE->>Hook: mount
+    Hook->>API: GET /api/v1/dashboard/stats (Basic auth)
+    API->>BE: HTTP
+    BE->>SVC: getStats()
+    SVC->>DB: countByStatus / revenueByStatus / revenueByMonth(6)
+    DB-->>SVC: rows
+    SVC-->>BE: DashboardStatsResponse
+    BE-->>API: 200 JSON
+    API-->>Hook: data
+    Hook-->>FE: { data, loading=false, error=null }
+    FE-->>U: banner + 4 cards + 2 charts
+```
+
+#### 4.2 Edge case — mark as paid
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant FE as InvoiceDetailPage
+    participant Hook as useMarkInvoicePaid
+    participant BE as InvoiceController.markPaid
+    participant DB as Postgres
+    U->>FE: click "Mark as Paid"
+    FE->>Hook: trigger(id)
+    Hook->>BE: PATCH /api/v1/invoices/{id}/mark-paid
+    BE->>DB: UPDATE invoices SET status='PAID' WHERE id=:id AND deleted_at IS NULL
+    DB-->>BE: 1 row
+    BE-->>Hook: 200 InvoiceResponse (status="PAID")
+    Hook-->>FE: refetch invoice
+    FE-->>U: badge flips to PAID, button hides, toast "Invoice marked as paid"
+```

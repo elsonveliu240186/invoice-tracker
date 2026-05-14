@@ -1,11 +1,28 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { server } from '@/mocks/server';
 import { http, HttpResponse } from 'msw';
-import { getInvoice, getInvoicePdfUrl, sendInvoiceEmail } from './invoicesApi';
+import { listInvoices, getInvoice, getInvoicePdfUrl, sendInvoiceEmail } from './invoicesApi';
 import { resetMockInvoices } from '@/mocks/handlers';
 
 beforeEach(() => {
   resetMockInvoices();
+});
+
+describe('listInvoices', () => {
+  it('returns a page of invoices', async () => {
+    const page = await listInvoices(0, 20);
+    expect(page.content).toHaveLength(1);
+    expect(page.totalElements).toBe(1);
+  });
+
+  it('throws ApiError on server error', async () => {
+    server.use(
+      http.get('/api/v1/invoices', () =>
+        HttpResponse.json({ status: 500, detail: 'Server error' }, { status: 500 }),
+      ),
+    );
+    await expect(listInvoices()).rejects.toMatchObject({ status: 500 });
+  });
 });
 
 describe('getInvoice', () => {

@@ -1,7 +1,11 @@
 import { http } from '@/shared/lib/http';
-import type { Invoice, SendEmailResponse } from '../model/types';
+import type { Invoice, InvoicePage, SendEmailResponse } from '../model/types';
 
 const BASE = '/api/v1/invoices';
+
+export async function listInvoices(page = 0, size = 20): Promise<InvoicePage> {
+  return http<InvoicePage>(`${BASE}?page=${page}&size=${size}&sort=createdAt,desc`);
+}
 
 export async function getInvoice(id: string): Promise<Invoice> {
   return http<Invoice>(`${BASE}/${id}`);

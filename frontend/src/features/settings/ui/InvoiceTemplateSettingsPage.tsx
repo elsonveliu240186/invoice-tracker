@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useTemplateMetadata } from '../api/useTemplateMetadata';
 import { TemplateUploadForm } from './TemplateUploadForm';
-import { getTemplateDownloadUrl } from '../api/templateApi';
+import { downloadTemplate } from '../api/templateApi';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -26,7 +26,6 @@ function formatDate(isoString: string): string {
 export function InvoiceTemplateSettingsPage() {
   const { t } = useTranslation();
   const { data: metadata, loading, refetch } = useTemplateMetadata();
-  const downloadUrl = getTemplateDownloadUrl();
 
   return (
     <div data-testid="invoice-template-settings-page">
@@ -79,15 +78,16 @@ export function InvoiceTemplateSettingsPage() {
                 </div>
               </div>
 
-              {/* Download current template */}
-              <a
-                href={downloadUrl}
+              {/* Download current template — uses authenticated fetch to avoid 401 */}
+              <button
+                type="button"
+                onClick={() => void downloadTemplate()}
                 className="inline-flex items-center gap-1 text-sm text-[var(--color-primary)] hover:underline"
                 data-testid="link-download-current"
               >
                 <Download className="h-3.5 w-3.5" aria-hidden="true" />
                 {t('settings.invoiceTemplate.downloadCurrent')}
-              </a>
+              </button>
             </div>
           )}
 

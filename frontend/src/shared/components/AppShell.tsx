@@ -48,7 +48,7 @@ export function AppShell({ children }: AppShellProps) {
   }
 
   return (
-    <div className="flex h-full min-h-screen bg-[var(--color-background)]">
+    <div className="flex h-full min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)]">
       {/* Desktop sidebar */}
       {!isMobile && (
         <div className="hidden lg:flex lg:flex-col lg:shrink-0" data-testid="desktop-sidebar">
