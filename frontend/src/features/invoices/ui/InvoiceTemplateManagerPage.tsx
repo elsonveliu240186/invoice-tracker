@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useTemplateMetadata } from '@/features/settings/api/useTemplateMetadata';
 import { TemplateUploadForm } from '@/features/settings/ui/TemplateUploadForm';
-import { downloadTemplate } from '@/features/settings/api/templateApi';
 import { PlaceholderReferenceCard } from './PlaceholderReferenceCard';
 
 function formatBytes(bytes: number): string {
@@ -95,15 +94,14 @@ export function InvoiceTemplateManagerPage() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => void downloadTemplate()}
+              <a
+                href="/api/v1/settings/invoice-template/download"
                 className="inline-flex items-center gap-1 text-sm text-[var(--color-primary)] hover:underline"
                 data-testid="link-download-current"
               >
                 <Download className="h-3.5 w-3.5" aria-hidden="true" />
                 {t('settings.invoiceTemplate.downloadCurrent')}
-              </button>
+              </a>
             </div>
           )}
 

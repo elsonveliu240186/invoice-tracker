@@ -9,6 +9,7 @@ import { InvoiceSentBadge } from './InvoiceSentBadge';
 import { StatusBadge } from './StatusBadge';
 import { MarkAsPaidButton } from './MarkAsPaidButton';
 import { PreviewInvoiceButton } from './PreviewInvoiceButton';
+import { ViewPdfButton } from './ViewPdfButton';
 import { GenerateInvoiceButton } from './GenerateInvoiceButton';
 import { GeneratedArtifactBadge } from './GeneratedArtifactBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -158,6 +159,7 @@ export function InvoiceDetailPage() {
 
       {/* Action row */}
       <div className="flex items-center gap-3 flex-wrap" data-testid="invoice-action-row">
+        <ViewPdfButton invoiceId={invoice.id} invoiceNumber={invoice.number} />
         <PreviewInvoiceButton invoiceId={invoice.id} invoiceNumber={invoice.number} />
         <GenerateInvoiceButton invoiceId={invoice.id} onGenerated={() => void refetchMetadata()} />
         <DownloadInvoiceMenu
