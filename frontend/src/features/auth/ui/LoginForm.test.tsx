@@ -113,4 +113,20 @@ describe('LoginForm', () => {
     expect(screen.getByRole('link', { name: /forgot password/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /create account/i })).toBeInTheDocument();
   });
+
+  it('navigates to / after successful Google sign-in', async () => {
+    const { signInWithPopup } = await import('firebase/auth');
+    vi.mocked(signInWithPopup).mockResolvedValueOnce({
+      user: {
+        email: 'google@example.com',
+        displayName: 'Google User',
+        getIdToken: () => Promise.resolve('mock-id-token'),
+      },
+    } as unknown as Awaited<ReturnType<typeof signInWithPopup>>);
+
+    const user = userEvent.setup();
+    await renderForm();
+    await user.click(screen.getByRole('button', { name: /google/i }));
+    await waitFor(() => expect(screen.getByText('Home')).toBeInTheDocument(), { timeout: 3000 });
+  });
 });

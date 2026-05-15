@@ -29,6 +29,8 @@ services:
       SPRING_SECURITY_USER_PASSWORD: ${API_PASSWORD:-secret}
     ports:
       - "8080:8080"
+    volumes:
+      - generated_invoices:/app/generated/invoices
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,3 +54,4 @@ services:
 
 volumes:
   pgdata:
+  generated_invoices:

@@ -77,6 +77,26 @@
             <version>${springdoc.version}</version>
         </dependency>
 
+        <!-- Email -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+        <!-- PDF generation -->
+        <dependency>
+            <groupId>com.github.librepdf</groupId>
+            <artifactId>openpdf</artifactId>
+            <version>2.0.3</version>
+        </dependency>
+
+        <!-- DOCX template rendering (poi-tl) -->
+        <dependency>
+            <groupId>com.deepoove</groupId>
+            <artifactId>poi-tl</artifactId>
+            <version>1.12.2</version>
+        </dependency>
+
         <!-- Dev tooling -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -111,6 +131,26 @@
             <artifactId>spring-boot-testcontainers</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- GreenMail for SMTP integration tests -->
+        <dependency>
+            <groupId>com.icegreen</groupId>
+            <artifactId>greenmail-junit5</artifactId>
+            <version>2.1.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.icegreen</groupId>
+            <artifactId>greenmail-spring</artifactId>
+            <version>2.1.0</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- PDFBox for test assertions on rendered PDFs -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.3</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>
@@ -121,6 +161,13 @@
                 <version>${testcontainers.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <!-- Force commons-io >= 2.14.0 to remediate CVE-2024-47554 (GHSA-78wr-2p64-hpwj, CVSS 8.7 High)
+                 pulled transitively via poi-tl -> poi-ooxml -> commons-io:2.11.0 -->
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>2.17.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -223,6 +270,17 @@
                                 <exclude>**/adapter/persistence/AppUserEntity*</exclude>
                                 <exclude>**/adapter/persistence/AppUserRepositoryAdapter*</exclude>
                                 <exclude>**/adapter/web/validation/ValidPassword*</exclude>
+                                <exclude>**/adapter/persistence/invoice/InvoiceEntity*</exclude>
+                                <exclude>**/adapter/persistence/invoice/InvoiceLineEntity*</exclude>
+                                <exclude>**/adapter/persistence/invoice/InvoiceRepositoryAdapter*</exclude>
+                                <exclude>**/adapter/persistence/invoice/InvoiceEntityMapper*</exclude>
+                                <exclude>**/adapter/persistence/invoice/GeneratedArtifactEntity*</exclude>
+                                <exclude>**/adapter/persistence/invoice/GeneratedArtifactRepositoryAdapter*</exclude>
+                                <exclude>**/adapter/persistence/invoice/GeneratedArtifactEntityMapper*</exclude>
+                                <exclude>**/adapter/web/settings/dto/**</exclude>
+                                <exclude>**/adapter/web/dashboard/dto/**</exclude>
+                                <exclude>**/adapter/template/FilesystemInvoiceTemplateStore$*</exclude>
+                                <exclude>**/tools/**</exclude>
                             </excludes>
                             <rules>
                                 <rule>

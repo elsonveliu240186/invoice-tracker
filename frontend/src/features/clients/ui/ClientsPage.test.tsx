@@ -1,10 +1,11 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import { http, HttpResponse } from 'msw';
 import { I18nextProvider } from 'react-i18next';
 import { server } from '@/mocks/server';
+import { resetMockClients } from '@/mocks/handlers';
 import { ClientsPage } from './ClientsPage';
 import { ToastProvider } from '@/shared/ui/Toast';
 import i18n from '@/shared/lib/i18n';
@@ -22,6 +23,10 @@ function renderPage() {
 }
 
 describe('ClientsPage', () => {
+  beforeEach(() => {
+    resetMockClients();
+  });
+
   it('renders the page heading and new client button', async () => {
     renderPage();
     expect(screen.getByRole('heading', { name: /clients/i })).toBeInTheDocument();
@@ -65,49 +70,49 @@ describe('ClientsPage', () => {
     });
   });
 
-  it('opens the create modal when New client is clicked', async () => {
+  it('opens the create sheet when New client is clicked', async () => {
     const user = userEvent.setup();
     renderPage();
     await waitFor(() => expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument());
 
     await user.click(screen.getByTestId('btn-new-client'));
-    expect(screen.getByTestId('client-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('client-form-sheet')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /new client/i })).toBeInTheDocument();
   });
 
-  it('closes the modal when Cancel is clicked', async () => {
+  it('closes the sheet when Cancel is clicked', async () => {
     const user = userEvent.setup();
     renderPage();
     await waitFor(() => expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument());
 
     await user.click(screen.getByTestId('btn-new-client'));
-    await user.click(screen.getByTestId('btn-cancel'));
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
     await waitFor(() => {
-      expect(screen.queryByTestId('client-modal')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('client-form-sheet')).not.toBeInTheDocument();
     });
   });
 
-  it('create flow: opens modal, submits form, list refreshes', async () => {
+  it('create flow: opens sheet, submits form, list refreshes', async () => {
     const user = userEvent.setup();
     renderPage();
     await waitFor(() => expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument());
 
     await user.click(screen.getByTestId('btn-new-client'));
 
-    const modal = screen.getByTestId('client-modal');
-    await user.type(within(modal).getByTestId('input-name'), 'Brand New Client');
-    await user.type(within(modal).getByTestId('input-email'), 'brandnew@client.com');
-    await user.click(within(modal).getByTestId('btn-submit'));
+    const sheet = screen.getByTestId('client-form-sheet');
+    await user.type(within(sheet).getByTestId('input-name'), 'Brand New Client');
+    await user.type(within(sheet).getByTestId('input-email'), 'brandnew@client.com');
+    await user.click(within(sheet).getByTestId('btn-submit'));
 
     await waitFor(() => {
-      expect(screen.queryByTestId('client-modal')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('client-form-sheet')).not.toBeInTheDocument();
     });
     await waitFor(() => {
       expect(screen.getByText('Brand New Client')).toBeInTheDocument();
     });
   });
 
-  it('opens edit modal with existing client data when Edit is clicked', async () => {
+  it('opens edit sheet with existing client data when Edit is clicked', async () => {
     const user = userEvent.setup();
     renderPage();
     await waitFor(() => expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument());
@@ -115,10 +120,45 @@ describe('ClientsPage', () => {
     const editButtons = screen.getAllByTestId('btn-edit');
     await user.click(editButtons[0]!);
 
-    expect(screen.getByTestId('client-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('client-form-sheet')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /edit client/i })).toBeInTheDocument();
     // name field should be pre-filled
     expect(screen.getByDisplayValue('Acme Corp')).toBeInTheDocument();
+  });
+
+  it('submits edit form and updates client in the list', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument());
+
+    const editButtons = screen.getAllByTestId('btn-edit');
+    await user.click(editButtons[0]!);
+    expect(screen.getByTestId('client-form-sheet')).toBeInTheDocument();
+
+    // Clear and retype name
+    const nameInput = screen.getByLabelText(/name/i);
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Acme Corp Updated');
+
+    await user.click(screen.getByTestId('btn-submit'));
+    await waitFor(() => expect(screen.queryByTestId('client-form-sheet')).not.toBeInTheDocument(), {
+      timeout: 3000,
+    });
+  });
+
+  it('closes the sheet when the X button is clicked', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument());
+
+    const editButtons = screen.getAllByTestId('btn-edit');
+    await user.click(editButtons[0]!);
+    expect(screen.getByTestId('client-form-sheet')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('sheet-close'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('client-form-sheet')).not.toBeInTheDocument();
+    });
   });
 
   it('delete requires confirmation: cancel does nothing', async () => {
@@ -264,18 +304,107 @@ describe('ClientsPage', () => {
     expect(screen.getByTestId('toast')).toBeInTheDocument();
   });
 
-  it('closes the edit modal when the X button is clicked', async () => {
+  it('status filter: All shows all clients', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument());
+
+    // Default "ALL" filter — both clients visible
+    expect(screen.getByText('Acme Corp')).toBeInTheDocument();
+    expect(screen.getByText('Globex')).toBeInTheDocument();
+  });
+
+  it('status filter: Active shows only active clients', async () => {
     const user = userEvent.setup();
     renderPage();
     await waitFor(() => expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument());
 
-    const editButtons = screen.getAllByTestId('btn-edit');
-    await user.click(editButtons[0]!);
-    expect(screen.getByTestId('client-modal')).toBeInTheDocument();
+    await user.click(screen.getByTestId('status-filter-trigger'));
+    await user.click(screen.getByTestId('filter-active'));
 
-    await user.click(screen.getByTestId('modal-close'));
+    // Both default to ACTIVE (no status field on fixture), so both visible
+    expect(screen.getByText('Acme Corp')).toBeInTheDocument();
+    expect(screen.getByText('Globex')).toBeInTheDocument();
+  });
+
+  it('status filter: Inactive shows only inactive clients', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument());
+
+    await user.click(screen.getByTestId('status-filter-trigger'));
+    await user.click(screen.getByTestId('filter-inactive'));
+
+    // Fixture clients have no status field → all derive to ACTIVE → none shown
     await waitFor(() => {
-      expect(screen.queryByTestId('client-modal')).not.toBeInTheDocument();
+      expect(screen.getByTestId('empty-state')).toBeInTheDocument();
     });
+  });
+
+  it('status filter trigger label updates when filter changes', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument());
+
+    const trigger = screen.getByTestId('status-filter-trigger');
+    expect(trigger).toHaveTextContent(/all/i);
+
+    await user.click(trigger);
+    await user.click(screen.getByTestId('filter-active'));
+
+    expect(screen.getByTestId('status-filter-trigger')).toHaveTextContent(/active/i);
+  });
+
+  it('clear-button-appears: X button is visible when search is non-empty, hidden when empty', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument());
+
+    // Initially no clear button
+    expect(screen.queryByTestId('btn-clear-search')).not.toBeInTheDocument();
+
+    // Type something — clear button appears
+    await user.type(screen.getByTestId('search-input'), 'Acme');
+    expect(screen.getByTestId('btn-clear-search')).toBeInTheDocument();
+
+    // Click clear — button disappears
+    await user.click(screen.getByTestId('btn-clear-search'));
+    expect(screen.queryByTestId('btn-clear-search')).not.toBeInTheDocument();
+    expect(screen.getByTestId('search-input')).toHaveValue('');
+  });
+
+  it('Escape-clears: pressing Escape on the input clears the search state', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument());
+
+    const input = screen.getByTestId('search-input');
+    await user.type(input, 'Globex');
+    expect(input).toHaveValue('Globex');
+
+    await user.keyboard('{Escape}');
+    expect(input).toHaveValue('');
+    expect(screen.queryByTestId('btn-clear-search')).not.toBeInTheDocument();
+  });
+
+  it('Reset-resets-all-state: Reset filters button clears search and status filter', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument());
+
+    // Set search and status filter
+    await user.type(screen.getByTestId('search-input'), 'Acme');
+    await user.click(screen.getByTestId('status-filter-trigger'));
+    await user.click(screen.getByTestId('filter-active'));
+
+    // Verify state changed
+    expect(screen.getByTestId('search-input')).toHaveValue('Acme');
+    expect(screen.getByTestId('status-filter-trigger')).toHaveTextContent(/active/i);
+
+    // Reset all filters
+    await user.click(screen.getByTestId('btn-reset-filters'));
+
+    expect(screen.getByTestId('search-input')).toHaveValue('');
+    expect(screen.getByTestId('status-filter-trigger')).toHaveTextContent(/all/i);
+    expect(screen.queryByTestId('btn-clear-search')).not.toBeInTheDocument();
   });
 });

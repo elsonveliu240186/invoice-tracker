@@ -1,5 +1,11 @@
 import { http, HttpResponse } from 'msw';
 import type { Client, ClientPage } from '@/features/clients/model/types';
+import type { Invoice } from '@/features/invoices/model/types';
+import type { TemplateMetadata, UploadTemplateResponse } from '@/features/settings/model/types';
+import type {
+  InvoiceArtifactsMetadata,
+  GeneratedArtifact,
+} from '@/features/invoices/model/artifact';
 
 let _idCounter = 1;
 
@@ -17,10 +23,123 @@ function makeClient(overrides: Partial<Client> = {}): Client {
   };
 }
 
-export const defaultClients: Client[] = [
+export let defaultClients: Client[] = [
   makeClient({ id: 'uuid-1', name: 'Acme Corp', email: 'acme@example.com' }),
   makeClient({ id: 'uuid-2', name: 'Globex', email: 'globex@example.com' }),
 ];
+
+/**
+ * Resets the mock clients array to a deterministic initial state.
+ * Call this in beforeEach to keep tests isolated.
+ */
+export function resetMockClients(initial?: Client[]): void {
+  _idCounter = 100;
+  if (initial !== undefined) {
+    defaultClients = initial;
+  } else {
+    defaultClients = [
+      {
+        id: 'uuid-1',
+        name: 'Acme Corp',
+        email: 'acme@example.com',
+        phone: null,
+        address: null,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+      {
+        id: 'uuid-2',
+        name: 'Globex',
+        email: 'globex@example.com',
+        phone: null,
+        address: null,
+        createdAt: '2024-01-02T00:00:00Z',
+        updatedAt: '2024-01-02T00:00:00Z',
+      },
+    ];
+  }
+}
+
+/**
+ * Seeds n clients for pagination and other tests requiring larger datasets.
+ */
+export function seedMany(n: number): Client[] {
+  _idCounter = 200;
+  const clients: Client[] = [];
+  for (let i = 0; i < n; i++) {
+    clients.push({
+      id: `seed-${i}`,
+      name: `Seed Client ${i}`,
+      email: `seed${i}@example.com`,
+      phone: null,
+      address: null,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+    });
+  }
+  defaultClients = clients;
+  return clients;
+}
+
+// ── Invoice mock data ─────────────────────────────────────────────────────────
+
+const BASE_INVOICE: Invoice = {
+  id: 'inv-uuid-1',
+  number: 'INV-2026-0001',
+  clientId: '00000000-0000-0000-0000-000000000003',
+  clientEmail: 'client@example.com',
+  issueDate: '2026-05-13',
+  dueDate: '2026-06-12',
+  taxRate: '0.21',
+  lines: [
+    {
+      id: '00000000-0000-0000-0000-000000000001',
+      description: 'Consulting services',
+      quantity: 2,
+      unitPrice: '50.00',
+      lineTotal: '100.00',
+    },
+  ],
+  subtotal: '100.00',
+  total: '121.00',
+  status: 'DRAFT',
+  lastSentAt: null,
+  createdAt: '2026-05-13T20:00:00Z',
+  updatedAt: '2026-05-13T20:00:00Z',
+};
+
+export let defaultInvoices: Invoice[] = [{ ...BASE_INVOICE }];
+
+export function resetMockInvoices(initial?: Invoice[]): void {
+  if (initial !== undefined) {
+    defaultInvoices = initial;
+  } else {
+    defaultInvoices = [{ ...BASE_INVOICE }];
+  }
+}
+
+// ── Template mock state ───────────────────────────────────────────────────────
+
+const DEFAULT_TEMPLATE_METADATA: TemplateMetadata = {
+  filename: 'invoice-template.docx',
+  size: 8192,
+  uploadedAt: '2026-01-01T00:00:00Z',
+  isDefault: true,
+};
+
+export let mockTemplateMetadata: TemplateMetadata = { ...DEFAULT_TEMPLATE_METADATA };
+
+export function resetMockTemplateMetadata(): void {
+  mockTemplateMetadata = { ...DEFAULT_TEMPLATE_METADATA };
+}
+
+// ── Generated artifacts mock state ───────────────────────────────────────────
+
+export let mockArtifactsMetadata: Record<string, InvoiceArtifactsMetadata> = {};
+
+export function resetMockArtifactsMetadata(): void {
+  mockArtifactsMetadata = {};
+}
 
 export const handlers = [
   // ── Auth endpoints ────────────────────────────────────────────────────────
@@ -166,4 +285,308 @@ export const handlers = [
     defaultClients.splice(idx, 1);
     return new HttpResponse(null, { status: 204 });
   }),
+
+  // ── Invoice endpoints ─────────────────────────────────────────────────────
+
+  // List invoices
+  http.get('/api/v1/invoices', ({ request }) => {
+    const url = new URL(request.url);
+    const page = parseInt(url.searchParams.get('page') ?? '0');
+    const size = parseInt(url.searchParams.get('size') ?? '20');
+    const content = defaultInvoices.slice(page * size, page * size + size);
+    return HttpResponse.json({
+      content,
+      page,
+      size,
+      totalElements: defaultInvoices.length,
+      totalPages: Math.ceil(defaultInvoices.length / size),
+    });
+  }),
+
+  // Get invoice by id
+  http.get('/api/v1/invoices/:id', ({ params }) => {
+    const invoice = defaultInvoices.find((inv) => inv.id === params['id']);
+    if (!invoice) {
+      return HttpResponse.json(
+        {
+          type: 'about:blank',
+          title: 'Not Found',
+          status: 404,
+          detail: 'Invoice not found',
+          code: 'INVOICE_NOT_FOUND',
+        },
+        { status: 404 },
+      );
+    }
+    return HttpResponse.json(invoice);
+  }),
+
+  // Get invoice DOCX (returns minimal PK\x03\x04 ZIP magic bytes)
+  http.get('/api/v1/invoices/:id/docx', ({ params }) => {
+    const invoice = defaultInvoices.find((inv) => inv.id === params['id']);
+    if (!invoice) {
+      return HttpResponse.json(
+        {
+          type: 'about:blank',
+          title: 'Not Found',
+          status: 404,
+          detail: 'Invoice not found',
+          code: 'INVOICE_NOT_FOUND',
+        },
+        { status: 404 },
+      );
+    }
+    // Minimal DOCX: PK\x03\x04 ZIP magic + padding to ≥ 5 KB
+    const docxMagic = new Uint8Array([0x50, 0x4b, 0x03, 0x04]);
+    const padding = new Uint8Array(5200).fill(0x00);
+    const body = new Uint8Array(docxMagic.length + padding.length);
+    body.set(docxMagic);
+    body.set(padding, docxMagic.length);
+    return new HttpResponse(body.buffer, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'Content-Disposition': `attachment; filename="invoice-${invoice.number}.docx"`,
+        'Cache-Control': 'private, no-store',
+      },
+    });
+  }),
+
+  // Get invoice PDF (returns a minimal valid PDF byte string)
+  http.get('/api/v1/invoices/:id/pdf', ({ params }) => {
+    const invoice = defaultInvoices.find((inv) => inv.id === params['id']);
+    if (!invoice) {
+      return HttpResponse.json(
+        {
+          type: 'about:blank',
+          title: 'Not Found',
+          status: 404,
+          detail: 'Invoice not found',
+          code: 'INVOICE_NOT_FOUND',
+        },
+        { status: 404 },
+      );
+    }
+    // Minimal %PDF- content to satisfy ≥ 1 KB check in tests
+    const pdfContent = '%PDF-1.4\n' + '0'.repeat(1100);
+    return new HttpResponse(pdfContent, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="invoice-${invoice.number}.pdf"`,
+        'Cache-Control': 'private, no-store',
+      },
+    });
+  }),
+
+  // Send invoice email
+  http.post('/api/v1/invoices/:id/send-email', ({ params }) => {
+    const idx = defaultInvoices.findIndex((inv) => inv.id === params['id']);
+    if (idx === -1) {
+      return HttpResponse.json(
+        {
+          type: 'about:blank',
+          title: 'Not Found',
+          status: 404,
+          detail: 'Invoice not found',
+          code: 'INVOICE_NOT_FOUND',
+        },
+        { status: 404 },
+      );
+    }
+    const lastSentAt = new Date().toISOString();
+    defaultInvoices[idx] = { ...defaultInvoices[idx]!, lastSentAt };
+    return HttpResponse.json({ lastSentAt });
+  }),
+
+  // Mark invoice as paid
+  http.patch('/api/v1/invoices/:id/mark-paid', ({ params }) => {
+    const idx = defaultInvoices.findIndex((inv) => inv.id === params['id']);
+    if (idx === -1) {
+      return HttpResponse.json(
+        {
+          type: 'about:blank',
+          title: 'Not Found',
+          status: 404,
+          detail: 'Invoice not found',
+          code: 'INVOICE_NOT_FOUND',
+        },
+        { status: 404 },
+      );
+    }
+    defaultInvoices[idx] = { ...defaultInvoices[idx]!, status: 'PAID' };
+    return HttpResponse.json(defaultInvoices[idx]);
+  }),
+
+  // ── Settings — Invoice Template endpoints ─────────────────────────────────
+
+  // GET /api/v1/settings/invoice-template/preview
+  http.get('/api/v1/settings/invoice-template/preview', () => {
+    return HttpResponse.json(mockTemplateMetadata);
+  }),
+
+  // GET /api/v1/settings/invoice-template/download
+  http.get('/api/v1/settings/invoice-template/download', () => {
+    const docxMagic = new Uint8Array([0x50, 0x4b, 0x03, 0x04]);
+    return new HttpResponse(docxMagic.buffer, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'Content-Disposition': 'attachment; filename="invoice-template.docx"',
+      },
+    });
+  }),
+
+  // POST /api/v1/settings/invoice-template
+  // NOTE: request.formData() with File entries hangs in the jsdom/Node test environment
+  // (MSW v2 + jsdom cannot reliably stream multipart bodies containing File objects).
+  // The success case is handled here without parsing the body; error cases (415, 413)
+  // are exercised via per-test server.use() overrides in templateApi.test.ts.
+  http.post('/api/v1/settings/invoice-template', () => {
+    const uploadedAt = new Date().toISOString();
+    const response: UploadTemplateResponse = {
+      filename: 'invoice-template.docx',
+      size: 1024,
+      uploadedAt,
+    };
+    mockTemplateMetadata = {
+      filename: 'invoice-template.docx',
+      size: 1024,
+      uploadedAt,
+      isDefault: false,
+    };
+    return HttpResponse.json(response);
+  }),
+
+  // ── Generated artifact endpoints ──────────────────────────────────────────
+
+  // GET /api/v1/invoices/:id/preview-pdf — returns minimal PDF bytes
+  http.get('/api/v1/invoices/:id/preview-pdf', ({ params }) => {
+    const invoice = defaultInvoices.find((inv) => inv.id === params['id']);
+    if (!invoice) {
+      return HttpResponse.json(
+        {
+          type: 'about:blank',
+          title: 'Not Found',
+          status: 404,
+          detail: 'Invoice not found',
+          code: 'INVOICE_NOT_FOUND',
+        },
+        { status: 404 },
+      );
+    }
+    const pdfContent = '%PDF-1.4\n' + '0'.repeat(1100);
+    return new HttpResponse(pdfContent, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="invoice-${invoice.number}.pdf"`,
+        'Cache-Control': 'private, no-store',
+      },
+    });
+  }),
+
+  // POST /api/v1/invoices/:id/generate — persists and returns artifact metadata
+  http.post('/api/v1/invoices/:id/generate', ({ params, request }) => {
+    const invoice = defaultInvoices.find((inv) => inv.id === params['id']);
+    if (!invoice) {
+      return HttpResponse.json(
+        { status: 404, code: 'INVOICE_NOT_FOUND', detail: 'Invoice not found' },
+        { status: 404 },
+      );
+    }
+    const url = new URL(request.url);
+    const format = (url.searchParams.get('format') ?? 'PDF').toUpperCase() as 'PDF' | 'DOCX';
+    const artifact: GeneratedArtifact = {
+      format,
+      generatedAt: new Date().toISOString(),
+      sizeBytes: 12345,
+      sha256: 'abc123def456abc123def456abc123def456abc123def456abc123def456abc1',
+    };
+    // Persist to mock metadata store
+    if (format === 'PDF') {
+      mockArtifactsMetadata[invoice.id] = {
+        ...(mockArtifactsMetadata[invoice.id] ?? { pdf: null, docx: null }),
+        pdf: artifact,
+      };
+    } else {
+      mockArtifactsMetadata[invoice.id] = {
+        ...(mockArtifactsMetadata[invoice.id] ?? { pdf: null, docx: null }),
+        docx: artifact,
+      };
+    }
+    return HttpResponse.json(artifact, { status: 201 });
+  }),
+
+  // GET /api/v1/invoices/:id/generated — streams persisted artifact bytes
+  http.get('/api/v1/invoices/:id/generated', ({ params, request }) => {
+    const invoice = defaultInvoices.find((inv) => inv.id === params['id']);
+    if (!invoice) {
+      return HttpResponse.json(
+        { status: 404, code: 'INVOICE_NOT_FOUND', detail: 'Invoice not found' },
+        { status: 404 },
+      );
+    }
+    const url = new URL(request.url);
+    const format = (url.searchParams.get('format') ?? 'PDF').toUpperCase();
+    const meta = mockArtifactsMetadata[invoice.id];
+    const artifact = format === 'PDF' ? meta?.pdf : meta?.docx;
+    if (!artifact) {
+      return HttpResponse.json(
+        { status: 404, code: 'GENERATED_ARTIFACT_NOT_FOUND', detail: 'Not generated yet' },
+        { status: 404 },
+      );
+    }
+    const ext = format === 'PDF' ? 'pdf' : 'docx';
+    const contentType =
+      format === 'PDF'
+        ? 'application/pdf'
+        : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    const body = format === 'PDF' ? '%PDF-1.4\n' + '0'.repeat(1100) : 'PK\x03\x04';
+    return new HttpResponse(body, {
+      status: 200,
+      headers: {
+        'Content-Type': contentType,
+        'Content-Disposition': `attachment; filename="invoice-${invoice.number}.${ext}"`,
+        'Cache-Control': 'private, no-store',
+      },
+    });
+  }),
+
+  // GET /api/v1/invoices/:id/generated/metadata — returns artifact metadata JSON
+  http.get('/api/v1/invoices/:id/generated/metadata', ({ params }) => {
+    const invoice = defaultInvoices.find((inv) => inv.id === params['id']);
+    if (!invoice) {
+      return HttpResponse.json(
+        { status: 404, code: 'INVOICE_NOT_FOUND', detail: 'Invoice not found' },
+        { status: 404 },
+      );
+    }
+    const meta: InvoiceArtifactsMetadata = mockArtifactsMetadata[invoice.id] ?? {
+      pdf: null,
+      docx: null,
+    };
+    return HttpResponse.json(meta);
+  }),
+
+  // ── Dashboard endpoints ───────────────────────────────────────────────────
+
+  http.get('/api/v1/dashboard/stats', () =>
+    HttpResponse.json({
+      totalInvoices: 12,
+      draftCount: 4,
+      sentCount: 5,
+      paidCount: 3,
+      totalRevenue: 24500,
+      paidRevenue: 8200,
+      pendingRevenue: 16300,
+      revenueByMonth: [
+        { month: '2026-01', revenue: 3200 },
+        { month: '2026-02', revenue: 4100 },
+        { month: '2026-03', revenue: 5800 },
+        { month: '2026-04', revenue: 4400 },
+        { month: '2026-05', revenue: 7000 },
+      ],
+    }),
+  ),
 ];

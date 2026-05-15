@@ -29,6 +29,24 @@ Auth endpoints (`/api/v1/auth/**`) are **public** and do not require credentials
 | Clients | GET | `/api/v1/clients/{id}` | Required | Get a client by ID |
 | Clients | PUT | `/api/v1/clients/{id}` | Required | Update a client (full replacement) |
 | Clients | DELETE | `/api/v1/clients/{id}` | Required | Soft-delete a client |
+| Dashboard | GET | `/api/v1/dashboard/stats` | Required | Get dashboard aggregates — counts, revenues, and last-6-months chart data (FEAT-20260514-01) |
+| Invoices | POST | `/api/v1/invoices` | Required | Create a new invoice |
+| Invoices | GET | `/api/v1/invoices` | Required | List invoices (paginated, filterable by clientId) — each item includes `status` |
+| Invoices | GET | `/api/v1/invoices/{id}` | Required | Get an invoice by ID — includes `status` field |
+| Invoices | PATCH | `/api/v1/invoices/{id}/mark-paid` | Required | Transition invoice status to PAID (idempotent) (FEAT-20260514-01) |
+| Invoices | GET | `/api/v1/invoices/{id}/pdf` | Required | Download invoice as PDF |
+| Invoices | POST | `/api/v1/invoices/{id}/send-email` | Required | Send invoice PDF by email to client |
+| Invoices | GET | `/api/v1/invoices/{id}/preview-pdf` | Required | Live-render invoice as PDF (no persist); for inline preview (FEAT-20260514-02) |
+| Invoices | POST | `/api/v1/invoices/{id}/generate` | Required | Render and persist a PDF or DOCX artefact (FEAT-20260514-02) |
+| Invoices | GET | `/api/v1/invoices/{id}/generated` | Required | Download a previously persisted artefact (FEAT-20260514-02) |
+| Invoices | GET | `/api/v1/invoices/{id}/generated/metadata` | Required | List what artefacts have been generated for an invoice (FEAT-20260514-02) |
+| Invoices | DELETE | `/api/v1/invoices/{id}` | Required | Soft-delete invoice and orphan all generated artefacts (FEAT-20260514-02) |
+| Invoice Rendering | GET | `/api/v1/invoices/{id}/docx` | Required | Download invoice as merged DOCX (FEAT-20260513-03) |
+| Invoice Rendering | GET | `/api/v1/invoices/{id}/docx-pdf` | Required | Download invoice PDF via DOCX-template + LibreOffice pipeline (FEAT-20260513-03) |
+| Invoice Rendering | POST | `/api/v1/invoices/{id}/docx-email` | Required | Send invoice PDF (DOCX-template pipeline) by email (FEAT-20260513-03) |
+| Settings | POST | `/api/v1/settings/invoice-template` | Required | Upload a new DOCX invoice template |
+| Settings | GET | `/api/v1/settings/invoice-template/preview` | Required | Get active template metadata |
+| Settings | GET | `/api/v1/settings/invoice-template/download` | Required | Download the active invoice template |
 
 ---
 
@@ -278,6 +296,466 @@ Soft-deletes the client (sets `deleted_at`). The record is retained in the datab
 
 ---
 
+---
+
+## Dashboard (FEAT-20260514-01)
+
+### GET `/api/v1/dashboard/stats`
+
+Returns aggregated statistics for all non-deleted invoices belonging to the authenticated user. The `revenueByMonth` array always contains exactly 6 entries (current month plus the 5 preceding months), zero-filled for months with no invoices.
+
+**Auth**: HTTP Basic required. Returns `401` when unauthenticated.
+
+**Request**: no body, no query parameters.
+
+**Success response** `200 OK`:
+
+```json
+{
+  "totalInvoices": 12,
+  "draftCount": 4,
+  "sentCount": 5,
+  "paidCount": 3,
+  "totalRevenue": "24500.00",
+  "paidRevenue": "8200.00",
+  "pendingRevenue": "16300.00",
+  "revenueByMonth": [
+    { "month": "2025-12", "revenue": "0.00" },
+    { "month": "2026-01", "revenue": "3200.00" },
+    { "month": "2026-02", "revenue": "4100.00" },
+    { "month": "2026-03", "revenue": "5800.00" },
+    { "month": "2026-04", "revenue": "4400.00" },
+    { "month": "2026-05", "revenue": "7000.00" }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `totalInvoices` | long | Count of all non-deleted invoices |
+| `draftCount` | long | Count with `status = 'DRAFT'` |
+| `sentCount` | long | Count with `status = 'SENT'` |
+| `paidCount` | long | Count with `status = 'PAID'` |
+| `totalRevenue` | BigDecimal | Sum of `(subtotal + tax)` across all statuses |
+| `paidRevenue` | BigDecimal | Sum for `status = 'PAID'` invoices only |
+| `pendingRevenue` | BigDecimal | `totalRevenue − paidRevenue` |
+| `revenueByMonth` | array | Exactly 6 `{ month: "YYYY-MM", revenue: BigDecimal }` entries, zero-filled |
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `500 Internal Server Error` | `INTERNAL_ERROR` | Unexpected server error |
+
+---
+
+## Invoices
+
+### POST `/api/v1/invoices`
+
+Creates a new invoice linked to the given client.
+
+**Request body** (`application/json`):
+
+```json
+{
+  "number":    "INV-2026-001",
+  "clientId":  "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "issueDate": "2026-05-14",
+  "dueDate":   "2026-06-13",
+  "taxRate":   0.20,
+  "lines": [
+    { "description": "Web development", "quantity": 10, "unitPrice": 150.00 }
+  ]
+}
+```
+
+**Success response** `201 Created`: `InvoiceResponse` + `Location` header.
+
+**Error responses**: `400 VALIDATION_FAILED`, `401 UNAUTHENTICATED`.
+
+---
+
+### GET `/api/v1/invoices`
+
+Returns a paginated list of invoices.
+
+**Query parameters**: `clientId` (UUID, optional filter), `page` (default 0), `size` (default 20), `sort` (default `createdAt,desc`).
+
+**Success response** `200 OK`: page envelope with `InvoiceResponse` items.
+
+---
+
+### GET `/api/v1/invoices/{id}`
+
+Returns a single invoice. The response includes the `status` field (`"DRAFT"`, `"SENT"`, or `"PAID"`).
+
+**Error responses**: `401 UNAUTHENTICATED`, `404 INVOICE_NOT_FOUND`.
+
+---
+
+### PATCH `/api/v1/invoices/{id}/mark-paid` (FEAT-20260514-01)
+
+Transitions the invoice's status to `PAID`. The operation is **idempotent**: calling it on an already-paid invoice returns `200` with the existing `InvoiceResponse` unchanged. Soft-deleted invoices return `404`.
+
+**Auth**: HTTP Basic required.
+
+**Path parameter**: `id` — UUID of the invoice.
+
+**Request**: no body.
+
+**Success response** `200 OK` — `InvoiceResponse` with `status: "PAID"`:
+
+```json
+{
+  "id":          "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "number":      "INV-2026-001",
+  "clientId":    "a1b2c3d4-...",
+  "issueDate":   "2026-05-14",
+  "dueDate":     "2026-06-13",
+  "taxRate":     0.20,
+  "status":      "PAID",
+  "subtotal":    "1500.00",
+  "tax":         "300.00",
+  "total":       "1800.00",
+  "lastSentAt":  "2026-05-14T10:45:00Z",
+  "createdAt":   "2026-05-14T09:00:00Z",
+  "updatedAt":   "2026-05-14T11:00:00Z",
+  "lines": [
+    { "description": "Web development", "quantity": 10, "unitPrice": 150.00 }
+  ]
+}
+```
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404 Not Found` | `INVOICE_NOT_FOUND` | No active (non-deleted) invoice with that UUID |
+
+---
+
+### GET `/api/v1/invoices/{id}/pdf`
+
+Streams the invoice as a PDF. Uses the `@Primary` renderer — if FEAT-20260513-03 is deployed this will use the poi-tl DOCX-template + LibreOffice pipeline automatically.
+
+**Response headers**: `Content-Disposition: inline; filename="invoice-<number>.pdf"`, `Cache-Control: private, no-store`.
+
+**Error responses**: `401`, `404 INVOICE_NOT_FOUND`, `502 PDF_CONVERSION_FAILED`.
+
+---
+
+### POST `/api/v1/invoices/{id}/send-email`
+
+Renders the invoice as PDF and emails it to `client.email`. Updates `last_sent_at` only on SMTP success. **Since FEAT-20260514-02**: when a persisted PDF artefact exists for this invoice, its bytes are reused instead of re-rendering; this avoids a LibreOffice process and ensures the emailed copy matches the saved artefact. The fallback to live rendering applies only when no saved PDF is present.
+
+**Success response** `200 OK`:
+
+```json
+{ "lastSentAt": "2026-05-14T10:45:00Z" }
+```
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404` | `INVOICE_NOT_FOUND` | Unknown invoice UUID |
+| `422` | `INVOICE_HAS_NO_RECIPIENT` | Client has no email address |
+| `502` | `EMAIL_DELIVERY_FAILED` | SMTP relay rejected or timed out |
+| `502` | `PDF_CONVERSION_FAILED` | LibreOffice exited non-zero or timed out (only when falling back to live render) |
+
+---
+
+### DELETE `/api/v1/invoices/{id}` (FEAT-20260514-02)
+
+Soft-deletes the invoice and orphans all associated generated artefacts. The invoice `deleted_at` is set; `invoice_generated_artifacts` rows have their `deleted_at` set; on-disk files are deleted synchronously within `InvoiceService.deleteInvoice`.
+
+**Auth**: HTTP Basic required.
+
+**Path parameter**: `id` — UUID of the invoice.
+
+**Request**: no body.
+
+**Success response** `204 No Content` (empty body).
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404 Not Found` | `INVOICE_NOT_FOUND` | No active (non-deleted) invoice with that UUID |
+
+---
+
+## Invoice Artifact Management (FEAT-20260514-02)
+
+These endpoints manage the persistent generated artefacts (PDF and DOCX) for an invoice. Artefacts are stored on the filesystem under `app.invoice.generated.path` and tracked in the `invoice_generated_artifacts` table. All responses carry `Cache-Control: private, no-store`.
+
+### GET `/api/v1/invoices/{id}/preview-pdf`
+
+Live-renders the invoice as PDF (using the `@Primary` `InvoicePdfRenderer` pipeline — poi-tl DOCX template + LibreOffice) and streams the bytes inline. **Does not persist anything**; use `POST /generate` to save.
+
+**Auth**: HTTP Basic required.
+
+**Path parameter**: `id` — UUID of the invoice.
+
+**Response**: `200 application/pdf`
+
+**Response headers**: `Content-Disposition: inline; filename="invoice-<number>.pdf"`, `Cache-Control: private, no-store`.
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404 Not Found` | `INVOICE_NOT_FOUND` | Unknown invoice UUID |
+| `502 Bad Gateway` | `PDF_CONVERSION_FAILED` | LibreOffice exited non-zero or timed out |
+| `503 Service Unavailable` | `PDF_CONVERSION_BUSY` | LibreOffice semaphore (limit 2) saturated |
+
+---
+
+### POST `/api/v1/invoices/{id}/generate`
+
+Renders the invoice in the specified format and persists the bytes to the filesystem. Returns `201` with the artefact metadata. If `overwrite=false` (default) and a non-deleted row already exists for the same `(invoiceId, format)` pair, returns `409 ARTIFACT_ALREADY_EXISTS`. Pass `overwrite=true` to replace (Regenerate flow).
+
+**Auth**: HTTP Basic required.
+
+**Path parameter**: `id` — UUID of the invoice.
+
+**Query parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `format` | `PDF` or `DOCX` | required | Format to generate |
+| `overwrite` | boolean | `false` | Whether to overwrite an existing artefact |
+
+**Request body**: empty.
+
+**Success response** `201 Created` (`application/json`):
+
+```json
+{
+  "format":      "PDF",
+  "generatedAt": "2026-05-15T09:30:00Z",
+  "sizeBytes":   14872,
+  "sha256":      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `format` | string | `"PDF"` or `"DOCX"` |
+| `generatedAt` | ISO-8601 instant | When the artefact was written to disk |
+| `sizeBytes` | long | Byte count of the stored file |
+| `sha256` | string | Hex-encoded SHA-256 of the stored bytes |
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `400 Bad Request` | `VALIDATION_FAILED` | Missing or invalid `format` query parameter |
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404 Not Found` | `INVOICE_NOT_FOUND` | Unknown invoice UUID |
+| `409 Conflict` | `ARTIFACT_ALREADY_EXISTS` | `overwrite=false` and a saved artefact already exists |
+| `413 Content Too Large` | `ARTIFACT_TOO_LARGE` | Rendered bytes exceed `app.invoice.generated.max-bytes-per-artifact` (25 MiB) |
+| `502 Bad Gateway` | `PDF_CONVERSION_FAILED` | LibreOffice failure |
+| `503 Service Unavailable` | `PDF_CONVERSION_BUSY` | LibreOffice concurrency limit reached |
+
+---
+
+### GET `/api/v1/invoices/{id}/generated`
+
+Streams the previously persisted artefact bytes. Returns `404 GENERATED_ARTIFACT_NOT_FOUND` if no artefact has been generated for this invoice+format combination.
+
+**Auth**: HTTP Basic required.
+
+**Path parameter**: `id` — UUID of the invoice.
+
+**Query parameter**: `format` — `PDF` or `DOCX` (required).
+
+**Response**: `200 application/pdf` (or `application/vnd.openxmlformats-officedocument.wordprocessingml.document` for DOCX)
+
+**Response headers**: `Content-Disposition: attachment; filename="invoice-<number>.<ext>"`, `Cache-Control: private, no-store`.
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404 Not Found` | `INVOICE_NOT_FOUND` | Unknown invoice UUID |
+| `404 Not Found` | `GENERATED_ARTIFACT_NOT_FOUND` | No artefact generated for this invoice+format |
+
+---
+
+### GET `/api/v1/invoices/{id}/generated/metadata`
+
+Returns metadata about what artefacts have been generated for an invoice. Fields are `null` when the corresponding format has not been generated (or was deleted).
+
+**Auth**: HTTP Basic required.
+
+**Path parameter**: `id` — UUID of the invoice.
+
+**Success response** `200 OK` (`application/json`):
+
+```json
+{
+  "pdf": {
+    "format":      "PDF",
+    "generatedAt": "2026-05-15T09:30:00Z",
+    "sizeBytes":   14872,
+    "sha256":      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "docx": null
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `pdf` | `GeneratedArtifactResponse` or `null` | Metadata for saved PDF; `null` if not generated |
+| `docx` | `GeneratedArtifactResponse` or `null` | Metadata for saved DOCX; `null` if not generated |
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404 Not Found` | `INVOICE_NOT_FOUND` | Unknown invoice UUID |
+
+---
+
+## Invoice Rendering (FEAT-20260513-03)
+
+These endpoints use the poi-tl DOCX-template pipeline explicitly, regardless of which `InvoicePdfRenderer` bean is primary. They are distinct from the `/pdf` and `/send-email` endpoints in `InvoiceController`.
+
+### GET `/api/v1/invoices/{id}/docx`
+
+Merges invoice + client + company data into the active DOCX template via poi-tl and streams the result.
+
+**Response**: `200 application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+
+**Response headers**: `Content-Disposition: attachment; filename="invoice-<number>.docx"`, `Cache-Control: private, no-store`.
+
+**Error responses**: `401`, `404 INVOICE_NOT_FOUND`.
+
+---
+
+### GET `/api/v1/invoices/{id}/docx-pdf`
+
+Renders the DOCX template as above, then converts to PDF using LibreOffice headless (`soffice --headless --convert-to pdf`). A `Semaphore(2)` limits concurrent conversions; the 20 s timeout triggers `destroyForcibly`.
+
+**Response**: `200 application/pdf`
+
+**Response headers**: `Content-Disposition: inline; filename="invoice-<number>.pdf"`, `Cache-Control: private, no-store`.
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404` | `INVOICE_NOT_FOUND` | Unknown invoice UUID |
+| `502` | `PDF_CONVERSION_FAILED` | soffice exited non-zero or timed out (20 s) |
+| `503` | `PDF_CONVERSION_BUSY` | Both semaphore slots occupied |
+
+---
+
+### POST `/api/v1/invoices/{id}/docx-email`
+
+Renders via poi-tl DOCX template, converts to PDF via LibreOffice, and emails the PDF attachment to `client.email`. Updates `last_sent_at` only on SMTP success. Neither `last_sent_at` nor the email is affected if PDF conversion fails.
+
+**Success response** `200 OK`:
+
+```json
+{ "lastSentAt": "2026-05-14T10:45:00Z" }
+```
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404` | `INVOICE_NOT_FOUND` | Unknown invoice UUID |
+| `422` | `INVOICE_HAS_NO_RECIPIENT` | Client has no email address |
+| `502` | `PDF_CONVERSION_FAILED` | LibreOffice failure; no email sent; `last_sent_at` unchanged |
+| `502` | `EMAIL_DELIVERY_FAILED` | SMTP failure; `last_sent_at` unchanged |
+| `503` | `PDF_CONVERSION_BUSY` | Semaphore saturated |
+
+---
+
+## Settings (FEAT-20260513-03)
+
+### POST `/api/v1/settings/invoice-template`
+
+Uploads a new DOCX invoice template. Validates:
+- File extension must be `.docx`
+- File size ≤ 5 MB (`app.invoice.max-template-bytes`)
+- Content-type: `application/vnd.openxmlformats-officedocument.wordprocessingml.document` or `application/octet-stream`
+- ZIP magic bytes (`PK\x03\x04`) and presence of `word/document.xml` entry
+- No external `Relationship Target="http(s)://..."` references (SSRF guard)
+
+The server atomically replaces the file at `app.invoice.template-path` via `Files.move(ATOMIC_MOVE, REPLACE_EXISTING)`. The uploaded filename is ignored — the stored file is always named `invoice-template.docx`.
+
+**Request**: `multipart/form-data`, field name `file`.
+
+**Success response** `200 OK`:
+
+```json
+{
+  "filename":   "invoice-template.docx",
+  "size":       12345,
+  "uploadedAt": "2026-05-14T10:00:00Z"
+}
+```
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `400` | `VALIDATION_FAILED` / `MISSING_REQUEST_PART` | `file` field absent or empty |
+| `401` | `UNAUTHENTICATED` | No / invalid credentials |
+| `413` | `TEMPLATE_TOO_LARGE` | File exceeds 5 MB |
+| `415` | `INVALID_TEMPLATE_TYPE` | Not a valid .docx (wrong extension, content-type, magic bytes, or external refs) |
+
+---
+
+### GET `/api/v1/settings/invoice-template/preview`
+
+Returns metadata of the active template. When no user template has been uploaded, returns the bundled classpath default with `isDefault: true`.
+
+**Success response** `200 OK`:
+
+```json
+{
+  "filename":   "invoice-template.docx",
+  "size":       12345,
+  "uploadedAt": "2026-05-14T10:00:00Z",
+  "isDefault":  false
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `filename` | Always `invoice-template.docx` |
+| `size` | File size in bytes |
+| `uploadedAt` | Derived from `Files.getLastModifiedTime()` — approximate (see ADR-015) |
+| `isDefault` | `true` when the bundled classpath template is active |
+
+---
+
+### GET `/api/v1/settings/invoice-template/download`
+
+Streams the active template (filesystem or classpath default) as a DOCX download.
+
+**Response**: `200 application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+
+**Response headers**: `Content-Disposition: attachment; filename="invoice-template.docx"`, `Cache-Control: private, no-store`.
+
+**Error responses**: `401`, `404 TEMPLATE_NOT_FOUND` (only if the classpath default is also missing — should not occur in normal operation).
+
+---
+
 ## Error schema (RFC 7807 Problem Detail)
 
 All error responses use `Content-Type: application/problem+json`:
@@ -298,8 +776,20 @@ All error responses use `Content-Type: application/problem+json`:
 | Code | Status | Meaning |
 |------|--------|---------|
 | `VALIDATION_FAILED` | 400 | Bean-validation failure; `errors` array lists per-field messages |
+| `MISSING_REQUEST_PART` | 400 | Required multipart field absent (e.g. `file` not provided) |
+| `UNAUTHENTICATED` | 401 | Missing or invalid HTTP Basic credentials |
 | `CLIENT_NOT_FOUND` | 404 | No active client matching the given UUID |
+| `INVOICE_NOT_FOUND` | 404 | No invoice matching the given UUID |
+| `TEMPLATE_NOT_FOUND` | 404 | Template not on filesystem and classpath default is also absent |
+| `GENERATED_ARTIFACT_NOT_FOUND` | 404 | No saved artefact for the given invoice+format combination (FEAT-20260514-02) |
 | `CLIENT_EMAIL_TAKEN` | 409 | Duplicate email among active clients |
 | `USER_EMAIL_TAKEN` | 409 | An active user account with that email already exists |
-| `UNAUTHENTICATED` | 401 | Missing or invalid HTTP Basic credentials (or unknown email / wrong password on login) |
+| `ARTIFACT_ALREADY_EXISTS` | 409 | `overwrite=false` and a saved artefact already exists for this invoice+format (FEAT-20260514-02) |
+| `TEMPLATE_TOO_LARGE` | 413 | Uploaded template exceeds 5 MB |
+| `ARTIFACT_TOO_LARGE` | 413 | Rendered artefact exceeds `app.invoice.generated.max-bytes-per-artifact` (25 MiB) (FEAT-20260514-02) |
+| `INVALID_TEMPLATE_TYPE` | 415 | Not a valid .docx (extension, magic bytes, external references, or contains VBA macros) |
+| `INVOICE_HAS_NO_RECIPIENT` | 422 | Client linked to the invoice has no email address |
+| `PDF_CONVERSION_FAILED` | 502 | LibreOffice exited non-zero or timed out (20 s) |
+| `EMAIL_DELIVERY_FAILED` | 502 | SMTP relay rejected or timed out |
+| `PDF_CONVERSION_BUSY` | 503 | LibreOffice concurrency semaphore (limit 2) is saturated |
 | `INTERNAL_ERROR` | 500 | Unexpected server error |

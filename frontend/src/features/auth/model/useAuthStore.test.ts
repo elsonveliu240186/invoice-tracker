@@ -253,4 +253,23 @@ describe('useAuthStore', () => {
       expect(useAuthStore.getState().status).toBe('authenticated');
     });
   });
+
+  describe('setSession', () => {
+    it('sets user, status=authenticated and clears error', async () => {
+      const { useAuthStore } = await import('./useAuthStore');
+      useAuthStore.setState({ user: null, status: 'unauthenticated', error: 'prev error' });
+      const session = {
+        email: 'test@example.com',
+        displayName: 'Test User',
+        provider: 'google' as const,
+        idToken: 'tok',
+        expiresAt: Date.now() + 3600 * 1000,
+      };
+      useAuthStore.getState().setSession(session);
+      const state = useAuthStore.getState();
+      expect(state.status).toBe('authenticated');
+      expect(state.user).toEqual(session);
+      expect(state.error).toBeNull();
+    });
+  });
 });
