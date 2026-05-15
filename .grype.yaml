@@ -1,0 +1,4 @@
+ignore:
+  - package:
+      type: go-module
+    reason: "Go runtime CVEs from tooling binaries inside node_modules (esbuild, vite internal go binaries). Project has zero Go source files and no go.mod."

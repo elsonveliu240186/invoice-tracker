@@ -41,6 +41,8 @@ export default mergeConfig(
           'src/shared/ui/dropdown-menu.tsx',
           'src/shared/ui/avatar.tsx',
           'src/shared/ui/separator.tsx',
+          // Additional shadcn/Radix primitive wrappers and utility UI atoms
+          'src/shared/ui/sheet.tsx',
         ],
       },
     },

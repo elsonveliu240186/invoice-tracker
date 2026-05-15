@@ -100,27 +100,27 @@ test.describe('smoke regression — clients flow', () => {
     await expect(page.getByRole('heading', { name: /clients/i })).toBeVisible();
   });
 
-  test('New client button opens the client form dialog', async ({ page }) => {
+  test('New client button opens the client form sheet', async ({ page }) => {
     await page.goto('/clients');
     await page.waitForSelector('[data-testid="clients-page"]');
 
     await page.getByTestId('btn-new-client').click();
 
-    // Dialog should open
-    await expect(page.getByTestId('client-modal')).toBeVisible();
+    // Sheet (slide-over) should open — SheetContent renders as a dialog role
+    await expect(page.getByTestId('client-form-sheet')).toBeVisible();
     await expect(page.getByRole('dialog')).toBeVisible();
   });
 
-  test('client form modal can be closed', async ({ page }) => {
+  test('client form sheet can be closed', async ({ page }) => {
     await page.goto('/clients');
     await page.waitForSelector('[data-testid="clients-page"]');
 
     await page.getByTestId('btn-new-client').click();
-    await expect(page.getByTestId('client-modal')).toBeVisible();
+    await expect(page.getByTestId('client-form-sheet')).toBeVisible();
 
-    // Close button inside dialog
-    await page.getByTestId('modal-close').click();
-    await expect(page.getByTestId('client-modal')).not.toBeVisible();
+    // Close button inside the sheet
+    await page.getByTestId('sheet-close').click();
+    await expect(page.getByTestId('client-form-sheet')).not.toBeVisible();
   });
 
   test('search input is visible and accepts input', async ({ page }) => {

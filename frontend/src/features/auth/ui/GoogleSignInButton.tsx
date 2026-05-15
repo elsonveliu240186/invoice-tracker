@@ -34,7 +34,7 @@ export function GoogleSignInButton({ onSuccess }: GoogleSignInButtonProps) {
     <Button
       type="button"
       variant="outline"
-      className="w-full"
+      className="w-full bg-[var(--color-google-btn-bg)] text-[var(--color-google-btn-fg)] border-[var(--color-google-btn-border)] hover:bg-[var(--color-google-btn-bg)] hover:opacity-90"
       onClick={() => {
         void handleClick();
       }}

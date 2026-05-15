@@ -11,26 +11,55 @@
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --radius: 0.5rem;
 
-  /* Light mode colors (HSL) */
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(222 47% 11%);
-  --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(222 47% 11%);
-  --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(222 47% 11%);
-  --color-primary: hsl(222 47% 11%);
-  --color-primary-foreground: hsl(210 40% 98%);
-  --color-secondary: hsl(210 40% 96%);
-  --color-secondary-foreground: hsl(222 47% 11%);
-  --color-muted: hsl(210 40% 96%);
-  --color-muted-foreground: hsl(215 16% 47%);
-  --color-accent: hsl(210 40% 96%);
-  --color-accent-foreground: hsl(222 47% 11%);
-  --color-destructive: hsl(0 84% 60%);
-  --color-destructive-foreground: hsl(210 40% 98%);
-  --color-border: hsl(214 32% 91%);
-  --color-input: hsl(214 32% 91%);
-  --color-ring: hsl(222 47% 11%);
+  /* Coolors palette — raw */
+  --palette-black: #000000;
+  --palette-navy: #14213d;
+  --palette-orange: #fca311;
+  --palette-grey: #e5e5e5;
+  --palette-white: #ffffff;
+
+  /* Semantic — light mode defaults */
+  --color-background: var(--palette-white);
+  --color-foreground: var(--palette-navy);
+  --color-card: var(--palette-white);
+  --color-card-foreground: var(--palette-navy);
+  --color-popover: var(--palette-white);
+  --color-popover-foreground: var(--palette-navy);
+  --color-primary: var(--palette-navy);
+  --color-primary-foreground: var(--palette-white);
+  --color-secondary: var(--palette-grey);
+  --color-secondary-foreground: var(--palette-navy);
+  --color-muted: var(--palette-grey);
+  --color-muted-foreground: #6b7280;
+  --color-accent: var(--palette-orange);
+  --color-accent-foreground: var(--palette-navy);
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: var(--palette-white);
+  --color-border: var(--palette-grey);
+  --color-input: var(--palette-grey);
+  --color-ring: var(--palette-orange);
+
+  /* Charts */
+  --color-chart-1: var(--palette-orange);
+  --color-chart-2: var(--palette-navy);
+  --color-chart-3: var(--palette-grey);
+
+  /* Status badges */
+  --color-status-draft-bg: var(--palette-grey);
+  --color-status-draft-fg: #4b5563;
+  --color-status-sent-bg: #dbeafe;
+  --color-status-sent-fg: #1d4ed8;
+  --color-status-paid-bg: #dcfce7;
+  --color-status-paid-fg: #166534;
+
+  /* Sidebar — always dark, NOT overridden by .dark */
+  --color-sidebar-bg: var(--palette-navy);
+  --color-sidebar-text: var(--palette-grey);
+  --color-sidebar-border: #1e2e52;
+  --color-sidebar-muted: rgba(229, 229, 229, 0.6);
+  --color-sidebar-active-bg: rgba(252, 163, 17, 0.2);
+  --color-sidebar-active-text: var(--palette-orange);
+  --color-sidebar-hover-bg: rgba(255, 255, 255, 0.1);
 
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -38,47 +67,118 @@
 }
 
 :root {
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(222 47% 11%);
-  --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(222 47% 11%);
-  --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(222 47% 11%);
-  --color-primary: hsl(222 47% 11%);
-  --color-primary-foreground: hsl(210 40% 98%);
-  --color-secondary: hsl(210 40% 96%);
-  --color-secondary-foreground: hsl(222 47% 11%);
-  --color-muted: hsl(210 40% 96%);
-  --color-muted-foreground: hsl(215 16% 47%);
-  --color-accent: hsl(210 40% 96%);
-  --color-accent-foreground: hsl(222 47% 11%);
-  --color-destructive: hsl(0 84% 60%);
-  --color-destructive-foreground: hsl(210 40% 98%);
-  --color-border: hsl(214 32% 91%);
-  --color-input: hsl(214 32% 91%);
-  --color-ring: hsl(222 47% 11%);
+  --color-background: var(--palette-white);
+  --color-foreground: var(--palette-navy);
+  --color-card: var(--palette-white);
+  --color-card-foreground: var(--palette-navy);
+  --color-popover: var(--palette-white);
+  --color-popover-foreground: var(--palette-navy);
+  --color-primary: var(--palette-navy);
+  --color-primary-foreground: var(--palette-white);
+  --color-secondary: var(--palette-grey);
+  --color-secondary-foreground: var(--palette-navy);
+  --color-muted: var(--palette-grey);
+  --color-muted-foreground: #6b7280;
+  --color-accent: var(--palette-orange);
+  --color-accent-foreground: var(--palette-navy);
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: var(--palette-white);
+  --color-border: var(--palette-grey);
+  --color-input: var(--palette-grey);
+  --color-ring: var(--palette-orange);
+
+  /* Charts */
+  --color-chart-1: var(--palette-orange);
+  --color-chart-2: var(--palette-navy);
+  --color-chart-3: var(--palette-grey);
+
+  /* Status badges */
+  --color-status-draft-bg: var(--palette-grey);
+  --color-status-draft-fg: #4b5563;
+  --color-status-sent-bg: #dbeafe;
+  --color-status-sent-fg: #1d4ed8;
+  --color-status-paid-bg: #dcfce7;
+  --color-status-paid-fg: #166534;
+
+  /* Sidebar — always dark navy regardless of theme */
+  --color-sidebar-bg: var(--palette-navy);
+  --color-sidebar-text: var(--palette-grey);
+  --color-sidebar-border: #1e2e52;
+  --color-sidebar-muted: rgba(229, 229, 229, 0.6);
+  --color-sidebar-active-bg: rgba(252, 163, 17, 0.2);
+  --color-sidebar-active-text: var(--palette-orange);
+  --color-sidebar-hover-bg: rgba(255, 255, 255, 0.1);
+
+  /* Google Sign-In button — always white per brand guidelines */
+  --color-google-btn-bg: #ffffff;
+  --color-google-btn-fg: #1f1f1f;
+  --color-google-btn-border: #dadce0;
 }
 
 .dark {
-  --color-background: hsl(222 47% 11%);
-  --color-foreground: hsl(210 40% 98%);
-  --color-card: hsl(222 47% 14%);
-  --color-card-foreground: hsl(210 40% 98%);
-  --color-popover: hsl(222 47% 14%);
-  --color-popover-foreground: hsl(210 40% 98%);
-  --color-primary: hsl(210 40% 98%);
-  --color-primary-foreground: hsl(222 47% 11%);
-  --color-secondary: hsl(217 33% 17%);
-  --color-secondary-foreground: hsl(210 40% 98%);
-  --color-muted: hsl(217 33% 17%);
-  --color-muted-foreground: hsl(215 20% 65%);
-  --color-accent: hsl(217 33% 17%);
-  --color-accent-foreground: hsl(210 40% 98%);
-  --color-destructive: hsl(0 62% 30%);
-  --color-destructive-foreground: hsl(210 40% 98%);
-  --color-border: hsl(217 33% 17%);
-  --color-input: hsl(217 33% 17%);
-  --color-ring: hsl(212 95% 68%);
+  --color-background: var(--palette-navy);
+  --color-foreground: var(--palette-grey);
+  --color-card: #1a2b4a;
+  --color-card-foreground: var(--palette-grey);
+  --color-popover: #1a2b4a;
+  --color-popover-foreground: var(--palette-grey);
+  --color-primary: var(--palette-orange);
+  --color-primary-foreground: var(--palette-navy);
+  --color-secondary: #1e2e52;
+  --color-secondary-foreground: var(--palette-grey);
+  --color-muted: #1e2e52;
+  --color-muted-foreground: #9ca3af;
+  --color-accent: var(--palette-orange);
+  --color-accent-foreground: var(--palette-navy);
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: var(--palette-white);
+  --color-border: #1e2e52;
+  --color-input: #1e2e52;
+  --color-ring: var(--palette-orange);
+  /* Status badges — readable on dark backgrounds */
+  --color-status-draft-bg: #2a3445;
+  --color-status-draft-fg: #c9cdd4;
+  --color-status-sent-bg: #1e3a5f;
+  --color-status-sent-fg: #93c5fd;
+  --color-status-paid-bg: #14432a;
+  --color-status-paid-fg: #86efac;
+  /* sidebar tokens deliberately omitted — they inherit from :root, so sidebar stays dark navy */
+}
+
+/* Teal-steel palette in dark mode — override hardcoded card/border shades */
+.dark.palette-teal-steel {
+  --color-card: #1a3a4d;
+  --color-popover: #1a3a4d;
+  --color-secondary: #163040;
+  --color-muted: #163040;
+  --color-border: #163040;
+  --color-input: #163040;
+  --color-status-sent-bg: #163a3c;
+  --color-status-sent-fg: #67e8f9;
+  --color-status-paid-bg: #14432a;
+  --color-status-paid-fg: #86efac;
+}
+
+.palette-teal-steel {
+  --palette-navy: #284b63;
+  --palette-orange: #3c6e71;
+  --palette-grey: #d9d9d9;
+  --palette-white: #ffffff;
+  --palette-black: #353535;
+  --color-sidebar-bg: #284b63;
+  --color-sidebar-border: #1e3a52;
+  --color-sidebar-active-text: #3c6e71;
+  --color-sidebar-active-bg: rgba(60, 110, 113, 0.2);
+}
+
+/* Placeholder fades out on focus so the cursor position is immediately clear */
+input::placeholder,
+textarea::placeholder {
+  transition: color 0.15s ease;
+}
+input:focus::placeholder,
+textarea:focus::placeholder {
+  color: transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {
