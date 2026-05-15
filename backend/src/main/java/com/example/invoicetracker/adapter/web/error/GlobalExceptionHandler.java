@@ -1,6 +1,7 @@
 package com.example.invoicetracker.adapter.web.error;
 
 import com.example.invoicetracker.application.template.InvalidTemplateException;
+import com.example.invoicetracker.application.template.TemplateNotFoundException;
 import com.example.invoicetracker.application.template.TemplateTooLargeException;
 import com.example.invoicetracker.domain.UserEmailTakenException;
 import com.example.invoicetracker.domain.client.ClientEmailTakenException;
@@ -163,6 +164,16 @@ public class GlobalExceptionHandler {
     /**
      * Handles invalid template uploads (415).
      */
+    @ExceptionHandler(TemplateNotFoundException.class)
+    public ProblemDetail handleTemplateNotFound(TemplateNotFoundException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Template Not Found");
+        problem.setDetail(ex.getMessage());
+        problem.setProperty("code", "TEMPLATE_NOT_FOUND");
+        return problem;
+    }
+
     @ExceptionHandler(InvalidTemplateException.class)
     public ProblemDetail handleInvalidTemplate(InvalidTemplateException ex) {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE);

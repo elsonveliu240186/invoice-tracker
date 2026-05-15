@@ -4,6 +4,7 @@ import { ArrowLeft, AlertTriangle, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useTemplateMetadata } from '@/features/settings/api/useTemplateMetadata';
+import { downloadTemplate } from '@/features/settings/api/templateApi';
 import { TemplateUploadForm } from '@/features/settings/ui/TemplateUploadForm';
 import { PlaceholderReferenceCard } from './PlaceholderReferenceCard';
 
@@ -96,6 +97,10 @@ export function InvoiceTemplateManagerPage() {
 
               <a
                 href="/api/v1/settings/invoice-template/download"
+                onClick={(e) => {
+                  e.preventDefault();
+                  void downloadTemplate();
+                }}
                 className="inline-flex items-center gap-1 text-sm text-[var(--color-primary)] hover:underline"
                 data-testid="link-download-current"
               >

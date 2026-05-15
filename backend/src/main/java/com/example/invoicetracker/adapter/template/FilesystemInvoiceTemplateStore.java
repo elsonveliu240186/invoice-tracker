@@ -3,8 +3,9 @@ package com.example.invoicetracker.adapter.template;
 import com.example.invoicetracker.application.template.InvalidTemplateException;
 import com.example.invoicetracker.application.template.InvoiceTemplateProperties;
 import com.example.invoicetracker.application.template.InvoiceTemplateStore;
-import com.example.invoicetracker.application.template.TemplateTooLargeException;
 import com.example.invoicetracker.application.template.TemplateMetadata;
+import com.example.invoicetracker.application.template.TemplateNotFoundException;
+import com.example.invoicetracker.application.template.TemplateTooLargeException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -77,6 +78,9 @@ public class FilesystemInvoiceTemplateStore implements InvoiceTemplateStore {
         }
         // Classpath fallback
         ClassPathResource resource = new ClassPathResource(props.classpathDefault());
+        if (!resource.exists()) {
+            throw new TemplateNotFoundException();
+        }
         return resource.getInputStream();
     }
 

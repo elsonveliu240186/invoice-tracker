@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
+import { downloadTemplate } from '../api/templateApi';
 import { useTemplateMetadata } from '../api/useTemplateMetadata';
 import { TemplateUploadForm } from './TemplateUploadForm';
 
@@ -79,6 +80,10 @@ export function InvoiceTemplateSettingsPage() {
 
               <a
                 href="/api/v1/settings/invoice-template/download"
+                onClick={(e) => {
+                  e.preventDefault();
+                  void downloadTemplate();
+                }}
                 className="inline-flex items-center gap-1 text-sm text-[var(--color-primary)] hover:underline"
                 data-testid="link-download-current"
               >
