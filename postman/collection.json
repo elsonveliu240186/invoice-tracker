@@ -365,6 +365,526 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Dashboard (FEAT-20260514-01)",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/dashboard/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "dashboard", "stats"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('response has scalar aggregates', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('totalInvoices').that.is.a('number');",
+                  "  pm.expect(body).to.have.property('draftCount').that.is.a('number');",
+                  "  pm.expect(body).to.have.property('sentCount').that.is.a('number');",
+                  "  pm.expect(body).to.have.property('paidCount').that.is.a('number');",
+                  "  pm.expect(body).to.have.property('totalRevenue');",
+                  "  pm.expect(body).to.have.property('paidRevenue');",
+                  "  pm.expect(body).to.have.property('pendingRevenue');",
+                  "});",
+                  "pm.test('revenueByMonth has exactly 6 entries', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.revenueByMonth).to.be.an('array').with.lengthOf(6);",
+                  "  body.revenueByMonth.forEach(entry => {",
+                  "    pm.expect(entry).to.have.property('month').that.matches(/^\\d{4}-\\d{2}$/);",
+                  "    pm.expect(entry).to.have.property('revenue');",
+                  "  });",
+                  "});",
+                  "pm.test('counts sum to totalInvoices', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.draftCount + body.sentCount + body.paidCount).to.eql(body.totalInvoices);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        {
+          "name": "Create Invoice",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"number\": \"INV-2026-001\",\n  \"clientId\": \"{{clientId}}\",\n  \"issueDate\": \"2026-05-14\",\n  \"dueDate\": \"2026-06-13\",\n  \"taxRate\": 0.20,\n  \"lines\": [\n    { \"description\": \"Web development\", \"quantity\": 10, \"unitPrice\": 150.00 }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('Location header present', () => {",
+                  "  pm.expect(pm.response.headers.get('Location')).to.match(/\\/api\\/v1\\/invoices\\//);",
+                  "});",
+                  "pm.test('response body has id and lines', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body.lines).to.be.an('array').with.length.gte(1);",
+                  "  pm.environment.set('invoiceId', body.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Invoices",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('response is a page envelope', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('content').that.is.an('array');",
+                  "  pm.expect(body).to.have.property('totalElements').that.is.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Invoice",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('response has invoice fields', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('number');",
+                  "  pm.expect(body).to.have.property('clientId');",
+                  "  pm.expect(body.lines).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark Invoice as Paid (FEAT-20260514-01)",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/mark-paid",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "mark-paid"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('response has status PAID', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('status').that.eql('PAID');",
+                  "});",
+                  "pm.test('response has invoice fields', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('id').that.eql(pm.environment.get('invoiceId'));",
+                  "  pm.expect(body).to.have.property('number');",
+                  "  pm.expect(body).to.have.property('lines').that.is.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Invoice PDF",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/pdf",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "pdf"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Content-Type is application/pdf', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Send Invoice Email",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/send-email",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "send-email"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('response has lastSentAt', () => {",
+                  "  pm.expect(pm.response.json()).to.have.property('lastSentAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Invoice Rendering (FEAT-20260513-03)",
+      "item": [
+        {
+          "name": "Get Invoice DOCX",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/docx",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "docx"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Content-Type is DOCX', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('wordprocessingml.document');",
+                  "});",
+                  "pm.test('Content-Disposition is attachment', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Disposition')).to.include('attachment');",
+                  "});",
+                  "pm.test('Cache-Control is private no-store', () => {",
+                  "  pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Invoice DOCX-PDF",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/docx-pdf",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "docx-pdf"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Content-Type is application/pdf', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
+                  "});",
+                  "pm.test('Content-Disposition is inline', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Disposition')).to.include('inline');",
+                  "});",
+                  "pm.test('Cache-Control is private no-store', () => {",
+                  "  pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Send Invoice DOCX-Email",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/docx-email",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "docx-email"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('response has lastSentAt', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('lastSentAt');",
+                  "  pm.expect(body.lastSentAt).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Settings (FEAT-20260513-03)",
+      "item": [
+        {
+          "name": "Upload Invoice Template",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/settings/invoice-template",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "settings", "invoice-template"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "Select a .docx file (max 5 MB)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('response has filename, size, uploadedAt', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('filename').that.eql('invoice-template.docx');",
+                  "  pm.expect(body).to.have.property('size').that.is.a('number');",
+                  "  pm.expect(body).to.have.property('uploadedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Template Metadata (preview)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/settings/invoice-template/preview",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "settings", "invoice-template", "preview"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('response has isDefault field', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('filename');",
+                  "  pm.expect(body).to.have.property('size').that.is.a('number');",
+                  "  pm.expect(body).to.have.property('uploadedAt');",
+                  "  pm.expect(body).to.have.property('isDefault').that.is.a('boolean');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Download Active Template",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/settings/invoice-template/download",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "settings", "invoice-template", "download"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Content-Type is DOCX', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('wordprocessingml.document');",
+                  "});",
+                  "pm.test('Content-Disposition is attachment', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Disposition')).to.include('attachment');",
+                  "  pm.expect(pm.response.headers.get('Content-Disposition')).to.include('invoice-template.docx');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [

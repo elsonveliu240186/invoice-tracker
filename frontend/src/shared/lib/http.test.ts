@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { http as mswHttp, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
-import { http, ApiError, setOn401Handler } from './http';
+import { http, httpRaw, ApiError, setOn401Handler } from './http';
 
 vi.mock('firebase/auth', () => ({
   GoogleAuthProvider: vi.fn(() => ({})),
@@ -165,5 +165,82 @@ describe('http wrapper', () => {
 
     const result = await http<void>('/test/delete', { method: 'DELETE' });
     expect(result).toBeUndefined();
+  });
+});
+
+describe('httpRaw', () => {
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+    const { useAuthStore } = await import('@/features/auth/model/useAuthStore');
+    useAuthStore.setState({ user: null, status: 'unauthenticated', error: null });
+  });
+
+  it('returns the raw Response object on 200', async () => {
+    server.use(
+      mswHttp.get('/test/raw/ok', () => {
+        return new HttpResponse('binary-data', {
+          status: 200,
+          headers: { 'Content-Type': 'application/octet-stream' },
+        });
+      }),
+    );
+    const response = await httpRaw('/test/raw/ok');
+    expect(response).toBeInstanceOf(Response);
+    expect(response.status).toBe(200);
+    const text = await response.text();
+    expect(text).toBe('binary-data');
+  });
+
+  it('throws ApiError on 4xx', async () => {
+    server.use(
+      mswHttp.get('/test/raw/404', () =>
+        HttpResponse.json(
+          { status: 404, code: 'NOT_FOUND', detail: 'Resource not found' },
+          { status: 404 },
+        ),
+      ),
+    );
+    await expect(httpRaw('/test/raw/404')).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('does not set Content-Type when body is FormData', async () => {
+    const spy = vi.spyOn(globalThis, 'fetch');
+    server.use(
+      mswHttp.post('/test/raw/upload', () => HttpResponse.json({ ok: true }, { status: 200 })),
+    );
+    const formData = new FormData();
+    formData.append('file', new Blob(['data'], { type: 'application/octet-stream' }), 'file.docx');
+    await httpRaw('/test/raw/upload', { method: 'POST', body: formData });
+    const callArgs = spy.mock.calls[0];
+    const opts = callArgs?.[1] as RequestInit & { headers?: Record<string, string> };
+    expect(opts?.headers?.['Content-Type']).toBeUndefined();
+  });
+
+  it('sets Content-Type for non-FormData body', async () => {
+    const spy = vi.spyOn(globalThis, 'fetch');
+    server.use(mswHttp.get('/test/raw/json', () => HttpResponse.json({ ok: true })));
+    await httpRaw('/test/raw/json');
+    const callArgs = spy.mock.calls[0];
+    const opts = callArgs?.[1] as RequestInit & { headers?: Record<string, string> };
+    expect(opts?.headers?.['Content-Type']).toBe('application/json');
+  });
+
+  it('attaches Authorization header when session has basicAuthToken', async () => {
+    const { useAuthStore } = await import('@/features/auth/model/useAuthStore');
+    useAuthStore.setState({
+      user: {
+        email: 'u@e.com',
+        displayName: 'U',
+        provider: 'password',
+        basicAuthToken: 'dGVzdA==',
+      },
+      status: 'authenticated',
+    });
+    const spy = vi.spyOn(globalThis, 'fetch');
+    server.use(mswHttp.get('/test/raw/auth', () => HttpResponse.json({ ok: true })));
+    await httpRaw('/test/raw/auth');
+    const callArgs = spy.mock.calls[0];
+    const opts = callArgs?.[1] as RequestInit & { headers?: Record<string, string> };
+    expect(opts?.headers?.['Authorization']).toBe('Basic dGVzdA==');
   });
 });

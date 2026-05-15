@@ -73,14 +73,23 @@ export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
       data-testid="client-form"
     >
       {serverError && (
-        <p role="alert" className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p
+          role="alert"
+          className="mb-4 rounded bg-[var(--color-destructive)]/10 px-3 py-2 text-sm text-[var(--color-destructive)]"
+        >
           {serverError}
         </p>
       )}
 
       <div className="mb-4">
-        <label htmlFor="client-name" className="block text-sm font-medium text-foreground mb-1">
-          Name <span className="text-red-500">*</span>
+        <label
+          htmlFor="client-name"
+          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+        >
+          Name{' '}
+          <span className="text-[var(--color-destructive)]" aria-hidden="true">
+            *
+          </span>
         </label>
         <Input
           id="client-name"
@@ -93,15 +102,21 @@ export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
           data-testid="input-name"
         />
         {fieldErrors.name && (
-          <p id="name-error" role="alert" className="mt-1 text-xs text-red-600">
+          <p id="name-error" role="alert" className="mt-1 text-xs text-[var(--color-destructive)]">
             {fieldErrors.name}
           </p>
         )}
       </div>
 
       <div className="mb-4">
-        <label htmlFor="client-email" className="block text-sm font-medium text-foreground mb-1">
-          Email <span className="text-red-500">*</span>
+        <label
+          htmlFor="client-email"
+          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+        >
+          Email{' '}
+          <span className="text-[var(--color-destructive)]" aria-hidden="true">
+            *
+          </span>
         </label>
         <Input
           id="client-email"
@@ -114,14 +129,17 @@ export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
           data-testid="input-email"
         />
         {fieldErrors.email && (
-          <p id="email-error" role="alert" className="mt-1 text-xs text-red-600">
+          <p id="email-error" role="alert" className="mt-1 text-xs text-[var(--color-destructive)]">
             {fieldErrors.email}
           </p>
         )}
       </div>
 
       <div className="mb-4">
-        <label htmlFor="client-phone" className="block text-sm font-medium text-foreground mb-1">
+        <label
+          htmlFor="client-phone"
+          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+        >
           Phone
         </label>
         <Input
@@ -135,14 +153,17 @@ export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
           data-testid="input-phone"
         />
         {fieldErrors.phone && (
-          <p id="phone-error" role="alert" className="mt-1 text-xs text-red-600">
+          <p id="phone-error" role="alert" className="mt-1 text-xs text-[var(--color-destructive)]">
             {fieldErrors.phone}
           </p>
         )}
       </div>
 
       <div className="mb-6">
-        <label htmlFor="client-address" className="block text-sm font-medium text-foreground mb-1">
+        <label
+          htmlFor="client-address"
+          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+        >
           Address
         </label>
         <textarea
@@ -156,7 +177,11 @@ export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
           data-testid="input-address"
         />
         {fieldErrors.address && (
-          <p id="address-error" role="alert" className="mt-1 text-xs text-red-600">
+          <p
+            id="address-error"
+            role="alert"
+            className="mt-1 text-xs text-[var(--color-destructive)]"
+          >
             {fieldErrors.address}
           </p>
         )}

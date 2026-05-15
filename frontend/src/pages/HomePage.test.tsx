@@ -1,9 +1,14 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/shared/lib/i18n';
+import { useAuthStore } from '@/features/auth/model/useAuthStore';
 import { HomePage } from './HomePage';
+
+beforeEach(() => {
+  useAuthStore.setState({ user: null, status: 'unauthenticated', error: null });
+});
 
 function renderHomePage() {
   return render(
@@ -16,25 +21,24 @@ function renderHomePage() {
 }
 
 describe('HomePage', () => {
-  it('renders welcome heading', () => {
+  it('renders the dashboard page container', () => {
     renderHomePage();
-    expect(
-      screen.getByRole('heading', { name: /welcome to invoice tracker/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId('dashboard-page')).toBeInTheDocument();
   });
 
-  it('renders the subtitle from i18n', () => {
+  it('renders the welcome banner', () => {
     renderHomePage();
-    expect(screen.getByText(/scaffolded by the agenticai framework/i)).toBeInTheDocument();
+    expect(screen.getByTestId('welcome-banner')).toBeInTheDocument();
   });
 
-  it('has a link to the clients page', () => {
+  it('shows loading state initially', () => {
     renderHomePage();
-    expect(screen.getByTestId('link-clients')).toBeInTheDocument();
+    expect(screen.getByTestId('dashboard-loading')).toBeInTheDocument();
   });
 
-  it('client link text comes from i18n', () => {
+  it('renders stat cards after data loads', async () => {
     renderHomePage();
-    expect(screen.getByText('Manage Clients')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('dashboard-loading')).not.toBeInTheDocument());
+    expect(screen.getAllByTestId('stat-card')).toHaveLength(4);
   });
 });

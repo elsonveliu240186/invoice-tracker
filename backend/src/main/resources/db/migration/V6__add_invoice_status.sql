@@ -1,0 +1,2 @@
+ALTER TABLE invoices ADD COLUMN status VARCHAR(10) NOT NULL DEFAULT 'DRAFT';
+UPDATE invoices SET status = 'SENT' WHERE last_sent_at IS NOT NULL;

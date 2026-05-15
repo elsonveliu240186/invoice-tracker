@@ -50,18 +50,22 @@ export function setOn401Handler(handler: () => void): void {
   _on401 = handler;
 }
 
-export async function http<T>(url: string, options: RequestInit = {}): Promise<T> {
-  // Lazily read the auth store to avoid circular-import at module load time
-  let authHeaders: Record<string, string> = {};
+async function buildAuthHeaders(): Promise<Record<string, string>> {
   try {
     const { useAuthStore } = await import('@/features/auth/model/useAuthStore');
     const token = useAuthStore.getState().user?.basicAuthToken;
     if (token) {
-      authHeaders = { Authorization: `Basic ${token}` };
+      return { Authorization: `Basic ${token}` };
     }
   } catch {
     // auth store not yet initialised or not available — continue without header
   }
+  return {};
+}
+
+export async function http<T>(url: string, options: RequestInit = {}): Promise<T> {
+  // Lazily read the auth store to avoid circular-import at module load time
+  const authHeaders = await buildAuthHeaders();
 
   const response = await fetch(url, {
     ...options,
@@ -89,4 +93,36 @@ export async function http<T>(url: string, options: RequestInit = {}): Promise<T
   }
 
   return response.json() as Promise<T>;
+}
+
+/**
+ * Raw fetch helper that returns the Response object unchanged.
+ * Use for binary downloads (DOCX, PDF) and multipart uploads (FormData).
+ * When body is FormData, Content-Type is NOT set so the browser can attach the boundary.
+ */
+export async function httpRaw(url: string, options: RequestInit = {}): Promise<Response> {
+  const authHeaders = await buildAuthHeaders();
+
+  const isFormData = options.body instanceof FormData;
+
+  const response = await fetch(url, {
+    ...options,
+    credentials: 'include',
+    headers: {
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+      Accept: '*/*',
+      ...authHeaders,
+      ...(options.headers as Record<string, string> | undefined),
+    },
+  });
+
+  if (!response.ok) {
+    const error = await parseErrorResponse(response);
+    if (response.status === 401 && _on401) {
+      _on401();
+    }
+    throw error;
+  }
+
+  return response;
 }

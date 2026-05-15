@@ -6,7 +6,8 @@
     { "key": "username", "value": "user", "enabled": true, "type": "default" },
     { "key": "password", "value": "password", "enabled": true, "type": "secret" },
     { "key": "authToken", "value": "", "enabled": true, "type": "secret" },
-    { "key": "clientId", "value": "", "enabled": true, "type": "default" }
+    { "key": "clientId", "value": "", "enabled": true, "type": "default" },
+    { "key": "invoiceId", "value": "", "enabled": true, "type": "default" }
   ],
   "_postman_variable_scope": "environment"
 }

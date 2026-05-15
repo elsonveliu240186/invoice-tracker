@@ -19,7 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
@@ -32,7 +31,14 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest(webEnvironment = WebEnvironment.MOCK)
+@SpringBootTest(
+    webEnvironment = WebEnvironment.MOCK,
+    classes = com.example.invoicetracker.Application.class,
+    properties = {
+        "management.health.defaults.enabled=false",
+        "management.health.ping.enabled=true"
+    }
+)
 @Testcontainers
 class SecurityConfigTest {
 
