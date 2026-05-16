@@ -114,6 +114,26 @@ describe('LoginForm', () => {
     expect(screen.getByRole('link', { name: /create account/i })).toBeInTheDocument();
   });
 
+<<<<<<< HEAD
+=======
+  it('shows root error message for non-401 server errors', async () => {
+    server.use(
+      mswHttp.post('/api/v1/auth/login', () =>
+        HttpResponse.json({ status: 500, detail: 'Server error' }, { status: 500 }),
+      ),
+    );
+    const user = userEvent.setup();
+    await renderForm();
+    await user.type(screen.getByLabelText(/email/i), 'user@example.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'Password1');
+    await user.click(screen.getByRole('button', { name: /sign in$/i }));
+    await waitFor(() => {
+      const alerts = screen.getAllByRole('alert');
+      expect(alerts.length).toBeGreaterThan(0);
+    });
+  });
+
+>>>>>>> feat/FEAT-20260516-01-expense-tracking
   it('navigates to / after successful Google sign-in', async () => {
     const { signInWithPopup } = await import('firebase/auth');
     vi.mocked(signInWithPopup).mockResolvedValueOnce({

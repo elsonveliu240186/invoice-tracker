@@ -103,12 +103,16 @@ class InvoiceControllerTest {
 
     @Test
     @WithMockUser
-    void create_returns_400_when_number_blank() throws Exception {
+    void create_with_null_number_auto_generates_on_server() throws Exception {
+        // number is now optional; blank/absent triggers server-side generation
+        when(invoiceService.create(
+            eq(null), any(UUID.class), any(), any(), anyList(), any(BigDecimal.class)))
+            .thenReturn(sampleInvoice);
+
         mvc.perform(post("/api/v1/invoices")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "number": "",
                       "clientId": "%s",
                       "issueDate": "2026-05-01",
                       "dueDate": "2026-06-01",
@@ -116,8 +120,7 @@ class InvoiceControllerTest {
                       "lines": [{"description": "Widget", "quantity": 1, "unitPrice": "10.00"}]
                     }
                     """.formatted(UUID.randomUUID())))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+            .andExpect(status().isCreated());
     }
 
     @Test
@@ -206,7 +209,8 @@ class InvoiceControllerTest {
             sampleInvoice.id(), sampleInvoice.number(), sampleInvoice.clientId(),
             sampleInvoice.issueDate(), sampleInvoice.dueDate(), sampleInvoice.lines(),
             sampleInvoice.taxRate(), InvoiceStatus.SENT, sentAt, sampleInvoice.createdAt(),
-            sampleInvoice.updatedAt(), null, null);
+            sampleInvoice.updatedAt(), null, null,
+            null, null, null, null, null, null, null, null);
         when(invoiceService.sendEmail(invoiceId)).thenReturn(sentInvoice);
 
         mvc.perform(post("/api/v1/invoices/{id}/send-email", invoiceId))
@@ -244,7 +248,8 @@ class InvoiceControllerTest {
             sampleInvoice.id(), sampleInvoice.number(), sampleInvoice.clientId(),
             sampleInvoice.issueDate(), sampleInvoice.dueDate(), sampleInvoice.lines(),
             sampleInvoice.taxRate(), InvoiceStatus.PAID, null, sampleInvoice.createdAt(),
-            sampleInvoice.updatedAt(), null, null);
+            sampleInvoice.updatedAt(), null, null,
+            null, null, null, null, null, null, null, null);
         when(invoiceService.markAsPaid(invoiceId)).thenReturn(paidInvoice);
 
         mvc.perform(patch("/api/v1/invoices/{id}/mark-paid", invoiceId))

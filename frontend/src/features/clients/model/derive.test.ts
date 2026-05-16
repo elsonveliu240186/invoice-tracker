@@ -13,6 +13,12 @@ function makeClient(overrides: Partial<Client> = {}): Client {
     email: 'test@example.com',
     phone: null,
     address: null,
+    companyName: '',
+    companyAddress: '',
+    companyVatNumber: '',
+    companyIban: '',
+    companySwiftBic: '',
+    companyBankName: '',
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
 <<<<<<< HEAD

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { Plus, X } from 'lucide-react';
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '../api/useClients';
 import { ClientTable } from './ClientTable';
 import { ClientFormSheet } from './ClientFormSheet';
@@ -27,6 +28,7 @@ type StatusFilter = 'ALL' | ClientStatus;
 export function ClientsPage() {
   const { t } = useTranslation();
   const { show } = useToast();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
@@ -134,6 +136,7 @@ export function ClientsPage() {
         title={t('clients.title')}
         actions={
           <Button onClick={openCreate} data-testid="btn-new-client">
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
             {t('clients.newClient')}
           </Button>
         }
@@ -239,6 +242,7 @@ export function ClientsPage() {
         <>
           <ClientTable
             clients={filteredClients}
+            onView={(c) => void navigate(`/clients/${c.id}`)}
             onEdit={openEdit}
             onDelete={(c) => setDeletingClient(c)}
           />

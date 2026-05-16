@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/shared/ui/table';
 import { Button } from '@/shared/ui/button';
 import { ClientStatusBadge } from './ClientStatusBadge';
@@ -7,11 +8,12 @@ import type { Client } from '../model/types';
 
 interface ClientTableProps {
   clients: Client[];
+  onView: (client: Client) => void;
   onEdit: (client: Client) => void;
   onDelete: (client: Client) => void;
 }
 
-export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
+export function ClientTable({ clients, onView, onEdit, onDelete }: ClientTableProps) {
   const { t } = useTranslation();
 
   if (clients.length === 0) {
@@ -43,7 +45,7 @@ export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
             <TableHead>{t('clients.column.phone')}</TableHead>
             <TableHead>{t('clients.column.status')}</TableHead>
             <TableHead>{t('clients.column.updated')}</TableHead>
-            <TableHead className="text-right">{t('clients.column.actions')}</TableHead>
+            <TableHead className="w-28" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -69,6 +71,7 @@ export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
 >>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
                 {formatDate(client.updatedAt)}
               </TableCell>
+<<<<<<< HEAD
               <TableCell className="text-right">
                 <Button
                   variant="ghost"
@@ -94,6 +97,41 @@ export function ClientTable({ clients, onEdit, onDelete }: ClientTableProps) {
                 >
                   {t('clients.action.delete')}
                 </Button>
+=======
+              <TableCell>
+                <div className="flex items-center justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onView(client)}
+                    data-testid="btn-view"
+                    aria-label={`${t('clients.action.view')} ${client.name}`}
+                  >
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onEdit(client)}
+                    data-testid="btn-edit"
+                    aria-label={`${t('clients.action.edit')} ${client.name}`}
+                  >
+                    <Pencil className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onDelete(client)}
+                    data-testid="btn-delete"
+                    aria-label={`${t('clients.action.delete')} ${client.name}`}
+                  >
+                    <Trash2
+                      className="h-4 w-4 text-[var(--color-destructive)]"
+                      aria-hidden="true"
+                    />
+                  </Button>
+                </div>
+>>>>>>> feat/FEAT-20260516-01-expense-tracking
               </TableCell>
             </TableRow>
           ))}

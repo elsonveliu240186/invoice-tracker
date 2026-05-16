@@ -5,6 +5,7 @@ import { ClientDetailPage } from '@/pages/ClientDetailPage';
 <<<<<<< HEAD
 import { InvoiceDetailPage } from '@/pages/InvoiceDetailPage';
 import { InvoicesPage } from '@/pages/InvoicesPage';
+import { ExpensesPage } from '@/pages/ExpensesPage';
 import { InvoiceTemplateSettingsPage } from '@/pages/InvoiceTemplateSettingsPage';
 <<<<<<< HEAD
 =======
@@ -67,6 +68,7 @@ export function App() {
               <Route path="/clients" element={<ClientsPage />} />
               <Route path="/clients/:id" element={<ClientDetailPage />} />
               <Route path="/invoices" element={<InvoicesPage />} />
+              <Route path="/expenses" element={<ExpensesPage />} />
               <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
               <Route path="/invoices/template" element={<InvoiceTemplateManagerPage />} />
               <Route path="/settings/invoice-template" element={<InvoiceTemplateSettingsPage />} />

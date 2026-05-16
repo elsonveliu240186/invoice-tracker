@@ -66,6 +66,17 @@ describe('DashboardPage', () => {
     expect(screen.getByText(/welcome back, John Doe/i)).toBeInTheDocument();
   });
 
+  it('shows user email in banner when user has email but no displayName', () => {
+    useAuthStore.setState({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+      user: { email: 'john@example.com', displayName: undefined as any, provider: 'google' },
+      status: 'authenticated',
+      error: null,
+    });
+    renderDashboard();
+    expect(screen.getByText(/welcome back, john@example.com/i)).toBeInTheDocument();
+  });
+
   it('shows loading state while fetching', () => {
     renderDashboard();
     expect(screen.getByTestId('dashboard-loading')).toBeInTheDocument();

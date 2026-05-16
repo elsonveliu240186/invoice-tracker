@@ -9,11 +9,7 @@ interface PageContainerProps {
 
 export function PageContainer({ children, className }: PageContainerProps) {
   if (prefersReducedMotion()) {
-    return (
-      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 ${className ?? ''}`}>
-        {children}
-      </div>
-    );
+    return <div className={`w-full px-6 py-6 ${className ?? ''}`}>{children}</div>;
   }
 
   return (
@@ -22,7 +18,7 @@ export function PageContainer({ children, className }: PageContainerProps) {
       initial="initial"
       animate="animate"
       exit="exit"
-      className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 ${className ?? ''}`}
+      className={`w-full px-6 py-6 ${className ?? ''}`}
     >
       {children}
     </motion.div>

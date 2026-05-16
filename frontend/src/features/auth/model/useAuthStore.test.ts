@@ -122,6 +122,22 @@ describe('useAuthStore', () => {
       await expect(useAuthStore.getState().loginWithGoogle()).rejects.toBeDefined();
       expect(useAuthStore.getState().status).toBe('unauthenticated');
     });
+
+    it('falls back to empty string when Google user email and displayName are null', async () => {
+      await setGoogleSignInResult({
+        user: {
+          email: null,
+          displayName: null,
+          getIdToken: () => Promise.resolve('fake-id-token'),
+        },
+      });
+      const { useAuthStore } = await import('./useAuthStore');
+      await useAuthStore.getState().loginWithGoogle();
+      const state = useAuthStore.getState();
+      expect(state.status).toBe('authenticated');
+      expect(state.user?.email).toBe('');
+      expect(state.user?.displayName).toBe('');
+    });
   });
 
   describe('register', () => {
@@ -254,6 +270,18 @@ describe('useAuthStore', () => {
     });
   });
 
+<<<<<<< HEAD
+=======
+  describe('clearError', () => {
+    it('sets error to null', async () => {
+      const { useAuthStore } = await import('./useAuthStore');
+      useAuthStore.setState({ error: 'some error' });
+      useAuthStore.getState().clearError();
+      expect(useAuthStore.getState().error).toBeNull();
+    });
+  });
+
+>>>>>>> feat/FEAT-20260516-01-expense-tracking
   describe('setSession', () => {
     it('sets user, status=authenticated and clears error', async () => {
       const { useAuthStore } = await import('./useAuthStore');

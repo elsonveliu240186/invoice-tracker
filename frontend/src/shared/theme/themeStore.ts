@@ -50,7 +50,8 @@ export const useThemeStore = create<ThemeState>()(
       toggleTheme: () => {
         const { theme } = get();
         const currentIndex = themeOrder.indexOf(theme);
-        const nextTheme = themeOrder[(currentIndex + 1) % themeOrder.length] ?? 'light';
+        // themeOrder is a fixed-length tuple; index is always in range
+        const nextTheme = themeOrder[(currentIndex + 1) % themeOrder.length] as Theme;
         get().setTheme(nextTheme);
       },
 

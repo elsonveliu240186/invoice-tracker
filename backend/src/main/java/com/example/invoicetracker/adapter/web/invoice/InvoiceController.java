@@ -8,7 +8,11 @@ import com.example.invoicetracker.adapter.web.invoice.dto.InvoiceArtifactsMetada
 import com.example.invoicetracker.adapter.web.invoice.dto.InvoiceLineDto;
 import com.example.invoicetracker.adapter.web.invoice.dto.InvoiceResponse;
 import com.example.invoicetracker.adapter.web.invoice.dto.SendEmailResponse;
+<<<<<<< HEAD
 import com.example.invoicetracker.application.invoice.InvoiceArtifactService;
+=======
+import com.example.invoicetracker.adapter.web.invoice.dto.UpdateInvoiceRequest;
+>>>>>>> feat/FEAT-20260516-01-expense-tracking
 import com.example.invoicetracker.application.invoice.InvoiceService;
 import com.example.invoicetracker.domain.invoice.ArtifactFormat;
 import com.example.invoicetracker.domain.invoice.GeneratedArtifact;
@@ -32,6 +36,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -174,11 +179,39 @@ public class InvoiceController {
         return ResponseEntity.ok(toResponse(updated));
     }
 
+<<<<<<< HEAD
     /**
      * Soft-deletes an invoice and its generated artefacts.
      *
      * @param id the invoice UUID
      * @return 204 No Content on success
+=======
+
+    /**
+     * Updates an existing DRAFT invoice.
+     */
+    @PutMapping("/{id}")
+    @Operation(summary = "Update a DRAFT invoice")
+    public ResponseEntity<InvoiceResponse> update(
+        @PathVariable UUID id,
+        @Valid @RequestBody UpdateInvoiceRequest request
+    ) {
+        List<InvoiceLine> lines = toInvoiceLines(request.lines());
+        Invoice invoice = invoiceService.update(
+            id,
+            request.number(),
+            request.clientId(),
+            request.issueDate(),
+            request.dueDate(),
+            lines,
+            request.taxRate()
+        );
+        return ResponseEntity.ok(toResponse(invoice));
+    }
+
+    /**
+     * Soft-deletes an invoice.
+>>>>>>> feat/FEAT-20260516-01-expense-tracking
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete an invoice (soft-delete)")
@@ -187,6 +220,7 @@ public class InvoiceController {
         return ResponseEntity.noContent().build();
     }
 
+<<<<<<< HEAD
     /**
      * Streams a live PDF preview — never persists to disk.
      *
@@ -271,6 +305,8 @@ public class InvoiceController {
     ) {
         return ResponseEntity.ok(artifactService.metadata(id));
     }
+=======
+>>>>>>> feat/FEAT-20260516-01-expense-tracking
 
     private InvoiceResponse toResponse(Invoice invoice) {
         List<InvoiceLineDto> lineDtos = invoice.lines().stream()
@@ -292,7 +328,15 @@ public class InvoiceController {
             statusName,
             invoice.lastSentAt(),
             invoice.createdAt(),
-            invoice.updatedAt()
+            invoice.updatedAt(),
+            invoice.clientNameSnapshot(),
+            invoice.clientAddressSnapshot(),
+            invoice.companyNameSnapshot(),
+            invoice.companyAddressSnapshot(),
+            invoice.companyVatSnapshot(),
+            invoice.companyIbanSnapshot(),
+            invoice.companySwiftSnapshot(),
+            invoice.companyBankNameSnapshot()
         );
     }
 

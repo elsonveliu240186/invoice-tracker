@@ -22,6 +22,12 @@ public class ClientEntityMapper {
             entity.getEmail(),
             entity.getPhone(),
             entity.getAddress(),
+            entity.getCompanyName() != null ? entity.getCompanyName() : "",
+            entity.getCompanyAddress() != null ? entity.getCompanyAddress() : "",
+            entity.getCompanyVatNumber() != null ? entity.getCompanyVatNumber() : "",
+            entity.getCompanyIban() != null ? entity.getCompanyIban() : "",
+            entity.getCompanySwiftBic() != null ? entity.getCompanySwiftBic() : "",
+            entity.getCompanyBankName() != null ? entity.getCompanyBankName() : "",
             entity.getCreatedAt(),
             entity.getUpdatedAt(),
             entity.getDeletedAt()
@@ -41,6 +47,13 @@ public class ClientEntityMapper {
         entity.setEmail(client.email());
         entity.setPhone(client.phone());
         entity.setAddress(client.address());
+        entity.setCompanyName(client.companyName() != null ? client.companyName() : "");
+        entity.setCompanyAddress(client.companyAddress() != null ? client.companyAddress() : "");
+        entity.setCompanyVatNumber(
+            client.companyVatNumber() != null ? client.companyVatNumber() : "");
+        entity.setCompanyIban(client.companyIban() != null ? client.companyIban() : "");
+        entity.setCompanySwiftBic(client.companySwiftBic() != null ? client.companySwiftBic() : "");
+        entity.setCompanyBankName(client.companyBankName() != null ? client.companyBankName() : "");
         entity.setCreatedAt(client.createdAt());
         entity.setUpdatedAt(client.updatedAt());
         entity.setDeletedAt(client.deletedAt());
@@ -59,6 +72,13 @@ public class ClientEntityMapper {
         entity.setEmail(client.email());
         entity.setPhone(client.phone());
         entity.setAddress(client.address());
+        entity.setCompanyName(client.companyName() != null ? client.companyName() : "");
+        entity.setCompanyAddress(client.companyAddress() != null ? client.companyAddress() : "");
+        entity.setCompanyVatNumber(
+            client.companyVatNumber() != null ? client.companyVatNumber() : "");
+        entity.setCompanyIban(client.companyIban() != null ? client.companyIban() : "");
+        entity.setCompanySwiftBic(client.companySwiftBic() != null ? client.companySwiftBic() : "");
+        entity.setCompanyBankName(client.companyBankName() != null ? client.companyBankName() : "");
         entity.setDeletedAt(client.deletedAt());
     }
 }

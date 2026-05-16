@@ -23,5 +23,13 @@ public record InvoiceResponse(
     String status,
     Instant lastSentAt,
     Instant createdAt,
-    Instant updatedAt
+    Instant updatedAt,
+    String clientNameSnapshot,
+    String clientAddressSnapshot,
+    String companyNameSnapshot,
+    String companyAddressSnapshot,
+    String companyVatSnapshot,
+    String companyIbanSnapshot,
+    String companySwiftSnapshot,
+    String companyBankNameSnapshot
 ) {}

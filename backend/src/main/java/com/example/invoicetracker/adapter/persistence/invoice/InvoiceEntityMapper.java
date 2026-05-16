@@ -39,7 +39,15 @@ public class InvoiceEntityMapper {
             entity.getCreatedAt(),
             entity.getUpdatedAt(),
             entity.getDeletedAt(),
-            null
+            entity.getClientEmail(),
+            nvl(entity.getClientNameSnapshot()),
+            nvl(entity.getClientAddressSnapshot()),
+            nvl(entity.getCompanyNameSnapshot()),
+            nvl(entity.getCompanyAddressSnapshot()),
+            nvl(entity.getCompanyVatSnapshot()),
+            nvl(entity.getCompanyIbanSnapshot()),
+            nvl(entity.getCompanySwiftSnapshot()),
+            nvl(entity.getCompanyBankNameSnapshot())
         );
     }
 
@@ -62,6 +70,15 @@ public class InvoiceEntityMapper {
         entity.setCreatedAt(invoice.createdAt());
         entity.setUpdatedAt(invoice.updatedAt());
         entity.setDeletedAt(invoice.deletedAt());
+        entity.setClientEmail(invoice.clientEmail());
+        entity.setClientNameSnapshot(nvl(invoice.clientNameSnapshot()));
+        entity.setClientAddressSnapshot(nvl(invoice.clientAddressSnapshot()));
+        entity.setCompanyNameSnapshot(nvl(invoice.companyNameSnapshot()));
+        entity.setCompanyAddressSnapshot(nvl(invoice.companyAddressSnapshot()));
+        entity.setCompanyVatSnapshot(nvl(invoice.companyVatSnapshot()));
+        entity.setCompanyIbanSnapshot(nvl(invoice.companyIbanSnapshot()));
+        entity.setCompanySwiftSnapshot(nvl(invoice.companySwiftSnapshot()));
+        entity.setCompanyBankNameSnapshot(nvl(invoice.companyBankNameSnapshot()));
 
         for (int i = 0; i < invoice.lines().size(); i++) {
             InvoiceLine domainLine = invoice.lines().get(i);
@@ -86,6 +103,15 @@ public class InvoiceEntityMapper {
         entity.setStatus(invoice.status() != null ? invoice.status() : InvoiceStatus.DRAFT);
         entity.setLastSentAt(invoice.lastSentAt());
         entity.setDeletedAt(invoice.deletedAt());
+        entity.setClientEmail(invoice.clientEmail());
+        entity.setClientNameSnapshot(nvl(invoice.clientNameSnapshot()));
+        entity.setClientAddressSnapshot(nvl(invoice.clientAddressSnapshot()));
+        entity.setCompanyNameSnapshot(nvl(invoice.companyNameSnapshot()));
+        entity.setCompanyAddressSnapshot(nvl(invoice.companyAddressSnapshot()));
+        entity.setCompanyVatSnapshot(nvl(invoice.companyVatSnapshot()));
+        entity.setCompanyIbanSnapshot(nvl(invoice.companyIbanSnapshot()));
+        entity.setCompanySwiftSnapshot(nvl(invoice.companySwiftSnapshot()));
+        entity.setCompanyBankNameSnapshot(nvl(invoice.companyBankNameSnapshot()));
 
         // Merge lines in-place to avoid NonUniqueObjectException:
         // updating existing managed entities rather than clear-then-add.
@@ -128,5 +154,9 @@ public class InvoiceEntityMapper {
         e.setUnitPrice(line.unitPrice());
         e.setPosition(pos);
         return e;
+    }
+
+    private static String nvl(String value) {
+        return value != null ? value : "";
     }
 }

@@ -136,7 +136,11 @@ describe('ClientsPage', () => {
     expect(screen.getByTestId('client-form-sheet')).toBeInTheDocument();
 
     // Clear and retype name
+<<<<<<< HEAD
     const nameInput = screen.getByLabelText(/name/i);
+=======
+    const nameInput = screen.getByTestId('input-name');
+>>>>>>> feat/FEAT-20260516-01-expense-tracking
     await user.clear(nameInput);
     await user.type(nameInput, 'Acme Corp Updated');
 

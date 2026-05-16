@@ -37,12 +37,12 @@ export function ClientFormSheet({ open, onClose, onSubmit, editingClient }: Clie
         aria-hidden="true"
         data-testid="sheet-backdrop"
       />
-      {/* Sheet panel */}
+      {/* Centered dialog panel */}
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="sheet-title"
-        className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-[var(--color-background)] shadow-xl"
+        className="fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-full max-w-md -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg bg-[var(--color-background)] shadow-xl"
         data-testid="client-form-sheet"
       >
         {/* Header */}

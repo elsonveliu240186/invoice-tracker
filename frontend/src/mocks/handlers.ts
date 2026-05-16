@@ -3,11 +3,30 @@ import type { Client, ClientPage } from '@/features/clients/model/types';
 import type { Invoice } from '@/features/invoices/model/types';
 import type { TemplateMetadata, UploadTemplateResponse } from '@/features/settings/model/types';
 import type {
-  InvoiceArtifactsMetadata,
-  GeneratedArtifact,
-} from '@/features/invoices/model/artifact';
+  Expense,
+  ExpensePage,
+  ExpenseSummary,
+  ExpenseCategory,
+} from '@/features/expenses/model/types';
+
+interface CompanyProfile {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  updatedAt: string;
+}
 
 let _idCounter = 1;
+
+const DEFAULT_COMPANY_FIELDS = {
+  companyName: 'Elson Veliu',
+  companyAddress: 'Abedin Dino 2, Tirana, Albania',
+  companyVatNumber: 'M21813035F',
+  companyIban: 'AL6220511162009756CLPRCFEUR0',
+  companySwiftBic: 'NCBAALTX',
+  companyBankName: 'Banka Kombetare Tregtare',
+};
 
 function makeClient(overrides: Partial<Client> = {}): Client {
   const id = String(_idCounter++);
@@ -17,6 +36,7 @@ function makeClient(overrides: Partial<Client> = {}): Client {
     email: `client${id}@example.com`,
     phone: null,
     address: null,
+    ...DEFAULT_COMPANY_FIELDS,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     ...overrides,
@@ -44,6 +64,7 @@ export function resetMockClients(initial?: Client[]): void {
         email: 'acme@example.com',
         phone: null,
         address: null,
+        ...DEFAULT_COMPANY_FIELDS,
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
       },
@@ -53,6 +74,7 @@ export function resetMockClients(initial?: Client[]): void {
         email: 'globex@example.com',
         phone: null,
         address: null,
+        ...DEFAULT_COMPANY_FIELDS,
         createdAt: '2024-01-02T00:00:00Z',
         updatedAt: '2024-01-02T00:00:00Z',
       },
@@ -73,6 +95,7 @@ export function seedMany(n: number): Client[] {
       email: `seed${i}@example.com`,
       phone: null,
       address: null,
+      ...DEFAULT_COMPANY_FIELDS,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
     });
@@ -118,6 +141,33 @@ export function resetMockInvoices(initial?: Invoice[]): void {
   }
 }
 
+// ── Expense mock state ────────────────────────────────────────────────────────
+
+function getCurrentMonthStr(): string {
+  const d = new Date();
+  return `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+const BASE_EXPENSE: Expense = {
+  id: 'exp-uuid-1',
+  amount: 42.5,
+  category: 'FOOD_DRINK',
+  description: 'Team lunch',
+  expenseDate: `${getCurrentMonthStr()}-10`,
+  createdAt: '2026-05-10T12:00:00Z',
+  updatedAt: '2026-05-10T12:00:00Z',
+};
+
+export let defaultExpenses: Expense[] = [{ ...BASE_EXPENSE }];
+
+export function resetMockExpenses(initial?: Expense[]): void {
+  if (initial !== undefined) {
+    defaultExpenses = initial;
+  } else {
+    defaultExpenses = [{ ...BASE_EXPENSE }];
+  }
+}
+
 // ── Template mock state ───────────────────────────────────────────────────────
 
 const DEFAULT_TEMPLATE_METADATA: TemplateMetadata = {
@@ -133,12 +183,20 @@ export function resetMockTemplateMetadata(): void {
   mockTemplateMetadata = { ...DEFAULT_TEMPLATE_METADATA };
 }
 
-// ── Generated artifacts mock state ───────────────────────────────────────────
+// ── Company profile mock state ────────────────────────────────────────────────
 
-export let mockArtifactsMetadata: Record<string, InvoiceArtifactsMetadata> = {};
+const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
+  name: '',
+  email: '',
+  phone: '',
+  address: '',
+  updatedAt: '2026-01-01T00:00:00Z',
+};
 
-export function resetMockArtifactsMetadata(): void {
-  mockArtifactsMetadata = {};
+export let mockCompanyProfile: CompanyProfile = { ...DEFAULT_COMPANY_PROFILE };
+
+export function resetMockCompanyProfile(): void {
+  mockCompanyProfile = { ...DEFAULT_COMPANY_PROFILE };
 }
 
 export const handlers = [
@@ -222,6 +280,12 @@ export const handlers = [
       email: string;
       phone?: string;
       address?: string;
+      companyName?: string;
+      companyAddress?: string;
+      companyVatNumber?: string;
+      companyIban?: string;
+      companySwiftBic?: string;
+      companyBankName?: string;
     };
     const existing = defaultClients.find((c) => c.email.toLowerCase() === body.email.toLowerCase());
     if (existing) {
@@ -241,6 +305,12 @@ export const handlers = [
       email: body.email,
       phone: body.phone ?? null,
       address: body.address ?? null,
+      companyName: body.companyName ?? '',
+      companyAddress: body.companyAddress ?? '',
+      companyVatNumber: body.companyVatNumber ?? '',
+      companyIban: body.companyIban ?? '',
+      companySwiftBic: body.companySwiftBic ?? '',
+      companyBankName: body.companyBankName ?? '',
     });
     defaultClients.push(newClient);
     return HttpResponse.json(newClient, { status: 201 });
@@ -260,6 +330,12 @@ export const handlers = [
       email: string;
       phone?: string;
       address?: string;
+      companyName?: string;
+      companyAddress?: string;
+      companyVatNumber?: string;
+      companyIban?: string;
+      companySwiftBic?: string;
+      companyBankName?: string;
     };
     const updated: Client = {
       ...defaultClients[idx]!,
@@ -267,6 +343,12 @@ export const handlers = [
       email: body.email,
       phone: body.phone ?? null,
       address: body.address ?? null,
+      companyName: body.companyName ?? '',
+      companyAddress: body.companyAddress ?? '',
+      companyVatNumber: body.companyVatNumber ?? '',
+      companyIban: body.companyIban ?? '',
+      companySwiftBic: body.companySwiftBic ?? '',
+      companyBankName: body.companyBankName ?? '',
       updatedAt: new Date().toISOString(),
     };
     defaultClients[idx] = updated;
@@ -458,117 +540,6 @@ export const handlers = [
     return HttpResponse.json(response);
   }),
 
-  // ── Generated artifact endpoints ──────────────────────────────────────────
-
-  // GET /api/v1/invoices/:id/preview-pdf — returns minimal PDF bytes
-  http.get('/api/v1/invoices/:id/preview-pdf', ({ params }) => {
-    const invoice = defaultInvoices.find((inv) => inv.id === params['id']);
-    if (!invoice) {
-      return HttpResponse.json(
-        {
-          type: 'about:blank',
-          title: 'Not Found',
-          status: 404,
-          detail: 'Invoice not found',
-          code: 'INVOICE_NOT_FOUND',
-        },
-        { status: 404 },
-      );
-    }
-    const pdfContent = '%PDF-1.4\n' + '0'.repeat(1100);
-    return new HttpResponse(pdfContent, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="invoice-${invoice.number}.pdf"`,
-        'Cache-Control': 'private, no-store',
-      },
-    });
-  }),
-
-  // POST /api/v1/invoices/:id/generate — persists and returns artifact metadata
-  http.post('/api/v1/invoices/:id/generate', ({ params, request }) => {
-    const invoice = defaultInvoices.find((inv) => inv.id === params['id']);
-    if (!invoice) {
-      return HttpResponse.json(
-        { status: 404, code: 'INVOICE_NOT_FOUND', detail: 'Invoice not found' },
-        { status: 404 },
-      );
-    }
-    const url = new URL(request.url);
-    const format = (url.searchParams.get('format') ?? 'PDF').toUpperCase() as 'PDF' | 'DOCX';
-    const artifact: GeneratedArtifact = {
-      format,
-      generatedAt: new Date().toISOString(),
-      sizeBytes: 12345,
-      sha256: 'abc123def456abc123def456abc123def456abc123def456abc123def456abc1',
-    };
-    // Persist to mock metadata store
-    if (format === 'PDF') {
-      mockArtifactsMetadata[invoice.id] = {
-        ...(mockArtifactsMetadata[invoice.id] ?? { pdf: null, docx: null }),
-        pdf: artifact,
-      };
-    } else {
-      mockArtifactsMetadata[invoice.id] = {
-        ...(mockArtifactsMetadata[invoice.id] ?? { pdf: null, docx: null }),
-        docx: artifact,
-      };
-    }
-    return HttpResponse.json(artifact, { status: 201 });
-  }),
-
-  // GET /api/v1/invoices/:id/generated — streams persisted artifact bytes
-  http.get('/api/v1/invoices/:id/generated', ({ params, request }) => {
-    const invoice = defaultInvoices.find((inv) => inv.id === params['id']);
-    if (!invoice) {
-      return HttpResponse.json(
-        { status: 404, code: 'INVOICE_NOT_FOUND', detail: 'Invoice not found' },
-        { status: 404 },
-      );
-    }
-    const url = new URL(request.url);
-    const format = (url.searchParams.get('format') ?? 'PDF').toUpperCase();
-    const meta = mockArtifactsMetadata[invoice.id];
-    const artifact = format === 'PDF' ? meta?.pdf : meta?.docx;
-    if (!artifact) {
-      return HttpResponse.json(
-        { status: 404, code: 'GENERATED_ARTIFACT_NOT_FOUND', detail: 'Not generated yet' },
-        { status: 404 },
-      );
-    }
-    const ext = format === 'PDF' ? 'pdf' : 'docx';
-    const contentType =
-      format === 'PDF'
-        ? 'application/pdf'
-        : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    const body = format === 'PDF' ? '%PDF-1.4\n' + '0'.repeat(1100) : 'PK\x03\x04';
-    return new HttpResponse(body, {
-      status: 200,
-      headers: {
-        'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="invoice-${invoice.number}.${ext}"`,
-        'Cache-Control': 'private, no-store',
-      },
-    });
-  }),
-
-  // GET /api/v1/invoices/:id/generated/metadata — returns artifact metadata JSON
-  http.get('/api/v1/invoices/:id/generated/metadata', ({ params }) => {
-    const invoice = defaultInvoices.find((inv) => inv.id === params['id']);
-    if (!invoice) {
-      return HttpResponse.json(
-        { status: 404, code: 'INVOICE_NOT_FOUND', detail: 'Invoice not found' },
-        { status: 404 },
-      );
-    }
-    const meta: InvoiceArtifactsMetadata = mockArtifactsMetadata[invoice.id] ?? {
-      pdf: null,
-      docx: null,
-    };
-    return HttpResponse.json(meta);
-  }),
-
   // ── Dashboard endpoints ───────────────────────────────────────────────────
 
   http.get('/api/v1/dashboard/stats', () =>
@@ -589,4 +560,281 @@ export const handlers = [
       ],
     }),
   ),
+
+  // ── Settings — Company profile endpoints ─────────────────────────────────
+
+  http.get('/api/v1/settings/company', () => {
+    return HttpResponse.json(mockCompanyProfile);
+  }),
+
+  http.put('/api/v1/settings/company', async ({ request }) => {
+    const body = (await request.json()) as Partial<CompanyProfile>;
+    mockCompanyProfile = {
+      ...mockCompanyProfile,
+      ...body,
+      updatedAt: new Date().toISOString(),
+    };
+    return HttpResponse.json(mockCompanyProfile);
+  }),
+
+  // ── Invoice CRUD endpoints ────────────────────────────────────────────────
+
+  // POST /api/v1/invoices (create)
+  http.post('/api/v1/invoices', async ({ request }) => {
+    const body = (await request.json()) as {
+      clientId: string;
+      number?: string;
+      issueDate: string;
+      dueDate: string;
+      taxRate: number;
+      lines: Array<{ description: string; quantity: number; unitPrice: number }>;
+    };
+    const client = defaultClients.find((c) => c.id === body.clientId);
+    if (!client) {
+      return HttpResponse.json(
+        { status: 404, detail: 'Client not found', code: 'CLIENT_NOT_FOUND' },
+        { status: 404 },
+      );
+    }
+    const year = new Date().getFullYear();
+    const seq = defaultInvoices.length + 1;
+    const number = body.number ?? `INV-${year}-${String(seq).padStart(4, '0')}`;
+    const existing = defaultInvoices.find(
+      (inv) => inv.number.toLowerCase() === number.toLowerCase(),
+    );
+    if (existing) {
+      return HttpResponse.json(
+        { status: 409, detail: 'Invoice number already taken', code: 'INVOICE_NUMBER_TAKEN' },
+        { status: 409 },
+      );
+    }
+    const subtotal = body.lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
+    const taxAmount = subtotal * body.taxRate;
+    const newInvoice: Invoice = {
+      id: `inv-${Date.now()}`,
+      number,
+      clientId: body.clientId,
+      clientEmail: client.email,
+      issueDate: body.issueDate,
+      dueDate: body.dueDate,
+      taxRate: String(body.taxRate),
+      lines: body.lines.map((l, i) => ({
+        id: `line-${i}`,
+        description: l.description,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice.toFixed(2),
+        lineTotal: (l.quantity * l.unitPrice).toFixed(2),
+      })),
+      subtotal: subtotal.toFixed(2),
+      total: (subtotal + taxAmount).toFixed(2),
+      status: 'DRAFT',
+      lastSentAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    defaultInvoices.push(newInvoice);
+    return HttpResponse.json(newInvoice, { status: 201 });
+  }),
+
+  // PUT /api/v1/invoices/:id (update)
+  http.put('/api/v1/invoices/:id', async ({ params, request }) => {
+    const idx = defaultInvoices.findIndex((inv) => inv.id === params['id']);
+    if (idx === -1) {
+      return HttpResponse.json(
+        { status: 404, detail: 'Invoice not found', code: 'INVOICE_NOT_FOUND' },
+        { status: 404 },
+      );
+    }
+    const invoice = defaultInvoices[idx]!;
+    if (invoice.status !== 'DRAFT') {
+      return HttpResponse.json(
+        { status: 409, detail: 'Invoice is not editable', code: 'INVOICE_NOT_EDITABLE' },
+        { status: 409 },
+      );
+    }
+    const body = (await request.json()) as {
+      clientId: string;
+      number?: string;
+      issueDate: string;
+      dueDate: string;
+      taxRate: number;
+      lines: Array<{ description: string; quantity: number; unitPrice: number }>;
+    };
+    const subtotal = body.lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
+    const taxAmount = subtotal * body.taxRate;
+    const updated: Invoice = {
+      ...invoice,
+      clientId: body.clientId,
+      number: body.number ?? invoice.number,
+      issueDate: body.issueDate,
+      dueDate: body.dueDate,
+      taxRate: String(body.taxRate),
+      lines: body.lines.map((l, i) => ({
+        id: `line-upd-${i}`,
+        description: l.description,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice.toFixed(2),
+        lineTotal: (l.quantity * l.unitPrice).toFixed(2),
+      })),
+      subtotal: subtotal.toFixed(2),
+      total: (subtotal + taxAmount).toFixed(2),
+      updatedAt: new Date().toISOString(),
+    };
+    defaultInvoices[idx] = updated;
+    return HttpResponse.json(updated);
+  }),
+
+  // DELETE /api/v1/invoices/:id
+  http.delete('/api/v1/invoices/:id', ({ params }) => {
+    const idx = defaultInvoices.findIndex((inv) => inv.id === params['id']);
+    if (idx === -1) {
+      return HttpResponse.json(
+        { status: 404, detail: 'Invoice not found', code: 'INVOICE_NOT_FOUND' },
+        { status: 404 },
+      );
+    }
+    defaultInvoices.splice(idx, 1);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  // ── Expense endpoints ─────────────────────────────────────────────────────
+
+  // GET /api/v1/expenses
+  http.get('/api/v1/expenses', ({ request }) => {
+    const url = new URL(request.url);
+    const page = parseInt(url.searchParams.get('page') ?? '0');
+    const size = parseInt(url.searchParams.get('size') ?? '20');
+    const category = url.searchParams.get('category') as ExpenseCategory | null;
+    const dateFrom = url.searchParams.get('dateFrom');
+    const dateTo = url.searchParams.get('dateTo');
+
+    let filtered = defaultExpenses;
+    if (category) filtered = filtered.filter((e) => e.category === category);
+    if (dateFrom) filtered = filtered.filter((e) => e.expenseDate >= dateFrom);
+    if (dateTo) filtered = filtered.filter((e) => e.expenseDate <= dateTo);
+
+    const content = filtered.slice(page * size, page * size + size);
+    const pageResponse: ExpensePage = {
+      content,
+      page,
+      size,
+      totalElements: filtered.length,
+      totalPages: Math.ceil(filtered.length / size) || 1,
+    };
+    return HttpResponse.json(pageResponse);
+  }),
+
+  // GET /api/v1/expenses/summary
+  http.get('/api/v1/expenses/summary', ({ request }) => {
+    const url = new URL(request.url);
+    const month = url.searchParams.get('month');
+    const targetMonth = month ?? getCurrentMonthStr();
+
+    const inMonth = defaultExpenses.filter((e) => e.expenseDate.startsWith(targetMonth));
+    const byCategory: Record<string, { total: number; count: number }> = {};
+    for (const e of inMonth) {
+      const cat = e.category;
+      if (!byCategory[cat]) byCategory[cat] = { total: 0, count: 0 };
+      const entry = byCategory[cat];
+      if (entry) {
+        entry.total += e.amount;
+        entry.count += 1;
+      }
+    }
+    const grandTotal = inMonth.reduce((s, e) => s + e.amount, 0);
+    const byCategoryArr = Object.entries(byCategory)
+      .map(([category, { total, count }]) => ({
+        category: category as ExpenseCategory,
+        total,
+        count,
+      }))
+      .sort((a, b) => b.total - a.total);
+
+    const summary: ExpenseSummary = {
+      month: targetMonth,
+      grandTotal,
+      totalCount: inMonth.length,
+      byCategory: byCategoryArr,
+    };
+    return HttpResponse.json(summary);
+  }),
+
+  // GET /api/v1/expenses/:id
+  http.get('/api/v1/expenses/:id', ({ params }) => {
+    const expense = defaultExpenses.find((e) => e.id === params['id']);
+    if (!expense) {
+      return HttpResponse.json(
+        { status: 404, code: 'EXPENSE_NOT_FOUND', detail: 'Expense not found' },
+        { status: 404 },
+      );
+    }
+    return HttpResponse.json(expense);
+  }),
+
+  // POST /api/v1/expenses
+  http.post('/api/v1/expenses', async ({ request }) => {
+    const body = (await request.json()) as {
+      amount: number;
+      category: ExpenseCategory;
+      expenseDate: string;
+      description?: string | null;
+    };
+    if (!body.amount || body.amount <= 0) {
+      return HttpResponse.json(
+        { code: 'VALIDATION_ERROR', message: 'amount: must be greater than 0' },
+        { status: 400 },
+      );
+    }
+    const newExpense: Expense = {
+      id: `exp-${Date.now()}`,
+      amount: body.amount,
+      category: body.category,
+      description: body.description ?? null,
+      expenseDate: body.expenseDate,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    defaultExpenses.push(newExpense);
+    return HttpResponse.json(newExpense, { status: 201 });
+  }),
+
+  // PUT /api/v1/expenses/:id
+  http.put('/api/v1/expenses/:id', async ({ params, request }) => {
+    const idx = defaultExpenses.findIndex((e) => e.id === params['id']);
+    if (idx === -1) {
+      return HttpResponse.json(
+        { status: 404, code: 'EXPENSE_NOT_FOUND', detail: 'Expense not found' },
+        { status: 404 },
+      );
+    }
+    const body = (await request.json()) as {
+      amount: number;
+      category: ExpenseCategory;
+      expenseDate: string;
+      description?: string | null;
+    };
+    const updated: Expense = {
+      ...defaultExpenses[idx]!,
+      amount: body.amount,
+      category: body.category,
+      expenseDate: body.expenseDate,
+      description: body.description ?? null,
+      updatedAt: new Date().toISOString(),
+    };
+    defaultExpenses[idx] = updated;
+    return HttpResponse.json(updated);
+  }),
+
+  // DELETE /api/v1/expenses/:id
+  http.delete('/api/v1/expenses/:id', ({ params }) => {
+    const idx = defaultExpenses.findIndex((e) => e.id === params['id']);
+    if (idx === -1) {
+      return HttpResponse.json(
+        { status: 404, code: 'EXPENSE_NOT_FOUND', detail: 'Expense not found' },
+        { status: 404 },
+      );
+    }
+    defaultExpenses.splice(idx, 1);
+    return new HttpResponse(null, { status: 204 });
+  }),
 ];

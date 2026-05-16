@@ -12,7 +12,13 @@ public sealed interface ClientCommand {
         String name,
         String email,
         String phone,
-        String address
+        String address,
+        String companyName,
+        String companyAddress,
+        String companyVatNumber,
+        String companyIban,
+        String companySwiftBic,
+        String companyBankName
     ) implements ClientCommand {}
 
     /**
@@ -22,6 +28,12 @@ public sealed interface ClientCommand {
         String name,
         String email,
         String phone,
-        String address
+        String address,
+        String companyName,
+        String companyAddress,
+        String companyVatNumber,
+        String companyIban,
+        String companySwiftBic,
+        String companyBankName
     ) implements ClientCommand {}
 }

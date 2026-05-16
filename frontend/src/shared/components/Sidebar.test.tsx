@@ -64,6 +64,16 @@ describe('Sidebar', () => {
     expect(screen.getByText('Invoice Template')).toBeInTheDocument();
   });
 
+  it('does not render Company Profile link in settings section', () => {
+    renderSidebar();
+    expect(screen.queryByText('Company Profile')).not.toBeInTheDocument();
+  });
+
+  it('Invoices nav item has no child sub-items', () => {
+    renderSidebar();
+    expect(screen.queryByTestId('nav-children-invoices')).not.toBeInTheDocument();
+  });
+
   it('Invoice Template link navigates to /settings/invoice-template', () => {
     renderSidebar();
     const link = screen.getByText('Invoice Template').closest('a');

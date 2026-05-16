@@ -99,9 +99,25 @@ public interface InvoiceRepository {
 
     /**
      * Soft-deletes an invoice by setting its deletedAt timestamp.
+<<<<<<< HEAD
      *
      * @param id the invoice UUID
      * @throws InvoiceNotFoundException if not found or already soft-deleted
      */
     void softDelete(UUID id);
+=======
+     */
+    void softDelete(UUID id);
+
+    /**
+     * Updates an existing active invoice (replaces lines, updates header fields).
+     */
+    Invoice update(Invoice invoice);
+
+    /**
+     * Returns the highest invoice number for the given year in the format INV-YYYY-NNNN,
+     * or {@code null} if no invoice exists for that year.
+     */
+    String findMaxNumberForYear(int year);
+>>>>>>> feat/FEAT-20260516-01-expense-tracking
 }

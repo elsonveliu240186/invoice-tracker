@@ -4,6 +4,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/shared/lib/i18n';
+import { http, HttpResponse } from 'msw';
+import { server } from '@/mocks/server';
 import { resetMockClients } from '@/mocks/handlers';
 import { ClientDetailPage } from './ClientDetailPage';
 
@@ -233,6 +235,49 @@ describe('ClientDetailPage', () => {
     });
     expect(screen.getByTestId('status-badge-active')).toBeInTheDocument();
   });
+<<<<<<< HEAD
 =======
 >>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
+=======
+
+  it('renders phone when client has a phone number', async () => {
+    server.use(
+      http.get('/api/v1/clients/:id', () =>
+        HttpResponse.json({
+          id: 'uuid-1',
+          name: 'Acme Corp',
+          email: 'acme@example.com',
+          phone: '+1-555-0100',
+          address: null,
+          deletedAt: null,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        }),
+      ),
+    );
+    renderPage('uuid-1');
+    await waitFor(() => expect(screen.getByTestId('client-detail-page')).toBeInTheDocument());
+    expect(screen.getByText('+1-555-0100')).toBeInTheDocument();
+  });
+
+  it('renders address when client has an address', async () => {
+    server.use(
+      http.get('/api/v1/clients/:id', () =>
+        HttpResponse.json({
+          id: 'uuid-1',
+          name: 'Acme Corp',
+          email: 'acme@example.com',
+          phone: null,
+          address: '123 Main St, Springfield',
+          deletedAt: null,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        }),
+      ),
+    );
+    renderPage('uuid-1');
+    await waitFor(() => expect(screen.getByTestId('client-detail-page')).toBeInTheDocument());
+    expect(screen.getByText('123 Main St, Springfield')).toBeInTheDocument();
+  });
+>>>>>>> feat/FEAT-20260516-01-expense-tracking
 });

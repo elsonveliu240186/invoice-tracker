@@ -5,15 +5,14 @@ interface ThemeProviderProps {
   children: ReactNode;
 }
 
+function disposeMediaListener() {
+  useThemeStore.getState()._mediaCleanup?.();
+}
+
 export function ThemeProvider({ children }: ThemeProviderProps) {
   useEffect(() => {
-    const state = useThemeStore.getState();
-    state._initMediaListener();
-
-    return () => {
-      const cleanup = useThemeStore.getState()._mediaCleanup;
-      if (cleanup) cleanup();
-    };
+    useThemeStore.getState()._initMediaListener();
+    return disposeMediaListener;
   }, []);
 
   return <>{children}</>;

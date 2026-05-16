@@ -166,6 +166,44 @@ describe('http wrapper', () => {
     const result = await http<void>('/test/delete', { method: 'DELETE' });
     expect(result).toBeUndefined();
   });
+
+  it('falls through to generic ApiError when response.json() throws on json content-type error', async () => {
+    // Return a response that claims to be JSON but has a body that cannot be parsed
+    server.use(
+      mswHttp.get(
+        '/test/malformed-json',
+        () =>
+          new HttpResponse('not-json-at-all', {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+      ),
+    );
+    let caught: unknown;
+    try {
+      await http('/test/malformed-json');
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(ApiError);
+    expect((caught as ApiError).status).toBe(400);
+  });
+
+  it('proceeds without Authorization header when auth store import fails', async () => {
+    // Make the dynamic import of useAuthStore throw so the catch branch in buildAuthHeaders runs
+    vi.doMock('@/features/auth/model/useAuthStore', () => {
+      throw new Error('module load failure');
+    });
+    const spy = vi.spyOn(globalThis, 'fetch');
+    server.use(mswHttp.get('/test/noauth-import-fail', () => HttpResponse.json({ ok: true })));
+    // Use dynamic import of http to get a fresh module that will hit the failing import
+    const { http: httpFresh } = await import('./http');
+    await httpFresh('/test/noauth-import-fail');
+    const callArgs = spy.mock.calls[0];
+    const opts = callArgs?.[1] as RequestInit & { headers?: Record<string, string> };
+    expect(opts?.headers?.['Authorization']).toBeUndefined();
+    vi.doUnmock('@/features/auth/model/useAuthStore');
+  });
 });
 
 describe('httpRaw', () => {
@@ -242,5 +280,22 @@ describe('httpRaw', () => {
     const callArgs = spy.mock.calls[0];
     const opts = callArgs?.[1] as RequestInit & { headers?: Record<string, string> };
     expect(opts?.headers?.['Authorization']).toBe('Basic dGVzdA==');
+  });
+
+  it('invokes the on401 handler when a 401 is received via httpRaw', async () => {
+    const handler = vi.fn();
+    setOn401Handler(handler);
+    server.use(
+      mswHttp.get('/test/raw/401', () =>
+        HttpResponse.json({ status: 401, detail: 'Unauthorized' }, { status: 401 }),
+      ),
+    );
+    try {
+      await httpRaw('/test/raw/401');
+    } catch {
+      // expected
+    }
+    expect(handler).toHaveBeenCalledTimes(1);
+    setOn401Handler(() => {});
   });
 });

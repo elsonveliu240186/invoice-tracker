@@ -23,7 +23,9 @@ public final class InvoiceFixtures {
      */
     public static Client client(UUID id, String name, String email) {
         Instant now = Instant.now();
-        return new Client(id, name, email, null, null, now, now, null);
+        return new Client(id, name, email, null, null,
+            "Acme Corp", "123 Business St", "VAT001", "IBAN001", "SWIFT01", "Test Bank",
+            now, now, null);
     }
 
     /**
@@ -63,7 +65,15 @@ public final class InvoiceFixtures {
             now,
             now,
             null,
-            null
+            null,
+            "Acme Corp",
+            "123 Main St",
+            "Acme Corp",
+            "123 Business St",
+            "VAT001",
+            "IBAN001",
+            "SWIFT01",
+            "Test Bank"
         );
     }
 
@@ -82,7 +92,11 @@ public final class InvoiceFixtures {
             "Acme Corp",
             "123 Business St, New York NY",
             "billing@acme.com",
-            "US-12345"
+            "US-12345",
+            "VAT-001",
+            "IBAN001",
+            "SWIFT01",
+            "Test Bank"
         );
     }
 }

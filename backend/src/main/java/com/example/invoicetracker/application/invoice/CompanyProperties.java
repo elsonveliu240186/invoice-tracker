@@ -10,5 +10,23 @@ public record CompanyProperties(
     String name,
     String address,
     String email,
-    String taxId
-) {}
+    String taxId,
+    String vatNumber,
+    String iban,
+    String swiftBic,
+    String bankName
+) {
+    /**
+     * Normalises all null values to empty strings.
+     */
+    public CompanyProperties {
+        name      = name      != null ? name      : "";
+        address   = address   != null ? address   : "";
+        email     = email     != null ? email     : "";
+        taxId     = taxId     != null ? taxId     : "";
+        vatNumber = vatNumber != null ? vatNumber : "";
+        iban      = iban      != null ? iban      : "";
+        swiftBic  = swiftBic  != null ? swiftBic  : "";
+        bankName  = bankName  != null ? bankName  : "";
+    }
+}

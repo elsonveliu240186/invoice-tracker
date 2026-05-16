@@ -55,7 +55,13 @@ public class ClientController {
             request.name(),
             request.email(),
             request.phone(),
-            request.address()
+            request.address(),
+            request.companyName(),
+            request.companyAddress(),
+            request.companyVatNumber(),
+            request.companyIban(),
+            request.companySwiftBic(),
+            request.companyBankName()
         );
         Client client = clientService.create(cmd);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -122,7 +128,13 @@ public class ClientController {
             request.name(),
             request.email(),
             request.phone(),
-            request.address()
+            request.address(),
+            request.companyName(),
+            request.companyAddress(),
+            request.companyVatNumber(),
+            request.companyIban(),
+            request.companySwiftBic(),
+            request.companyBankName()
         );
         Client client = clientService.update(id, cmd);
         return ResponseEntity.ok(toResponse(client));
@@ -148,6 +160,12 @@ public class ClientController {
             client.email(),
             client.phone(),
             client.address(),
+            client.companyName(),
+            client.companyAddress(),
+            client.companyVatNumber(),
+            client.companyIban(),
+            client.companySwiftBic(),
+            client.companyBankName(),
             client.createdAt(),
             client.updatedAt()
         );
