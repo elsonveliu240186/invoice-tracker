@@ -211,7 +211,8 @@ class InvoiceServiceTest {
             invoice.id(), invoice.number(), invoice.clientId(),
             invoice.issueDate(), invoice.dueDate(), invoice.lines(),
             invoice.taxRate(), InvoiceStatus.SENT, sentAt, invoice.createdAt(),
-            invoice.updatedAt(), null, null);
+            invoice.updatedAt(), null, null,
+            null, null, null, null, null, null, null, null);
 
         when(invoiceRepository.findByIdWithLines(id))
             .thenReturn(Optional.of(invoice))
@@ -364,7 +365,8 @@ class InvoiceServiceTest {
             java.time.LocalDate.now(), java.time.LocalDate.now().plusDays(30),
             List.of(InvoiceFixtures.line("Item", 1, "100.00")),
             BigDecimal.ZERO, InvoiceStatus.PAID, null,
-            java.time.Instant.now(), java.time.Instant.now(), null, null);
+            java.time.Instant.now(), java.time.Instant.now(), null, null,
+            null, null, null, null, null, null, null, null);
 
         when(invoiceRepository.markPaid(id)).thenReturn(paidInvoice);
 
@@ -381,5 +383,14 @@ class InvoiceServiceTest {
 
         assertThatThrownBy(() -> service.markAsPaid(id))
             .isInstanceOf(InvoiceNotFoundException.class);
+    }
+
+    @Test
+    void deleteInvoice_soft_deletes() {
+        UUID id = UUID.randomUUID();
+
+        service.deleteInvoice(id);
+
+        verify(invoiceRepository).softDelete(id);
     }
 }

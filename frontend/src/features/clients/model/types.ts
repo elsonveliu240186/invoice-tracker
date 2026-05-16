@@ -4,6 +4,13 @@ export interface Client {
   email: string;
   phone: string | null;
   address: string | null;
+  // Per-client company profile (your billing entity for this client)
+  companyName: string;
+  companyAddress: string;
+  companyVatNumber: string;
+  companyIban: string;
+  companySwiftBic: string;
+  companyBankName: string;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
@@ -22,6 +29,12 @@ export interface CreateClient {
   email: string;
   phone?: string | undefined;
   address?: string | undefined;
+  companyName?: string | undefined;
+  companyAddress?: string | undefined;
+  companyVatNumber?: string | undefined;
+  companyIban?: string | undefined;
+  companySwiftBic?: string | undefined;
+  companyBankName?: string | undefined;
 }
 
 export interface UpdateClient {
@@ -29,6 +42,12 @@ export interface UpdateClient {
   email: string;
   phone?: string | undefined;
   address?: string | undefined;
+  companyName?: string | undefined;
+  companyAddress?: string | undefined;
+  companyVatNumber?: string | undefined;
+  companyIban?: string | undefined;
+  companySwiftBic?: string | undefined;
+  companyBankName?: string | undefined;
 }
 
 export interface ClientQuery {

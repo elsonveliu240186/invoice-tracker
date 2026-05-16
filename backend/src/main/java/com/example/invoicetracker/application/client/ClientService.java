@@ -47,6 +47,12 @@ public class ClientService {
             cmd.email(),
             cmd.phone(),
             cmd.address(),
+            normalise(cmd.companyName()),
+            normalise(cmd.companyAddress()),
+            normalise(cmd.companyVatNumber()),
+            normalise(cmd.companyIban()),
+            normalise(cmd.companySwiftBic()),
+            normalise(cmd.companyBankName()),
             now,
             now,
             null
@@ -111,6 +117,12 @@ public class ClientService {
             cmd.email(),
             cmd.phone(),
             cmd.address(),
+            normalise(cmd.companyName()),
+            normalise(cmd.companyAddress()),
+            normalise(cmd.companyVatNumber()),
+            normalise(cmd.companyIban()),
+            normalise(cmd.companySwiftBic()),
+            normalise(cmd.companyBankName()),
             existing.createdAt(),
             Instant.now(),
             null
@@ -136,11 +148,21 @@ public class ClientService {
             existing.email(),
             existing.phone(),
             existing.address(),
+            existing.companyName(),
+            existing.companyAddress(),
+            existing.companyVatNumber(),
+            existing.companyIban(),
+            existing.companySwiftBic(),
+            existing.companyBankName(),
             existing.createdAt(),
             existing.updatedAt(),
             Instant.now()
         );
         clientRepository.save(deleted);
         log.info("Client soft-deleted: {}", id);
+    }
+
+    private String normalise(String value) {
+        return value != null ? value : "";
     }
 }

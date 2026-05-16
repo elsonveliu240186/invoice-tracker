@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { Outlet } from 'react-router';
 import { Sidebar } from './Sidebar';
 import { TopNav } from './TopNav';
@@ -12,7 +12,6 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const hamburgerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 1023px)');
@@ -25,13 +24,12 @@ export function AppShell({ children }: AppShellProps) {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
-  // Close drawer on Escape and return focus to hamburger
+  // Close drawer on Escape
   useEffect(() => {
     if (!drawerOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setDrawerOpen(false);
-        hamburgerRef.current?.focus();
       }
     };
     document.addEventListener('keydown', onKey);
@@ -44,7 +42,6 @@ export function AppShell({ children }: AppShellProps) {
 
   function closeDrawer() {
     setDrawerOpen(false);
-    hamburgerRef.current?.focus();
   }
 
   return (

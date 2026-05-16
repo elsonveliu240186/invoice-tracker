@@ -37,7 +37,8 @@ class ClientRepositoryAdapterIT {
 
     private Client buildClient(String name, String email) {
         Instant now = Instant.now();
-        return new Client(UUID.randomUUID(), name, email, null, null, now, now, null);
+        return new Client(UUID.randomUUID(), name, email, null, null,
+            "", "", "", "", "", "", now, now, null);
     }
 
     @Test
@@ -73,6 +74,8 @@ class ClientRepositoryAdapterIT {
 
         Client softDeleted = new Client(
             saved.id(), saved.name(), saved.email(), saved.phone(), saved.address(),
+            saved.companyName(), saved.companyAddress(), saved.companyVatNumber(),
+            saved.companyIban(), saved.companySwiftBic(), saved.companyBankName(),
             saved.createdAt(), saved.updatedAt(), Instant.now()
         );
         adapter.save(softDeleted);

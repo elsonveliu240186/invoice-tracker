@@ -88,7 +88,8 @@ class OpenPdfInvoiceRendererTest {
         Invoice invoice = new Invoice(
             UUID.randomUUID(), "INV-MULTI", clientId,
             LocalDate.of(2026, 5, 1), LocalDate.of(2026, 6, 1),
-            lines, new BigDecimal("0.10"), InvoiceStatus.DRAFT, null, now, now, null, null);
+            lines, new BigDecimal("0.10"), InvoiceStatus.DRAFT, null, now, now, null, null,
+            null, null, null, null, null, null, null, null);
 
         byte[] pdf = renderer.render(invoice, client, company);
         assertThat(pdf).hasSizeGreaterThan(1024);
@@ -128,7 +129,8 @@ class OpenPdfInvoiceRendererTest {
         Invoice invoice = new Invoice(
             UUID.randomUUID(), "INV-NOTAX", clientId,
             LocalDate.now(), LocalDate.now().plusDays(30),
-            lines, BigDecimal.ZERO, InvoiceStatus.DRAFT, null, now, now, null, null);
+            lines, BigDecimal.ZERO, InvoiceStatus.DRAFT, null, now, now, null, null,
+            null, null, null, null, null, null, null, null);
 
         byte[] pdf = renderer.render(invoice, client, company);
         assertThat(pdf).hasSizeGreaterThan(1024);
@@ -138,29 +140,33 @@ class OpenPdfInvoiceRendererTest {
     }
 
     @Test
-    void renders_with_null_optional_company_fields() throws Exception {
-        // Cover the null-check branches for company address/email/taxId
-        CompanyProperties minimalCompany = new CompanyProperties(
-            "Minimal Corp", null, null, null);
-        Invoice invoice = InvoiceFixtures.invoice(UUID.randomUUID(), client.id());
-
-        byte[] pdf = renderer.render(invoice, client, minimalCompany);
-        assertThat(pdf).hasSizeGreaterThan(1024);
-        String text = extractText(pdf);
-        assertThat(text).contains("Minimal Corp");
-    }
-
-    @Test
     void renders_with_empty_optional_company_fields() throws Exception {
-        // Cover the isEmpty() branches for company address/email/taxId
+        // Cover the isEmpty() branches for company address/email/taxId (false branch = empty)
         CompanyProperties emptyCompany = new CompanyProperties(
-            "Empty Corp", "", "", "");
+            "Empty Corp", "", "", "", "", "", "", "");
         Invoice invoice = InvoiceFixtures.invoice(UUID.randomUUID(), client.id());
 
         byte[] pdf = renderer.render(invoice, client, emptyCompany);
         assertThat(pdf).hasSizeGreaterThan(1024);
         String text = extractText(pdf);
         assertThat(text).contains("Empty Corp");
+    }
+
+    @Test
+    void renders_with_populated_company_fields() throws Exception {
+        // Cover the !isEmpty() true branches for company address/email/taxId
+        CompanyProperties fullCompany = new CompanyProperties(
+            "Full Corp", "100 Corp St", "corp@example.com", "TAX-001", "VAT-001",
+            "IBAN-001", "SWIFT01", "Corp Bank");
+        Invoice invoice = InvoiceFixtures.invoice(UUID.randomUUID(), client.id());
+
+        byte[] pdf = renderer.render(invoice, client, fullCompany);
+        assertThat(pdf).hasSizeGreaterThan(1024);
+        String text = extractText(pdf);
+        assertThat(text).contains("Full Corp");
+        assertThat(text).contains("100 Corp St");
+        assertThat(text).contains("corp@example.com");
+        assertThat(text).contains("TAX-001");
     }
 
     @Test
@@ -182,8 +188,9 @@ class OpenPdfInvoiceRendererTest {
         com.example.invoicetracker.domain.client.Client clientWithAddr =
             new com.example.invoicetracker.domain.client.Client(
                 UUID.randomUUID(), "Addressed Client", "addr@example.com",
-                null, "123 Client Street, NY", java.time.Instant.now(),
-                java.time.Instant.now(), null);
+                null, "123 Client Street, NY",
+                "", "", "", "", "", "",
+                java.time.Instant.now(), java.time.Instant.now(), null);
         Invoice invoice = InvoiceFixtures.invoice(UUID.randomUUID(), clientWithAddr.id());
 
         byte[] pdf = renderer.render(invoice, clientWithAddr, company);

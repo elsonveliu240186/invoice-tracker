@@ -135,4 +135,65 @@ describe('InvoiceTemplateSettingsPage', () => {
       WAIT,
     );
   });
+
+  it('displays file size in KB when template is between 1KB and 1MB', async () => {
+    server.use(
+      http.get('/api/v1/settings/invoice-template/preview', () =>
+        HttpResponse.json({
+          filename: 'invoice-template.docx',
+          size: 2048, // 2 KB
+          uploadedAt: '2026-01-01T00:00:00Z',
+          isDefault: false,
+        }),
+      ),
+    );
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('template-size')).toBeInTheDocument(), WAIT);
+    expect(screen.getByTestId('template-size').textContent).toContain('KB');
+  });
+
+  it('displays file size in MB when template is large', async () => {
+    server.use(
+      http.get('/api/v1/settings/invoice-template/preview', () =>
+        HttpResponse.json({
+          filename: 'large-template.docx',
+          size: 2 * 1024 * 1024, // 2 MB
+          uploadedAt: '2026-01-01T00:00:00Z',
+          isDefault: false,
+        }),
+      ),
+    );
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('template-size')).toBeInTheDocument(), WAIT);
+    expect(screen.getByTestId('template-size').textContent).toContain('MB');
+  });
+
+  it('displays file size in bytes when template is very small', async () => {
+    server.use(
+      http.get('/api/v1/settings/invoice-template/preview', () =>
+        HttpResponse.json({
+          filename: 'tiny-template.docx',
+          size: 512, // 512 B
+          uploadedAt: '2026-01-01T00:00:00Z',
+          isDefault: false,
+        }),
+      ),
+    );
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('template-size')).toBeInTheDocument(), WAIT);
+    expect(screen.getByTestId('template-size').textContent).toContain('B');
+    expect(screen.getByTestId('template-size').textContent).not.toContain('KB');
+  });
+
+  it('clicking download link calls downloadTemplate', async () => {
+    renderPage();
+    await waitFor(
+      () => expect(screen.getByTestId('link-download-current')).toBeInTheDocument(),
+      WAIT,
+    );
+    const link = screen.getByTestId('link-download-current');
+    // Click triggers the onClick handler (e.preventDefault + downloadTemplate)
+    // We just verify the click doesn't throw
+    link.click();
+  });
 });

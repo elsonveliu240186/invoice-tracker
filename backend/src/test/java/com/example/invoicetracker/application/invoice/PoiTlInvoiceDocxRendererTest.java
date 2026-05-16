@@ -111,7 +111,8 @@ class PoiTlInvoiceDocxRendererTest {
             Instant.now(),
             Instant.now(),
             null,
-            null
+            null,
+            null, null, null, null, null, null, null, null
         );
         var client = InvoiceFixtures.client();
 
@@ -140,7 +141,8 @@ class PoiTlInvoiceDocxRendererTest {
             Instant.now(),
             Instant.now(),
             null,
-            null
+            null,
+            null, null, null, null, null, null, null, null
         );
         var client = InvoiceFixtures.client();
 
@@ -249,7 +251,8 @@ class PoiTlInvoiceDocxRendererTest {
             null, null,
             Collections.emptyList(),
             java.math.BigDecimal.ZERO, InvoiceStatus.DRAFT,
-            null, Instant.now(), Instant.now(), null, null
+            null, Instant.now(), Instant.now(), null, null,
+            null, null, null, null, null, null, null, null
         );
         var client = InvoiceFixtures.client();
 
@@ -274,5 +277,6 @@ class PoiTlInvoiceDocxRendererTest {
         assertThat(docxBytes[0] & 0xFF).isEqualTo(0x50);
         assertThat(docxBytes[1] & 0xFF).isEqualTo(0x4B);
     }
+
 
 }

@@ -31,8 +31,11 @@
     "clients": "Clients",
     "invoices": "Invoices",
     "invoicesComingSoon": "Coming soon",
+    "expenses": "Expenses",
     "settings": "Settings",
     "settingsInvoiceTemplate": "Invoice Template",
+    "settingsCompany": "Company Profile",
+    "invoiceTemplate": "Manage template",
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar",
     "openMenu": "Open navigation menu",
@@ -120,7 +123,14 @@
       "email": "Email",
       "phone": "Phone",
       "address": "Address",
-      "required": "Required"
+      "required": "Required",
+      "companySection": "Your company details for this client",
+      "companyName": "Company name",
+      "companyAddress": "Company address",
+      "companyVatNumber": "VAT / Tax ID",
+      "companyIban": "IBAN",
+      "companySwiftBic": "Swift / BIC",
+      "companyBankName": "Bank name"
     },
     "delete": {
       "title": "Delete client",
@@ -211,7 +221,46 @@
       "title": "Invoice",
       "backToList": "Back to invoices",
       "issueDate": "Issue date",
-      "dueDate": "Due date"
+      "dueDate": "Due date",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "form": {
+      "title": {
+        "create": "New Invoice",
+        "edit": "Edit Invoice"
+      },
+      "client": "Client",
+      "clientPlaceholder": "Search clients…",
+      "number": "Invoice Number",
+      "numberPlaceholder": "Auto-generated if blank",
+      "issueDate": "Issue Date",
+      "dueDate": "Due Date",
+      "taxRate": "Tax Rate",
+      "lineItems": "Line Items",
+      "addLine": "Add Line",
+      "lineDescription": "Description",
+      "errors": {
+        "clientRequired": "Please select a client",
+        "numberTaken": "This invoice number is already in use",
+        "unexpected": "An unexpected error occurred"
+      }
+    },
+    "toast": {
+      "sendSuccess": "Invoice sent successfully",
+      "sendFailed": "Failed to send invoice",
+      "noRecipient": "Invoice has no recipient email address",
+      "pdfConversionFailed": "PDF conversion failed. Please try again.",
+      "downloadFailed": "Download failed. Please try again.",
+      "markPaidSuccess": "Invoice marked as paid.",
+      "markPaidFailed": "Could not mark invoice as paid.",
+      "generateSuccess": "Invoice generated and saved",
+      "generateFailed": "Failed to generate invoice",
+      "regenerated": "Invoice regenerated",
+      "previewFailed": "Failed to load preview",
+      "created": "Invoice created",
+      "updated": "Invoice updated",
+      "deleted": "Invoice deleted"
     },
     "actions": {
       "viewPdf": "View PDF",
@@ -260,6 +309,18 @@
     }
   },
   "settings": {
+    "company": {
+      "title": "Company Profile",
+      "fields": {
+        "name": "Company Name",
+        "email": "Email",
+        "phone": "Phone",
+        "address": "Address"
+      },
+      "toast": {
+        "saved": "Company profile saved"
+      }
+    },
     "invoiceTemplate": {
       "title": "Invoice Template",
       "currentFilename": "Current template",
@@ -276,6 +337,20 @@
         "uploadSuccess": "Template uploaded successfully",
         "uploadFailed": "Failed to upload template. Please try again."
       }
+    }
+  },
+  "expenses": {
+    "categories": {
+      "FOOD_DRINK": "Food & Drink",
+      "TRANSPORT": "Transport",
+      "HOUSING": "Housing",
+      "HEALTH": "Health",
+      "ENTERTAINMENT": "Entertainment",
+      "SHOPPING": "Shopping",
+      "TRAVEL": "Travel",
+      "EDUCATION": "Education",
+      "UTILITIES": "Utilities",
+      "OTHER": "Other"
     }
   },
   "errors": {

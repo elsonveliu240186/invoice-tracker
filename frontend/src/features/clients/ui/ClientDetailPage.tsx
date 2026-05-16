@@ -40,7 +40,7 @@ export function ClientDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6" data-testid="client-detail-page">
+    <div className="space-y-6" data-testid="client-detail-page">
       <div className="flex items-center gap-4">
         <Link
           to="/clients"

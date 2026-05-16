@@ -34,3 +34,29 @@ export interface InvoicePage {
   totalElements: number;
   totalPages: number;
 }
+
+export interface CreateInvoicePayload {
+  clientId: string;
+  number?: string | undefined;
+  issueDate: string;
+  dueDate: string;
+  taxRate: number;
+  lines: Array<{
+    description: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
+}
+
+export interface UpdateInvoicePayload {
+  clientId: string;
+  number?: string | undefined;
+  issueDate: string;
+  dueDate: string;
+  taxRate: number;
+  lines: Array<{
+    description: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
+}

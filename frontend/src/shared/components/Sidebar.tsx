@@ -1,5 +1,5 @@
 import { NavLink, Link } from 'react-router';
-import { LayoutDashboard, Users, FileText, X, Settings, FileOutput } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, X, Settings, FileOutput, Wallet } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 
@@ -15,6 +15,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, end: true },
   { to: '/clients', labelKey: 'nav.clients', icon: Users },
   { to: '/invoices', labelKey: 'nav.invoices', icon: FileText },
+  { to: '/expenses', labelKey: 'nav.expenses', icon: Wallet },
 ];
 
 const SETTINGS_ITEMS: NavItem[] = [
@@ -64,39 +65,24 @@ export function Sidebar({ collapsed = false, drawerMode = false, onClose }: Side
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto p-2" aria-label="Main navigation">
         <ul className="space-y-1">
-          {NAV_ITEMS.map(({ to, labelKey, icon: Icon, disabled, end }) => (
+          {NAV_ITEMS.map(({ to, labelKey, icon: Icon, end }) => (
             <li key={to}>
-              {disabled ? (
-                <span
-                  aria-disabled="true"
-                  title={t('nav.invoicesComingSoon')}
-                  className={cn(
-                    'flex cursor-not-allowed items-center gap-3 rounded-md px-3 py-2 text-sm font-medium opacity-50',
-                    'text-[var(--color-sidebar-text)]',
-                  )}
-                  data-testid="nav-item-disabled"
-                >
-                  <Icon className="h-4 w-4 shrink-0" aria-hidden={true} />
-                  {!collapsed && <span>{t(labelKey)}</span>}
-                </span>
-              ) : (
-                <NavLink to={to} {...(end !== undefined ? { end } : {})}>
-                  {({ isActive }) => (
-                    <span
-                      aria-current={isActive ? 'page' : undefined}
-                      className={cn(
-                        'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                        isActive
-                          ? 'bg-[var(--color-sidebar-active-bg)] text-[var(--color-sidebar-active-text)]'
-                          : 'text-[var(--color-sidebar-text)] hover:bg-[var(--color-sidebar-hover-bg)] hover:text-[var(--color-sidebar-text)]',
-                      )}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" aria-hidden={true} />
-                      {!collapsed && <span>{t(labelKey)}</span>}
-                    </span>
-                  )}
-                </NavLink>
-              )}
+              <NavLink to={to} {...(end !== undefined ? { end } : {})}>
+                {({ isActive }) => (
+                  <span
+                    aria-current={isActive ? 'page' : undefined}
+                    className={cn(
+                      'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-[var(--color-sidebar-active-bg)] text-[var(--color-sidebar-active-text)]'
+                        : 'text-[var(--color-sidebar-text)] hover:bg-[var(--color-sidebar-hover-bg)] hover:text-[var(--color-sidebar-text)]',
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" aria-hidden={true} />
+                    {!collapsed && <span>{t(labelKey)}</span>}
+                  </span>
+                )}
+              </NavLink>
             </li>
           ))}
         </ul>
@@ -118,9 +104,9 @@ export function Sidebar({ collapsed = false, drawerMode = false, onClose }: Side
             </Link>
           )}
           <ul className="space-y-1" data-testid="nav-settings-section">
-            {SETTINGS_ITEMS.map(({ to, labelKey, icon: Icon, end }) => (
+            {SETTINGS_ITEMS.map(({ to, labelKey, icon: Icon }) => (
               <li key={to}>
-                <NavLink to={to} {...(end !== undefined ? { end } : {})}>
+                <NavLink to={to}>
                   {({ isActive }) => (
                     <span
                       aria-current={isActive ? 'page' : undefined}

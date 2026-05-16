@@ -4,6 +4,7 @@ import { ClientsPage } from '@/pages/ClientsPage';
 import { ClientDetailPage } from '@/pages/ClientDetailPage';
 import { InvoiceDetailPage } from '@/pages/InvoiceDetailPage';
 import { InvoicesPage } from '@/pages/InvoicesPage';
+import { ExpensesPage } from '@/pages/ExpensesPage';
 import { InvoiceTemplateSettingsPage } from '@/pages/InvoiceTemplateSettingsPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
@@ -42,6 +43,7 @@ export function App() {
               <Route path="/clients" element={<ClientsPage />} />
               <Route path="/clients/:id" element={<ClientDetailPage />} />
               <Route path="/invoices" element={<InvoicesPage />} />
+              <Route path="/expenses" element={<ExpensesPage />} />
               <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
               <Route path="/settings/invoice-template" element={<InvoiceTemplateSettingsPage />} />
               <Route path="*" element={<NotFound />} />

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createClientSchema, type CreateClientInput } from '../model/schema';
 import type { Client } from '../model/types';
 import { ApiError } from '@/shared/lib/http';
@@ -15,11 +16,18 @@ interface ClientFormProps {
 type FieldErrors = Partial<Record<keyof CreateClientInput, string>>;
 
 export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }: ClientFormProps) {
+  const { t } = useTranslation();
   const [values, setValues] = useState<CreateClientInput>({
     name: initial?.name ?? '',
     email: initial?.email ?? '',
     phone: initial?.phone ?? '',
     address: initial?.address ?? '',
+    companyName: initial?.companyName ?? '',
+    companyAddress: initial?.companyAddress ?? '',
+    companyVatNumber: initial?.companyVatNumber ?? '',
+    companyIban: initial?.companyIban ?? '',
+    companySwiftBic: initial?.companySwiftBic ?? '',
+    companyBankName: initial?.companyBankName ?? '',
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -185,6 +193,179 @@ export function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save' }
             {fieldErrors.address}
           </p>
         )}
+      </div>
+
+      {/* Company profile section */}
+      <div className="mb-4 border-t border-[var(--color-border)] pt-4">
+        <h3
+          className="mb-4 text-sm font-semibold text-[var(--color-foreground)]"
+          data-testid="company-section-heading"
+        >
+          {t('clients.form.companySection')}
+        </h3>
+
+        <div className="mb-4">
+          <label
+            htmlFor="company-name"
+            className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+          >
+            {t('clients.form.companyName')}
+          </label>
+          <Input
+            id="company-name"
+            type="text"
+            value={values.companyName ?? ''}
+            onChange={(e) => handleChange('companyName', e.target.value)}
+            aria-describedby={fieldErrors.companyName ? 'companyName-error' : undefined}
+            aria-invalid={!!fieldErrors.companyName}
+            data-testid="input-companyName"
+          />
+          {fieldErrors.companyName && (
+            <p
+              id="companyName-error"
+              role="alert"
+              className="mt-1 text-xs text-[var(--color-destructive)]"
+            >
+              {fieldErrors.companyName}
+            </p>
+          )}
+        </div>
+
+        <div className="mb-4">
+          <label
+            htmlFor="company-address"
+            className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+          >
+            {t('clients.form.companyAddress')}
+          </label>
+          <textarea
+            id="company-address"
+            rows={3}
+            value={values.companyAddress ?? ''}
+            onChange={(e) => handleChange('companyAddress', e.target.value)}
+            aria-describedby={fieldErrors.companyAddress ? 'companyAddress-error' : undefined}
+            aria-invalid={!!fieldErrors.companyAddress}
+            className="block w-full rounded border border-input px-3 py-2 text-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring bg-transparent"
+            data-testid="input-companyAddress"
+          />
+          {fieldErrors.companyAddress && (
+            <p
+              id="companyAddress-error"
+              role="alert"
+              className="mt-1 text-xs text-[var(--color-destructive)]"
+            >
+              {fieldErrors.companyAddress}
+            </p>
+          )}
+        </div>
+
+        <div className="mb-4">
+          <label
+            htmlFor="company-vat"
+            className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+          >
+            {t('clients.form.companyVatNumber')}
+          </label>
+          <Input
+            id="company-vat"
+            type="text"
+            value={values.companyVatNumber ?? ''}
+            onChange={(e) => handleChange('companyVatNumber', e.target.value)}
+            aria-describedby={fieldErrors.companyVatNumber ? 'companyVatNumber-error' : undefined}
+            aria-invalid={!!fieldErrors.companyVatNumber}
+            data-testid="input-companyVatNumber"
+          />
+          {fieldErrors.companyVatNumber && (
+            <p
+              id="companyVatNumber-error"
+              role="alert"
+              className="mt-1 text-xs text-[var(--color-destructive)]"
+            >
+              {fieldErrors.companyVatNumber}
+            </p>
+          )}
+        </div>
+
+        <div className="mb-4">
+          <label
+            htmlFor="company-iban"
+            className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+          >
+            {t('clients.form.companyIban')}
+          </label>
+          <Input
+            id="company-iban"
+            type="text"
+            value={values.companyIban ?? ''}
+            onChange={(e) => handleChange('companyIban', e.target.value)}
+            aria-describedby={fieldErrors.companyIban ? 'companyIban-error' : undefined}
+            aria-invalid={!!fieldErrors.companyIban}
+            data-testid="input-companyIban"
+          />
+          {fieldErrors.companyIban && (
+            <p
+              id="companyIban-error"
+              role="alert"
+              className="mt-1 text-xs text-[var(--color-destructive)]"
+            >
+              {fieldErrors.companyIban}
+            </p>
+          )}
+        </div>
+
+        <div className="mb-4">
+          <label
+            htmlFor="company-swift"
+            className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+          >
+            {t('clients.form.companySwiftBic')}
+          </label>
+          <Input
+            id="company-swift"
+            type="text"
+            value={values.companySwiftBic ?? ''}
+            onChange={(e) => handleChange('companySwiftBic', e.target.value)}
+            aria-describedby={fieldErrors.companySwiftBic ? 'companySwiftBic-error' : undefined}
+            aria-invalid={!!fieldErrors.companySwiftBic}
+            data-testid="input-companySwiftBic"
+          />
+          {fieldErrors.companySwiftBic && (
+            <p
+              id="companySwiftBic-error"
+              role="alert"
+              className="mt-1 text-xs text-[var(--color-destructive)]"
+            >
+              {fieldErrors.companySwiftBic}
+            </p>
+          )}
+        </div>
+
+        <div className="mb-6">
+          <label
+            htmlFor="company-bank"
+            className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+          >
+            {t('clients.form.companyBankName')}
+          </label>
+          <Input
+            id="company-bank"
+            type="text"
+            value={values.companyBankName ?? ''}
+            onChange={(e) => handleChange('companyBankName', e.target.value)}
+            aria-describedby={fieldErrors.companyBankName ? 'companyBankName-error' : undefined}
+            aria-invalid={!!fieldErrors.companyBankName}
+            data-testid="input-companyBankName"
+          />
+          {fieldErrors.companyBankName && (
+            <p
+              id="companyBankName-error"
+              role="alert"
+              className="mt-1 text-xs text-[var(--color-destructive)]"
+            >
+              {fieldErrors.companyBankName}
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="flex justify-end gap-3">

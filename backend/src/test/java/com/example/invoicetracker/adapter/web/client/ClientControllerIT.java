@@ -56,7 +56,7 @@ class ClientControllerIT {
     }
 
     private CreateClientRequest buildRequest(String name, String email) {
-        return new CreateClientRequest(name, email, null, null);
+        return new CreateClientRequest(name, email, null, null, null, null, null, null, null, null);
     }
 
     @Test

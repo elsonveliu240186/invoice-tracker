@@ -42,7 +42,8 @@ class ClientServiceTest {
     @Test
     void create_returns_persisted_client_with_timestamps() {
         ClientCommand.Create cmd = new ClientCommand.Create(
-            "Acme Corp", "acme@example.com", "+1 555-0100", "123 Main St"
+            "Acme Corp", "acme@example.com", "+1 555-0100", "123 Main St",
+            null, null, null, null, null, null
         );
         when(clientRepository.existsByEmailIgnoreCaseAndDeletedAtIsNull("acme@example.com"))
             .thenReturn(false);
@@ -62,7 +63,8 @@ class ClientServiceTest {
     @Test
     void create_throws_when_email_already_taken() {
         ClientCommand.Create cmd = new ClientCommand.Create(
-            "Dup Corp", "dup@example.com", null, null
+            "Dup Corp", "dup@example.com", null, null,
+            null, null, null, null, null, null
         );
         when(clientRepository.existsByEmailIgnoreCaseAndDeletedAtIsNull("dup@example.com"))
             .thenReturn(true);
@@ -79,7 +81,9 @@ class ClientServiceTest {
         when(clientRepository.existsByEmailIgnoreCaseAndDeletedAtIsNullAndIdNot("new@example.com", id))
             .thenReturn(true);
 
-        ClientCommand.Update cmd = new ClientCommand.Update("New Name", "new@example.com", null, null);
+        ClientCommand.Update cmd = new ClientCommand.Update(
+            "New Name", "new@example.com", null, null,
+            null, null, null, null, null, null);
 
         assertThatThrownBy(() -> clientService.update(id, cmd))
             .isInstanceOf(ClientEmailTakenException.class);
@@ -90,7 +94,9 @@ class ClientServiceTest {
         UUID id = UUID.randomUUID();
         when(clientRepository.findByIdAndDeletedAtIsNull(id)).thenReturn(Optional.empty());
 
-        ClientCommand.Update cmd = new ClientCommand.Update("Name", "email@example.com", null, null);
+        ClientCommand.Update cmd = new ClientCommand.Update(
+            "Name", "email@example.com", null, null,
+            null, null, null, null, null, null);
 
         assertThatThrownBy(() -> clientService.update(id, cmd))
             .isInstanceOf(ClientNotFoundException.class);
@@ -105,7 +111,9 @@ class ClientServiceTest {
             .thenReturn(false);
         when(clientRepository.save(any(Client.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        ClientCommand.Update cmd = new ClientCommand.Update("New Name", "new@example.com", null, null);
+        ClientCommand.Update cmd = new ClientCommand.Update(
+            "New Name", "new@example.com", null, null,
+            null, null, null, null, null, null);
         Client result = clientService.update(id, cmd);
 
         assertThat(result.email()).isEqualTo("new@example.com");
@@ -120,7 +128,8 @@ class ClientServiceTest {
         when(clientRepository.save(any(Client.class))).thenAnswer(inv -> inv.getArgument(0));
 
         ClientCommand.Update cmd = new ClientCommand.Update(
-            "Acme Updated", "same@example.com", null, null
+            "Acme Updated", "same@example.com", null, null,
+            null, null, null, null, null, null
         );
         Client result = clientService.update(id, cmd);
 
@@ -171,6 +180,6 @@ class ClientServiceTest {
 
     private Client makeClient(UUID id, String name, String email) {
         Instant now = Instant.now();
-        return new Client(id, name, email, null, null, now, now, null);
+        return new Client(id, name, email, null, null, "", "", "", "", "", "", now, now, null);
     }
 }

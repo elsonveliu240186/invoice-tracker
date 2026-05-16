@@ -114,4 +114,49 @@ describe('RegisterForm', () => {
     await renderForm();
     expect(screen.getByRole('link', { name: /sign in/i })).toBeInTheDocument();
   });
+
+  it('shows email validation error when email is invalid', async () => {
+    const user = userEvent.setup();
+    await renderForm();
+    await user.type(screen.getByLabelText(/full name/i), 'Alice');
+    await user.type(screen.getByLabelText(/^email/i), 'not-an-email');
+    await user.type(screen.getByLabelText(/^password$/i), 'Password1');
+    await user.type(screen.getByLabelText(/confirm password/i), 'Password1');
+    await user.click(screen.getByRole('button', { name: /create account/i }));
+    await waitFor(() => {
+      const alerts = screen.getAllByRole('alert');
+      expect(alerts.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('shows password validation error when password is too short', async () => {
+    const user = userEvent.setup();
+    await renderForm();
+    await user.type(screen.getByLabelText(/full name/i), 'Alice');
+    await user.type(screen.getByLabelText(/^email/i), 'alice@example.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'abc');
+    await user.type(screen.getByLabelText(/confirm password/i), 'abc');
+    await user.click(screen.getByRole('button', { name: /create account/i }));
+    await waitFor(() => {
+      const alerts = screen.getAllByRole('alert');
+      expect(alerts.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('shows generic error toast on non-409 server error', async () => {
+    server.use(
+      mswHttp.post('/api/v1/auth/register', () =>
+        HttpResponse.json({ status: 500, detail: 'Internal error' }, { status: 500 }),
+      ),
+    );
+    const { toast } = await import('sonner');
+    const user = userEvent.setup();
+    await renderForm();
+    await user.type(screen.getByLabelText(/full name/i), 'Alice');
+    await user.type(screen.getByLabelText(/^email/i), 'alice@example.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'Password1');
+    await user.type(screen.getByLabelText(/confirm password/i), 'Password1');
+    await user.click(screen.getByRole('button', { name: /create account/i }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+  });
 });

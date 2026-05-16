@@ -7,6 +7,7 @@ export default mergeConfig(
     test: {
       globals: true,
       environment: 'jsdom',
+      globalSetup: ['./src/vitest.global-setup.ts'],
       setupFiles: ['./src/test-setup.ts'],
       css: false,
       exclude: ['**/node_modules/**', '**/dist/**', 'tests/**/*.spec.ts'],
@@ -23,6 +24,7 @@ export default mergeConfig(
         exclude: [
           'src/**/*.test.{ts,tsx}',
           'src/test-setup.ts',
+          'src/vitest.global-setup.ts',
           'src/main.tsx',
           'src/shared/api/mocks/**',
           'src/mocks/**',

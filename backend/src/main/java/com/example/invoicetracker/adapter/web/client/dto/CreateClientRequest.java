@@ -24,5 +24,23 @@ public record CreateClientRequest(
     String phone,
 
     @Size(max = 500)
-    String address
+    String address,
+
+    @Size(max = 200)
+    String companyName,
+
+    @Size(max = 500)
+    String companyAddress,
+
+    @Size(max = 50)
+    String companyVatNumber,
+
+    @Size(max = 100)
+    String companyIban,
+
+    @Size(max = 20)
+    String companySwiftBic,
+
+    @Size(max = 200)
+    String companyBankName
 ) {}

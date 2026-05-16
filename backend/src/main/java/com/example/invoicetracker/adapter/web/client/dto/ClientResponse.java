@@ -12,6 +12,12 @@ public record ClientResponse(
     String email,
     String phone,
     String address,
+    String companyName,
+    String companyAddress,
+    String companyVatNumber,
+    String companyIban,
+    String companySwiftBic,
+    String companyBankName,
     Instant createdAt,
     Instant updatedAt
 ) {}

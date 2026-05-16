@@ -6,6 +6,7 @@ import com.example.invoicetracker.adapter.web.invoice.dto.CreateInvoiceRequest;
 import com.example.invoicetracker.adapter.web.invoice.dto.InvoiceLineDto;
 import com.example.invoicetracker.adapter.web.invoice.dto.InvoiceResponse;
 import com.example.invoicetracker.adapter.web.invoice.dto.SendEmailResponse;
+import com.example.invoicetracker.adapter.web.invoice.dto.UpdateInvoiceRequest;
 import com.example.invoicetracker.application.invoice.InvoiceService;
 import com.example.invoicetracker.domain.invoice.Invoice;
 import com.example.invoicetracker.domain.invoice.InvoiceLine;
@@ -22,10 +23,12 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -157,6 +160,40 @@ public class InvoiceController {
         return ResponseEntity.ok(toResponse(updated));
     }
 
+
+    /**
+     * Updates an existing DRAFT invoice.
+     */
+    @PutMapping("/{id}")
+    @Operation(summary = "Update a DRAFT invoice")
+    public ResponseEntity<InvoiceResponse> update(
+        @PathVariable UUID id,
+        @Valid @RequestBody UpdateInvoiceRequest request
+    ) {
+        List<InvoiceLine> lines = toInvoiceLines(request.lines());
+        Invoice invoice = invoiceService.update(
+            id,
+            request.number(),
+            request.clientId(),
+            request.issueDate(),
+            request.dueDate(),
+            lines,
+            request.taxRate()
+        );
+        return ResponseEntity.ok(toResponse(invoice));
+    }
+
+    /**
+     * Soft-deletes an invoice.
+     */
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete an invoice (soft-delete)")
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        invoiceService.deleteInvoice(id);
+        return ResponseEntity.noContent().build();
+    }
+
+
     private InvoiceResponse toResponse(Invoice invoice) {
         List<InvoiceLineDto> lineDtos = invoice.lines().stream()
             .map(l -> new InvoiceLineDto(l.id(), l.description(), l.quantity(),
@@ -177,7 +214,15 @@ public class InvoiceController {
             statusName,
             invoice.lastSentAt(),
             invoice.createdAt(),
-            invoice.updatedAt()
+            invoice.updatedAt(),
+            invoice.clientNameSnapshot(),
+            invoice.clientAddressSnapshot(),
+            invoice.companyNameSnapshot(),
+            invoice.companyAddressSnapshot(),
+            invoice.companyVatSnapshot(),
+            invoice.companyIbanSnapshot(),
+            invoice.companySwiftSnapshot(),
+            invoice.companyBankNameSnapshot()
         );
     }
 

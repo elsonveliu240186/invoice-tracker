@@ -113,4 +113,37 @@ describe('LoginForm', () => {
     expect(screen.getByRole('link', { name: /forgot password/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /create account/i })).toBeInTheDocument();
   });
+
+  it('shows root error message for non-401 server errors', async () => {
+    server.use(
+      mswHttp.post('/api/v1/auth/login', () =>
+        HttpResponse.json({ status: 500, detail: 'Server error' }, { status: 500 }),
+      ),
+    );
+    const user = userEvent.setup();
+    await renderForm();
+    await user.type(screen.getByLabelText(/email/i), 'user@example.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'Password1');
+    await user.click(screen.getByRole('button', { name: /sign in$/i }));
+    await waitFor(() => {
+      const alerts = screen.getAllByRole('alert');
+      expect(alerts.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('navigates to / after successful Google sign-in', async () => {
+    const { signInWithPopup } = await import('firebase/auth');
+    vi.mocked(signInWithPopup).mockResolvedValueOnce({
+      user: {
+        email: 'google@example.com',
+        displayName: 'Google User',
+        getIdToken: () => Promise.resolve('mock-id-token'),
+      },
+    } as unknown as Awaited<ReturnType<typeof signInWithPopup>>);
+
+    const user = userEvent.setup();
+    await renderForm();
+    await user.click(screen.getByRole('button', { name: /google/i }));
+    await waitFor(() => expect(screen.getByText('Home')).toBeInTheDocument(), { timeout: 3000 });
+  });
 });

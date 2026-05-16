@@ -15,7 +15,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.Currency;
 import java.util.HashMap;
 import java.util.List;
@@ -119,8 +118,7 @@ public class PoiTlInvoiceDocxRenderer implements InvoiceDocxRenderer {
                 return templateBytes;
             }
 
-            List<InvoiceLine> lines =
-                invoice.lines() != null ? invoice.lines() : Collections.emptyList();
+            List<InvoiceLine> lines = invoice.lines();
 
             // Insert one properly-rooted row per line item after the template row (index 1).
             for (int i = 0; i < lines.size(); i++) {
@@ -189,16 +187,10 @@ public class PoiTlInvoiceDocxRenderer implements InvoiceDocxRenderer {
     }
 
     private String formatAmount(BigDecimal amount, NumberFormat fmt) {
-        if (amount == null) {
-            return "";
-        }
         return fmt.format(amount.setScale(2, RoundingMode.HALF_EVEN));
     }
 
     private String formatTaxRate(BigDecimal taxRate) {
-        if (taxRate == null) {
-            return "0%";
-        }
         BigDecimal pct = taxRate.multiply(BigDecimal.valueOf(100)).stripTrailingZeros();
         return pct.toPlainString() + "%";
     }

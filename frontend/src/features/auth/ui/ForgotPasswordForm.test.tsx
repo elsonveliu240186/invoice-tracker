@@ -78,4 +78,13 @@ describe('ForgotPasswordForm', () => {
     await renderForm();
     expect(screen.getByRole('link', { name: /back to sign in/i })).toBeInTheDocument();
   });
+
+  it('shows email validation error when field is empty on submit', async () => {
+    const user = userEvent.setup();
+    await renderForm();
+    await user.click(screen.getByRole('button', { name: /send reset link/i }));
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+    // Verify the error message paragraph (line 64) is rendered
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
 });

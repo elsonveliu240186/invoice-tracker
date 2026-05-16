@@ -100,6 +100,28 @@
   --color-status-paid-bg: #dcfce7;
   --color-status-paid-fg: #166534;
 
+  /* Category badge tokens */
+  --color-cat-food-drink-bg: #ffedd5;
+  --color-cat-food-drink-fg: #9a3412;
+  --color-cat-transport-bg: #dbeafe;
+  --color-cat-transport-fg: #1e40af;
+  --color-cat-housing-bg: #fef9c3;
+  --color-cat-housing-fg: #854d0e;
+  --color-cat-health-bg: #fee2e2;
+  --color-cat-health-fg: #991b1b;
+  --color-cat-entertainment-bg: #f3e8ff;
+  --color-cat-entertainment-fg: #6b21a8;
+  --color-cat-shopping-bg: #fce7f3;
+  --color-cat-shopping-fg: #9d174d;
+  --color-cat-travel-bg: #e0f2fe;
+  --color-cat-travel-fg: #075985;
+  --color-cat-education-bg: #e0e7ff;
+  --color-cat-education-fg: #3730a3;
+  --color-cat-utilities-bg: #fef3c7;
+  --color-cat-utilities-fg: #92400e;
+  --color-cat-other-bg: #f3f4f6;
+  --color-cat-other-fg: #374151;
+
   /* Sidebar — always dark navy regardless of theme */
   --color-sidebar-bg: var(--palette-navy);
   --color-sidebar-text: var(--palette-grey);

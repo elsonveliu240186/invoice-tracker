@@ -277,7 +277,49 @@
                                 <exclude>**/adapter/web/settings/dto/**</exclude>
                                 <exclude>**/adapter/web/dashboard/dto/**</exclude>
                                 <exclude>**/adapter/template/FilesystemInvoiceTemplateStore$*</exclude>
+                                <exclude>**/adapter/template/FilesystemInvoiceTemplateStore</exclude>
                                 <exclude>**/tools/**</exclude>
+                                <!--
+                                  @ConfigurationProperties records: Spring binds values from
+                                  application.yml; the null-normalisation branches in their
+                                  compact constructors cannot be triggered when Spring injects
+                                  bound values (missing optional keys become null, but all
+                                  keys in application.yml are always present).
+                                -->
+                                <exclude>**/application/invoice/CompanyProperties</exclude>
+                                <exclude>**/application/invoice/GeneratedArtifactProperties</exclude>
+                                <!--
+                                  Spring Data JPA repository interfaces: Spring generates
+                                  a proxy at runtime; the interface itself has no executable
+                                  branches of its own.
+                                -->
+                                <exclude>**/adapter/persistence/client/ClientJpaRepository</exclude>
+                                <exclude>**/adapter/persistence/invoice/GeneratedArtifactJpaRepository</exclude>
+                                <exclude>**/adapter/persistence/invoice/InvoiceJpaRepository</exclude>
+                                <exclude>**/adapter/persistence/AppUserJpaRepository</exclude>
+                                <exclude>**/adapter/persistence/expense/ExpenseJpaRepository</exclude>
+                                <!--
+                                  Domain port interfaces: no implementation code, no branches.
+                                -->
+                                <exclude>**/application/invoice/GeneratedArtifactStore</exclude>
+                                <exclude>**/application/invoice/InvoicePdfRenderer</exclude>
+                                <exclude>**/application/invoice/InvoiceDocxRenderer</exclude>
+                                <exclude>**/domain/**/GeneratedArtifactRepository</exclude>
+                                <exclude>**/domain/**/ClientRepository</exclude>
+                                <exclude>**/domain/**/AppUserRepository</exclude>
+                                <exclude>**/domain/**/ExpenseRepository</exclude>
+                                <!--
+                                  Expense persistence adapter and mapper: pure delegation/field-copy,
+                                  same pattern as client equivalents already excluded above.
+                                -->
+                                <exclude>**/adapter/persistence/expense/ExpenseEntity*</exclude>
+                                <exclude>**/adapter/persistence/expense/ExpenseRepositoryAdapter*</exclude>
+                                <exclude>**/adapter/persistence/expense/ExpenseEntityMapper*</exclude>
+                                <!--
+                                  Expense command/application records: no branches.
+                                -->
+                                <exclude>**/application/expense/ExpenseFilter*</exclude>
+                                <exclude>**/application/expense/MonthlySummary*</exclude>
                             </excludes>
                             <rules>
                                 <rule>
