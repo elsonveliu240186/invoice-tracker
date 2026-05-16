@@ -400,7 +400,11 @@ class InvoiceServiceTest {
             invoice.id(), invoice.number(), invoice.clientId(),
             invoice.issueDate(), invoice.dueDate(), invoice.lines(),
             invoice.taxRate(), com.example.invoicetracker.domain.invoice.InvoiceStatus.SENT,
-            sentAt, invoice.createdAt(), invoice.updatedAt(), null, null);
+            sentAt, invoice.createdAt(), invoice.updatedAt(), invoice.deletedAt(),
+            invoice.clientEmail(), invoice.clientNameSnapshot(), invoice.clientAddressSnapshot(),
+            invoice.companyNameSnapshot(), invoice.companyAddressSnapshot(),
+            invoice.companyVatSnapshot(), invoice.companyIbanSnapshot(),
+            invoice.companySwiftSnapshot(), invoice.companyBankNameSnapshot());
 
         when(invoiceRepository.findByIdWithLines(id))
             .thenReturn(Optional.of(invoice))
@@ -429,7 +433,11 @@ class InvoiceServiceTest {
             invoice.id(), invoice.number(), invoice.clientId(),
             invoice.issueDate(), invoice.dueDate(), invoice.lines(),
             invoice.taxRate(), com.example.invoicetracker.domain.invoice.InvoiceStatus.SENT,
-            sentAt, invoice.createdAt(), invoice.updatedAt(), null, null);
+            sentAt, invoice.createdAt(), invoice.updatedAt(), invoice.deletedAt(),
+            invoice.clientEmail(), invoice.clientNameSnapshot(), invoice.clientAddressSnapshot(),
+            invoice.companyNameSnapshot(), invoice.companyAddressSnapshot(),
+            invoice.companyVatSnapshot(), invoice.companyIbanSnapshot(),
+            invoice.companySwiftSnapshot(), invoice.companyBankNameSnapshot());
 
         when(invoiceRepository.findByIdWithLines(id))
             .thenReturn(Optional.of(invoice))

@@ -38,13 +38,15 @@ class InvoiceServiceUpdateTest {
     private InvoicePdfRenderer pdfRenderer;
     @Mock
     private InvoiceMailer mailer;
+    @Mock
+    private InvoiceArtifactService artifactService;
     private InvoiceService service;
 
     @BeforeEach
     void setUp() {
         CompanyProperties company = InvoiceFixtures.company();
         service = new InvoiceService(
-            invoiceRepository, clientRepository, pdfRenderer, mailer, company);
+            invoiceRepository, clientRepository, pdfRenderer, mailer, company, artifactService);
     }
 
     @Test

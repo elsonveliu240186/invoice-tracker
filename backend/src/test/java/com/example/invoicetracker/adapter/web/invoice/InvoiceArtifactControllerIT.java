@@ -226,7 +226,7 @@ class InvoiceArtifactControllerIT {
         ResponseEntity<ClientResponse> resp = auth.post()
             .uri("/api/v1/clients")
             .contentType(MediaType.APPLICATION_JSON)
-            .body(new CreateClientRequest(name, email, null, null))
+            .body(new CreateClientRequest(name, email, null, null, null, null, null, null, null, null))
             .retrieve()
             .toEntity(ClientResponse.class);
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
