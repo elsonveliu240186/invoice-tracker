@@ -143,7 +143,7 @@ export function DownloadInvoiceMenu({
                 data-testid="btn-regenerate-pdf"
               >
                 <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
-                {t('invoices.actions.regenerate')} PDF
+                {t('invoices.actions.regeneratePdf')}
                 {pendingRegenPdf && (
                   <Loader2 className="ml-2 h-3 w-3 animate-spin" aria-hidden="true" />
                 )}
@@ -156,7 +156,7 @@ export function DownloadInvoiceMenu({
                 data-testid="btn-regenerate-docx"
               >
                 <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
-                {t('invoices.actions.regenerate')} DOCX
+                {t('invoices.actions.regenerateDocx')}
                 {pendingRegenDocx && (
                   <Loader2 className="ml-2 h-3 w-3 animate-spin" aria-hidden="true" />
                 )}

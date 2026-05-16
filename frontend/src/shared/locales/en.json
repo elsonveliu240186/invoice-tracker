@@ -267,8 +267,15 @@
       "sendToClient": "Send to Client",
       "openInNewTab": "Open in new tab",
       "download": "Download",
-      "downloadDocx": "Download DOCX",
+      "downloadDocx": "Download Word Doc",
       "downloadPdf": "Download PDF",
+      "downloadSavedDocx": "Download Word Doc",
+      "downloadSavedPdf": "Download PDF",
+      "generate": "Generate",
+      "generatePdf": "Generate PDF",
+      "generateDocx": "Generate Word Doc",
+      "regeneratePdf": "Regenerate PDF",
+      "regenerateDocx": "Regenerate Word Doc",
       "markAsPaid": "Mark as Paid"
     },
     "lines": {
