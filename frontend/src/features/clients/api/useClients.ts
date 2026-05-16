@@ -1,12 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Client, ClientPage, ClientQuery, CreateClient, UpdateClient } from '../model/types';
-import {
-  listClients,
-  getClient,
-  createClient,
-  updateClient,
-  deleteClient,
-} from './clientsApi';
+import { listClients, getClient, createClient, updateClient, deleteClient } from './clientsApi';
 import type { ApiError } from '@/shared/lib/http';
 
 interface UseClientsResult {
@@ -56,12 +50,14 @@ interface UseClientResult {
   data: Client | null;
   loading: boolean;
   error: ApiError | null;
+  refetch: () => void;
 }
 
 export function useClient(id: string | null): UseClientResult {
   const [data, setData] = useState<Client | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
+  const [revision, setRevision] = useState(0);
 
   useEffect(() => {
     if (!id) return;
@@ -83,9 +79,11 @@ export function useClient(id: string | null): UseClientResult {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, revision]);
 
-  return { data, loading, error };
+  const refetch = useCallback(() => setRevision((r) => r + 1), []);
+
+  return { data, loading, error, refetch };
 }
 
 interface MutationState<T> {

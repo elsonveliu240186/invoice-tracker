@@ -77,6 +77,7 @@ export function seedMany(n: number): Client[] {
   return clients;
 }
 
+<<<<<<< HEAD
 // ── Invoice mock data ─────────────────────────────────────────────────────────
 
 const BASE_INVOICE: Invoice = {
@@ -129,6 +130,8 @@ export function resetMockTemplateMetadata(): void {
   mockTemplateMetadata = { ...DEFAULT_TEMPLATE_METADATA };
 }
 
+=======
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
 export const handlers = [
   // ── Auth endpoints ────────────────────────────────────────────────────────
 

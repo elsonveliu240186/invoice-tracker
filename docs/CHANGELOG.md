@@ -101,6 +101,7 @@ All notable changes to this project will be documented in this file. Format: [Ke
   to suppress go-module false positives; all 10 OWASP categories mitigated; gitleaks 0 secrets.
 
 - Scaffolded from the agenticai framework.
+<<<<<<< HEAD
 - **Design system foundation** (FEAT-20260513-01) — _no breaking changes, no backend changes_:
   CSS token system (`@theme` + `:root` + `.dark`) with 16 named colour tokens covering light and dark
   mode; typed token map at `src/shared/theme/tokens.ts`; three new primitives — `Icon` (Lucide wrapper
@@ -120,6 +121,8 @@ All notable changes to this project will be documented in this file. Format: [Ke
   primitive and foreground tokens rather than falling back to near-black values.
 - Register form `confirmPassword` field was collapsed/misaligned — now rendered via `FormField` in its
   own full-width row with an independent show/hide toggle.
+=======
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
 - **Dashboard and core UI modernization** (FEAT-20260512-03) — _no breaking changes_:
   full SaaS shell retrofit over the existing React SPA. New `AppShell` component composes a
   collapsible desktop `Sidebar` (Dashboard, Clients, Invoices-disabled nav items with Lucide icons

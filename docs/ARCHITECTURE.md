@@ -167,22 +167,34 @@ flowchart LR
 
 ## Components — Frontend
 
+<<<<<<< HEAD
 Updated by FEAT-20260514-01 (Dashboard upgrade, palette migration, invoice status). Previous update: FEAT-20260513-02 (Invoice PDF + email) and FEAT-20260513-01 (Design system, dark-mode fixes, responsive layout, form alignment).
 
 **Design system** — see [`docs/DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) for the full token reference, primitive component API, dark-mode guide, breakpoint contract, and ESLint enforcement rule.
 
 **Palette system** — `src/index.css` is the single source of truth for all CSS tokens. Changing `--palette-orange` from `#FCA311` to any other value updates every accented surface site-wide. Switching to `teal-steel` is achieved by toggling `.palette-teal-steel` on `<html>` via `PaletteProvider`.
+=======
+Updated by FEAT-20260512-03 (Dashboard and core UI modernization). Previous update: FEAT-20260512-02 (authentication modernization).
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
 
 ```mermaid
 flowchart LR
     subgraph Browser
       idx[index.html] --> main[main.tsx]
       main -->|hydrate| authStore[(useAuthStore<br/>Zustand + localStorage)]
+<<<<<<< HEAD
       main --> providers[Providers: I18n + Theme + PaletteProvider + ErrorBoundary + Router]
       providers --> appShell[AppShell]
       appShell --> sidebar[Sidebar<br/>--color-sidebar-* tokens<br/>always dark navy]
       appShell --> mobileSidebar[MobileSidebar<br/>Sheet drawer on mobile]
       appShell --> topnav[TopNav<br/>UserMenu + ThemeToggle + PaletteToggle + LanguageSelector]
+=======
+      main --> providers[Providers: I18n + Theme + ErrorBoundary + Router]
+      providers --> appShell[AppShell]
+      appShell --> sidebar[Sidebar<br/>collapsible desktop]
+      appShell --> mobileSidebar[MobileSidebar<br/>Sheet drawer on mobile]
+      appShell --> topnav[TopNav<br/>UserMenu + ThemeToggle + LanguageSelector]
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
       appShell --> outlet[(Routed outlet<br/>AnimatePresence)]
       outlet --> guard_p[ProtectedRoute]
       outlet --> guard_pub[PublicOnlyRoute]
@@ -197,6 +209,7 @@ flowchart LR
       forgot --> authStore
       login --> fbase[Firebase Auth<br/>GoogleAuthProvider]
       topnav --> userMenu[UserMenu<br/>logout → authStore]
+<<<<<<< HEAD
       topnav --> paletteToggle[PaletteToggle<br/>navy-amber / teal-steel]
     end
     subgraph DashboardFeature[src/features/dashboard]
@@ -209,6 +222,15 @@ flowchart LR
       dashPage --> revenueChart
       dashPage --> donutChart
       dashPage --> dashHook
+=======
+    end
+    subgraph DashboardFeature[src/features/dashboard]
+      kpi[KpiCard]
+      activity[RecentActivity stub]
+      dashPage[DashboardPage]
+      dashPage --> kpi
+      dashPage --> activity
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
     end
     subgraph ClientsFeature[src/features/clients]
       table[ClientTable<br/>shadcn Table + motion.tr]
@@ -218,6 +240,7 @@ flowchart LR
       detailPage[ClientDetailPage]
       statusBadge[ClientStatusBadge]
       derive[derive.ts<br/>deriveStatus + formatDate]
+<<<<<<< HEAD
     end
     subgraph InvoicesFeature[src/features/invoices]
       invDetailPage[InvoiceDetailPage<br/>StatusBadge in header<br/>MarkAsPaidButton in actions]
@@ -241,6 +264,8 @@ flowchart LR
       invDetailPage --> invApi
       invDetailPage --> useInv
       invApi --> invSchema
+=======
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
     end
     subgraph AuthFeature[src/features/auth]
       forms[LoginForm / RegisterForm / ForgotPasswordForm]
@@ -253,12 +278,15 @@ flowchart LR
       sidebar2[Sidebar] --- mobileSidebar2[MobileSidebar]
       topnav2[TopNav] --- userMenu2[UserMenu]
       navItems[navItems.ts]
+<<<<<<< HEAD
       palToggle[PaletteToggle]
     end
     subgraph SharedTheme[src/shared/theme]
       paletteStore[paletteStore.ts<br/>Zustand — navy-amber / teal-steel]
       usePalette[usePalette.ts]
       palProvider[PaletteProvider.tsx<br/>apply .palette-teal-steel on html]
+=======
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
     end
     subgraph SharedUI[src/shared/ui]
       btn[Button] --- inp[Input] --- card[Card]
@@ -268,10 +296,14 @@ flowchart LR
     subgraph SharedLib[src/shared/lib]
       http[http.ts<br/>Basic auth header] --- firebase[firebase.ts]
       motion[motion.ts<br/>Framer variants]
+<<<<<<< HEAD
       useThemeColor[useThemeColor.ts<br/>getComputedStyle + MutationObserver]
     end
     guard_p --> invoiceDetail[InvoiceDetailPage /invoices/:id]
     invoiceDetail --> InvoicesFeature
+=======
+    end
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
     dash --> DashboardFeature
     clients --> ClientsFeature
     detail --> ClientsFeature
@@ -378,6 +410,7 @@ flowchart LR
 - **Why**: The project's existing convention (established by FEAT-20260512-01) groups all shared non-domain components under `src/shared/components/`. Deviating would create an inconsistency. The dev agent followed the project convention over the plan's path suggestion.
 - **Trade-offs**: Minor divergence from the plan's file list; no functional impact.
 
+<<<<<<< HEAD
 ### ADR-014 — FEAT-20260513-03: LibreOffice headless chosen over docx4j+Apache FOP for PDF conversion
 
 - **Date**: 2026-05-13
@@ -441,6 +474,8 @@ flowchart LR
 - **Why**: Zero-filling in SQL via a `generate_series` / calendar join is Postgres-specific and adds complexity to the native query. Doing it in Java keeps the SQL simple, is trivially testable with a mocked repository, and allows the fixed `Clock` injection to drive both the window computation and the test assertions deterministically.
 - **Trade-offs**: A month boundary that falls exactly at midnight UTC could theoretically shift the 6-month window between two sequential calls if the system clock is consulted more than once. The injected `Clock` instance (fixed in tests, `Clock.systemUTC()` in production) is read once per `getStats()` call and shared across the window computation and the merge — there is no inconsistency within a single request.
 
+=======
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
 ### ADR-008 — FEAT-20260512-01: Dual toast system during transition (sonner + legacy)
 
 - **Date**: 2026-05-12

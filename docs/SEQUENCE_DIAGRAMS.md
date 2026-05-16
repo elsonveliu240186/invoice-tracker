@@ -184,6 +184,7 @@ sequenceDiagram
     D->>L: onCancel → close, no API call
     L-->>U: row still present, no toast
 ```
+<<<<<<< HEAD
 
 ---
 
@@ -407,3 +408,5 @@ sequenceDiagram
     Hook-->>FE: refetch invoice
     FE-->>U: badge flips to PAID, button hides, toast "Invoice marked as paid"
 ```
+=======
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui

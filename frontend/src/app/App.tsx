@@ -2,9 +2,12 @@ import { Route, Routes } from 'react-router';
 import { HomePage } from '@/pages/HomePage';
 import { ClientsPage } from '@/pages/ClientsPage';
 import { ClientDetailPage } from '@/pages/ClientDetailPage';
+<<<<<<< HEAD
 import { InvoiceDetailPage } from '@/pages/InvoiceDetailPage';
 import { InvoicesPage } from '@/pages/InvoicesPage';
 import { InvoiceTemplateSettingsPage } from '@/pages/InvoiceTemplateSettingsPage';
+=======
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
@@ -26,6 +29,7 @@ export function App() {
   return (
     <ToastProvider>
       <Toaster />
+<<<<<<< HEAD
       <PaletteProvider>
         <Routes>
           {/* Public-only routes: authenticated users are bounced to / */}
@@ -33,6 +37,23 @@ export function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+=======
+      <Routes>
+        {/* Public-only routes: authenticated users are bounced to / */}
+        <Route element={<PublicOnlyRoute />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        </Route>
+
+        {/* Protected routes: unauthenticated users are sent to /login */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppShell />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/clients/:id" element={<ClientDetailPage />} />
+            <Route path="*" element={<NotFound />} />
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
           </Route>
 
           {/* Protected routes: unauthenticated users are sent to /login */}

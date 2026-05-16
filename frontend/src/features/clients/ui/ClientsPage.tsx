@@ -140,6 +140,7 @@ export function ClientsPage() {
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
+<<<<<<< HEAD
         <div className="relative flex items-center sm:max-w-xs">
           <Input
             type="search"
@@ -170,6 +171,20 @@ export function ClientsPage() {
             </button>
           )}
         </div>
+=======
+        <Input
+          type="search"
+          placeholder={t('clients.searchPlaceholder')}
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(0);
+          }}
+          className="sm:max-w-xs"
+          data-testid="search-input"
+          aria-label="Search clients"
+        />
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -192,10 +207,13 @@ export function ClientsPage() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+<<<<<<< HEAD
 
         <Button variant="ghost" size="sm" onClick={resetFilters} data-testid="btn-reset-filters">
           {t('clients.resetFilters')}
         </Button>
+=======
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
       </div>
 
       {loading && (

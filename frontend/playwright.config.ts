@@ -4,10 +4,11 @@ const isCI = !!process.env.CI;
 
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: true,
+  // E2E tests share a real Postgres backend — run sequentially to avoid state conflicts
+  fullyParallel: false,
+  workers: 1,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
-  ...(isCI ? { workers: 2 } : {}),
   reporter: isCI ? [['github'], ['html']] : 'list',
   use: {
     baseURL: process.env.BASE_URL ?? 'http://localhost:5173',
@@ -15,9 +16,7 @@ export default defineConfig({
     video: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-  ],
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   ...(isCI
     ? {
         webServer: {

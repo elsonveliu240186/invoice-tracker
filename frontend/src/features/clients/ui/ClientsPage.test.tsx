@@ -333,6 +333,7 @@ describe('ClientsPage', () => {
 
     expect(screen.getByTestId('status-filter-trigger')).toHaveTextContent(/active/i);
   });
+<<<<<<< HEAD
 
   it('clear-button-appears: X button is visible when search is non-empty, hidden when empty', async () => {
     const user = userEvent.setup();
@@ -387,4 +388,6 @@ describe('ClientsPage', () => {
     expect(screen.getByTestId('status-filter-trigger')).toHaveTextContent(/all/i);
     expect(screen.queryByTestId('btn-clear-search')).not.toBeInTheDocument();
   });
+=======
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
 });

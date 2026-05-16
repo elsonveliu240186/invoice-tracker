@@ -4,15 +4,19 @@ Maintained by the **documentation** subagent. One row per feature.
 
 | ID | Title | State | Owner | Plan | Review | Security | QA | PR |
 |----|-------|-------|-------|------|--------|----------|----|----|
+<<<<<<< HEAD
 | FEAT-20260514-01 | Dashboard upgrade — stats, charts, centralized Coolors palette, invoice status, palette switcher | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260514-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260514-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260514-01/SECURITY.md) | — | — |
 | FEAT-20260513-03 | Invoice Sharing — DOCX template rendering, PDF via LibreOffice, email delivery | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260513-03/PLAN.md) | [REVIEW.md](.features/FEAT-20260513-03/REVIEW.md) | [SECURITY.md](.features/FEAT-20260513-03/SECURITY.md) | [QA.md](.features/FEAT-20260513-03/QA.md) | — |
 | FEAT-20260513-02 | Invoice PDF generation and email delivery to clients | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260513-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260513-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260513-02/SECURITY.md) | [QA.md](.features/FEAT-20260513-02/QA.md) | — |
 | FEAT-20260513-01 | Design System & UI Standards — dark mode fixes, responsive layout, form alignment, icon visibility | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260513-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260513-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260513-01/SECURITY.md) | [QA.md](.features/FEAT-20260513-01/QA.md) | — |
+=======
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
 | FEAT-20260512-03 | Dashboard and core UI modernization | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-03/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-03/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-03/SECURITY.md) | [QA.md](.features/FEAT-20260512-03/QA.md) | — |
 | FEAT-20260512-02 | Authentication modernization | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-02/SECURITY.md) | [QA.md](.features/FEAT-20260512-02/QA.md) | — |
 | FEAT-20260512-01 | Frontend design system foundation | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-01/SECURITY.md) | [QA.md](.features/FEAT-20260512-01/QA.md) | — |
 | FEAT-20260511-01 | Client management (CRUD) | Done | elsonveliu | [PLAN.md](.features/FEAT-20260511-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260511-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260511-01/SECURITY.md) | [QA.md](.features/FEAT-20260511-01/QA.md) | — |
 
+<<<<<<< HEAD
 ## FEAT-20260514-01 — Dashboard upgrade (stats, charts, palette, invoice status)
 
 ### Overview
@@ -265,6 +269,8 @@ Frontend-only polish pass that introduces a single, documented design system lay
 
 ---
 
+=======
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
 ## FEAT-20260512-03 — Dashboard and core UI modernization
 
 ### Overview

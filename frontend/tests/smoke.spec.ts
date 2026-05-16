@@ -41,9 +41,10 @@ test.describe('smoke', () => {
   });
 
   test('home page renders', async ({ page }) => {
+    await stubClients(page);
     await page.goto('/');
     await expect(page.getByTestId('home-page')).toBeVisible();
-    await expect(page.getByRole('heading', { name: /welcome/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
   });
 
   test('AppShell nav is present', async ({ page }) => {
@@ -52,6 +53,7 @@ test.describe('smoke', () => {
   });
 
   test('ThemeToggle reachable by aria-label; click toggles <html> class', async ({ page }) => {
+    await stubClients(page);
     await page.addInitScript(() => {
       window.localStorage.removeItem('it.theme');
     });

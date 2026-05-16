@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+=======
+import { useTranslation } from 'react-i18next';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
 import { ClientForm } from './ClientForm';
 import type { Client } from '../model/types';
 import type { CreateClientInput } from '../model/schema';
@@ -8,12 +13,17 @@ interface ClientFormSheetProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: CreateClientInput) => Promise<void>;
+<<<<<<< HEAD
   editingClient: Client | null;
+=======
+  editingClient?: Client | null;
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
 }
 
 export function ClientFormSheet({ open, onClose, onSubmit, editingClient }: ClientFormSheetProps) {
   const { t } = useTranslation();
 
+<<<<<<< HEAD
   if (!open) return null;
 
   const title = editingClient ? t('clients.form.title.edit') : t('clients.newClient');
@@ -63,5 +73,32 @@ export function ClientFormSheet({ open, onClose, onSubmit, editingClient }: Clie
         </div>
       </div>
     </>
+=======
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) onClose();
+      }}
+    >
+      <SheetContent data-testid="client-form-sheet">
+        <SheetHeader>
+          <SheetTitle>
+            {editingClient ? t('clients.form.title.edit') : t('clients.form.title.create')}
+          </SheetTitle>
+        </SheetHeader>
+        <div className="mt-6">
+          {open && (
+            <ClientForm
+              initial={editingClient ?? undefined}
+              onSubmit={onSubmit}
+              onCancel={onClose}
+              submitLabel={editingClient ? t('common.update') : t('common.create')}
+            />
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+>>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
   );
 }
