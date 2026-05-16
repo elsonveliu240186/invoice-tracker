@@ -5,6 +5,10 @@ Maintained by the **documentation** subagent. One row per feature.
 | ID | Title | State | Owner | Plan | Review | Security | QA | PR |
 |----|-------|-------|-------|------|--------|----------|----|----|
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+| FEAT-20260514-02 | Invoice template editor and full lifecycle (preview, generate, persist, download, email) | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260514-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260514-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260514-02/SECURITY.md) | [QA.md](.features/FEAT-20260514-02/QA.md) | — |
+>>>>>>> feat/FEAT-20260514-02-invoice-lifecycle
 | FEAT-20260514-01 | Dashboard upgrade — stats, charts, centralized Coolors palette, invoice status, palette switcher | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260514-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260514-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260514-01/SECURITY.md) | — | — |
 | FEAT-20260513-03 | Invoice Sharing — DOCX template rendering, PDF via LibreOffice, email delivery | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260513-03/PLAN.md) | [REVIEW.md](.features/FEAT-20260513-03/REVIEW.md) | [SECURITY.md](.features/FEAT-20260513-03/SECURITY.md) | [QA.md](.features/FEAT-20260513-03/QA.md) | — |
 | FEAT-20260513-02 | Invoice PDF generation and email delivery to clients | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260513-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260513-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260513-02/SECURITY.md) | [QA.md](.features/FEAT-20260513-02/QA.md) | — |
@@ -17,6 +21,90 @@ Maintained by the **documentation** subagent. One row per feature.
 | FEAT-20260511-01 | Client management (CRUD) | Done | elsonveliu | [PLAN.md](.features/FEAT-20260511-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260511-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260511-01/SECURITY.md) | [QA.md](.features/FEAT-20260511-01/QA.md) | — |
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+## FEAT-20260514-02 — Invoice template editor and full lifecycle
+
+### Overview
+
+Closes the invoice delivery lifecycle: an in-context Template Manager page at `/invoices/template` (with placeholder reference and upload), an inline PDF preview modal that streams a live render into a blob iframe without page navigation, a "Generate & Save" action that persists the rendered bytes to the filesystem and records them in a new `invoice_generated_artifacts` table, a `GeneratedArtifactBadge` showing the saved artefact date, a revised `DownloadInvoiceMenu` that serves saved bytes when available (falling back to on-the-fly rendering), a "Regenerate" option that overwrites with `overwrite=true`, and `SendInvoiceButton` that reuses the persisted PDF on `POST /send-email`. A new `DELETE /api/v1/invoices/{id}` endpoint soft-deletes both the invoice and any associated artefacts. AC-8 cleanup is triggered synchronously in `InvoiceService.deleteInvoice`.
+
+Review required 2 iterations (1 failure — ESLint errors). Security scan: 1 required fix (VBA macro rejection), applied immediately. QA passed on first attempt (245 specs, 0 new failures).
+
+### New sub-features
+
+| Sub-feature | Component(s) | Endpoint(s) |
+|-------------|-------------|------------|
+| In-context template manager | `InvoiceTemplateManagerPage`, `PlaceholderReferenceCard` | Reuses `GET/POST /api/v1/settings/invoice-template` |
+| Inline PDF preview | `PreviewInvoiceButton` (blob iframe modal) | `GET /api/v1/invoices/{id}/preview-pdf` |
+| Generate & Save | `GenerateInvoiceButton`, `GeneratedArtifactBadge` | `POST /api/v1/invoices/{id}/generate?format=PDF\|DOCX` |
+| Download saved artefact | `DownloadInvoiceMenu` (saved-vs-live) | `GET /api/v1/invoices/{id}/generated?format=PDF\|DOCX` |
+| Artefact metadata | `useGeneratedArtifactsMetadata` | `GET /api/v1/invoices/{id}/generated/metadata` |
+| Send email (prefers saved PDF) | `SendInvoiceButton` (updated) | `POST /api/v1/invoices/{id}/send-email` (unchanged URL) |
+| Delete invoice + artefacts | `InvoiceService.deleteInvoice` | `DELETE /api/v1/invoices/{id}` (new) |
+| Mark as Paid button | `MarkAsPaidButton` (existing — now in action row order) | Existing `PATCH /{id}/mark-paid` |
+
+### Backend changes
+
+- **New domain**: `GeneratedArtifact` record, `ArtifactFormat` enum (`PDF`/`DOCX`), `GeneratedArtifactRepository` port (`find`, `findAllByInvoice`, `upsert`, `softDeleteByInvoice`), `GeneratedArtifactStore` port, `GeneratedArtifactNotFoundException` (404), `ArtifactAlreadyExistsException` (409), `ArtifactTooLargeException` (413).
+- **New service**: `InvoiceArtifactService` (`previewPdf`, `generate`, `streamGenerated`, `metadata`, `deleteAll`) — wraps `InvoiceRenderService` + `GeneratedArtifactStore` + `GeneratedArtifactRepository`. Write methods are `@Transactional`; reads are `readOnly`.
+- **New adapter**: `FilesystemGeneratedArtifactStore` — atomic write via tmp+move, canonical path normalisation, SHA-256, size cap, path-traversal guard.
+- **New persistence**: `GeneratedArtifactEntity`, `GeneratedArtifactJpaRepository`, `GeneratedArtifactEntityMapper`, `GeneratedArtifactRepositoryAdapter`.
+- **New Flyway migration**: `V8__create_invoice_generated_artifacts.sql` — `invoice_generated_artifacts` table with FK → invoices, partial unique index `ux_iga_invoice_format_active (invoice_id, format) WHERE deleted_at IS NULL`.
+- **InvoiceController extended**: 4 new endpoints (`GET /preview-pdf`, `POST /generate`, `GET /generated`, `GET /generated/metadata`) + `DELETE /{id}` (204).
+- **InvoiceService edited**: `deleteInvoice(UUID)` calls `artifactService.deleteAll(id)` then `invoiceRepository.softDelete(id)`; `sendEmail` tries `artifactService.findPdfBytes(id)` first, falls back to live render.
+- **GlobalExceptionHandler**: 3 new mappings (`GENERATED_ARTIFACT_NOT_FOUND` → 404, `ARTIFACT_ALREADY_EXISTS` → 409, `ARTIFACT_TOO_LARGE` → 413).
+- **Security fix (from security scan)**: `FilesystemInvoiceTemplateStore.validateZipStructure()` now rejects DOCX files containing `word/vbaProject.bin` with `415 INVALID_TEMPLATE_TYPE`.
+- **Config**: `app.invoice.generated.path`, `app.invoice.generated.max-bytes-per-artifact`, `app.invoice.generated.enabled` added to `application.yml`; Docker named volume `generated_invoices:/app/generated/invoices`.
+
+### Frontend changes
+
+- **New components**: `PreviewInvoiceButton`, `GenerateInvoiceButton`, `GeneratedArtifactBadge`, `InvoiceTemplateManagerPage`, `PlaceholderReferenceCard`.
+- **New API layer**: `generatedArtifactApi.ts` (`getArtifactsMetadata`, `generateArtifact`, `downloadGeneratedArtifact`, `getPreviewPdfBlobUrl`); `useGeneratedArtifactsMetadata` hook; `artifact.ts` types.
+- **Edited**: `DownloadInvoiceMenu` accepts `metadata: InvoiceArtifactsMetadata`; uses saved-vs-live branch; adds Regenerate item. `SendInvoiceButton` adds subtitle i18n string. `InvoicesListPage` toolbar adds "Manage template" link. `App.tsx` adds `/invoices/template` route. `Sidebar`/`navItems.ts` adds child nav item `nav.invoiceTemplate`.
+- **i18n**: `invoices.preview.*`, `invoices.generate.*`, `invoices.actions.preview/generate/regenerate/downloadSavedPdf/downloadSavedDocx`, `invoices.template.*`, `invoices.toast.generateSuccess/generateFailed/regenerated/previewFailed`, `invoices.badge.generatedPdf/generatedDocx`, `nav.invoiceTemplate` added to `en.json`.
+- **MSW**: Handlers for `GET /preview-pdf`, `POST /generate`, `GET /generated`, `GET /generated/metadata` added to `handlers.ts`.
+
+### Quality gate results
+
+| Gate | Result | Detail |
+|------|--------|--------|
+| JaCoCo line + branch | ≥ 95% | pass — 278 unit + IT tests, "All coverage checks have been met" |
+| Vitest statements | 98.35% (gate 95%) | pass |
+| Vitest branches | 92.22% (gate 90%) | pass |
+| Vitest functions | 95.76% (gate 95%) | pass |
+| Vitest lines | 98.35% (gate 95%) | pass |
+| pnpm lint | 0 errors | pass (3 pre-existing fast-refresh warnings) |
+| pnpm audit | 0 high / 0 critical | pass |
+| Playwright E2E | 245 total; 163 pass, 17 skip (pre-existing), 0 failures | pass |
+| gitleaks | 0 secrets | pass |
+| Semgrep | 0 findings | pass (435 files, 394 rules) |
+| Trivy | pending (re-run required before production) | non-blocking |
+| OWASP DC / Grype | skipped (no NVD_API_KEY) | non-blocking |
+
+### Known open items
+
+| Item | Description |
+|------|-------------|
+| Non-blocking | `InvoiceRenderServiceTest` missing explicit `sendEmail_uses_saved_pdf_when_present` / `falls_back_to_live_render` tests (happy path in `InvoiceRenderService.sendEmail` uses `artifactService.findPdfBytes` but only the fallback is covered implicitly) |
+| Non-blocking | `SendInvoiceButton.test.tsx` missing assertion for `invoices.confirm.send.subtitle` string |
+| Follow-up | Rate-limiting on `POST /generate` (tracked; same as R-1 in FEAT-02) |
+| Follow-up | Per-tenant artifact quotas (single-tenant deployment for v1) |
+| Follow-up | `FEAT-artifact-cleanup` — startup INFO log of `./generated/` size; automatic eviction job |
+| Follow-up | S3/object-storage port swap via `GeneratedArtifactStore` interface |
+
+### Security findings resolved
+
+| OWASP | Finding | Resolution |
+|-------|---------|------------|
+| A03 Injection | VBA macros in uploaded DOCX could execute on server-side LibreOffice open | Added `word/vbaProject.bin` check in `FilesystemInvoiceTemplateStore.validateZipStructure()`; throws `InvalidTemplateException("DOCX contains VBA macros")` on detection |
+| A02 Cryptographic Failures | Artefact response cacheable by proxy | `Cache-Control: private, no-store` on all `/preview-pdf`, `/generated` responses |
+| A07 Identification & Auth Failures | `relative_path` could reveal invoice UUIDs via filesystem scan | `relative_path` is stored DB-side and computed server-side; never user-supplied; not exposed in any response body |
+| A08 Software & Data Integrity | Half-written artefact file if JVM crash mid-write | Atomic write via tmp+move; SHA-256 recorded in DB; integration test asserts hash on read |
+
+---
+
+>>>>>>> feat/FEAT-20260514-02-invoice-lifecycle
 ## FEAT-20260514-01 — Dashboard upgrade (stats, charts, palette, invoice status)
 
 ### Overview

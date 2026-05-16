@@ -6,8 +6,12 @@ import { ClientDetailPage } from '@/pages/ClientDetailPage';
 import { InvoiceDetailPage } from '@/pages/InvoiceDetailPage';
 import { InvoicesPage } from '@/pages/InvoicesPage';
 import { InvoiceTemplateSettingsPage } from '@/pages/InvoiceTemplateSettingsPage';
+<<<<<<< HEAD
 =======
 >>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
+=======
+import { InvoiceTemplateManagerPage } from '@/pages/InvoiceTemplateManagerPage';
+>>>>>>> feat/FEAT-20260514-02-invoice-lifecycle
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
@@ -64,6 +68,7 @@ export function App() {
               <Route path="/clients/:id" element={<ClientDetailPage />} />
               <Route path="/invoices" element={<InvoicesPage />} />
               <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
+              <Route path="/invoices/template" element={<InvoiceTemplateManagerPage />} />
               <Route path="/settings/invoice-template" element={<InvoiceTemplateSettingsPage />} />
               <Route path="*" element={<NotFound />} />
             </Route>

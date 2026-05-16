@@ -34,6 +34,7 @@ public class InvoiceRenderService {
     private final InvoicePdfRenderer pdfRenderer;
     private final InvoiceMailer mailer;
     private final CompanyProperties companyProperties;
+    private final InvoiceArtifactService artifactService;
 
     /**
      * Constructs the service with its dependencies.
@@ -44,6 +45,7 @@ public class InvoiceRenderService {
      * @param pdfRenderer       PDF renderer (DocxThenPdfInvoicePdfRenderer via @Primary)
      * @param mailer            email sender
      * @param companyProperties company configuration
+     * @param artifactService   artefact use-case service
      */
     public InvoiceRenderService(
         InvoiceRepository invoiceRepository,
@@ -51,7 +53,8 @@ public class InvoiceRenderService {
         InvoiceDocxRenderer docxRenderer,
         InvoicePdfRenderer pdfRenderer,
         InvoiceMailer mailer,
-        CompanyProperties companyProperties
+        CompanyProperties companyProperties,
+        InvoiceArtifactService artifactService
     ) {
         this.invoiceRepository = invoiceRepository;
         this.clientRepository = clientRepository;
@@ -59,6 +62,7 @@ public class InvoiceRenderService {
         this.pdfRenderer = pdfRenderer;
         this.mailer = mailer;
         this.companyProperties = companyProperties;
+        this.artifactService = artifactService;
     }
 
     /**
@@ -125,8 +129,9 @@ public class InvoiceRenderService {
             throw new InvoiceHasNoRecipientException(id);
         }
 
-        // PDF conversion throws PdfConversionFailedException on failure — no lastSentAt written
-        byte[] pdfBytes = pdfRenderer.render(invoice, client, companyProperties);
+        // Prefer saved PDF artefact; fall back to live rendering if absent
+        byte[] pdfBytes = artifactService.findPdfBytes(id)
+            .orElseGet(() -> pdfRenderer.render(invoice, client, companyProperties));
 
         // SMTP delivery throws EmailDeliveryFailedException on failure — no lastSentAt written
         mailer.send(invoice, toEmail, pdfBytes, companyProperties, client.name());

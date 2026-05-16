@@ -84,16 +84,36 @@ async function stubDefaultTemplatePreview(page: Page) {
   );
 }
 
+async function stubDashboardStats(page: Page) {
+  await page.route('**/api/v1/dashboard/stats', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        totalInvoices: 0,
+        draftCount: 0,
+        sentCount: 0,
+        paidCount: 0,
+        totalRevenue: 0,
+        paidRevenue: 0,
+        pendingRevenue: 0,
+        revenueByMonth: [],
+      }),
+    }),
+  );
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 test.describe('Smoke regression: adjacent flows unbroken after FEAT-20260513-03', () => {
   test.beforeEach(async ({ page }) => {
     await seedAuth(page);
+    await stubDashboardStats(page);
   });
 
   test('smoke-1: Home page still renders after route additions', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByTestId('home-page')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole('heading', { name: /welcome/i })).toBeVisible();
   });
 
@@ -101,7 +121,7 @@ test.describe('Smoke regression: adjacent flows unbroken after FEAT-20260513-03'
     page,
   }) => {
     await page.goto('/');
-    await expect(page.getByTestId('home-page')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10_000 });
 
     const nav = page.locator('nav[aria-label="Main navigation"]');
     await expect(nav).toBeVisible();
@@ -124,7 +144,7 @@ test.describe('Smoke regression: adjacent flows unbroken after FEAT-20260513-03'
   test('smoke-4: navigating to /clients via sidebar still works', async ({ page }) => {
     await stubEmptyClientList(page);
     await page.goto('/');
-    await expect(page.getByTestId('home-page')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10_000 });
 
     await page
       .getByRole('link', { name: /clients/i })
@@ -176,7 +196,7 @@ test.describe('Smoke regression: adjacent flows unbroken after FEAT-20260513-03'
       window.localStorage.removeItem('it.theme');
     });
     await page.goto('/');
-    await page.waitForSelector('[data-testid="home-page"]');
+    await page.waitForSelector('[data-testid="dashboard-page"]');
 
     const themeBtn = page.getByRole('button', { name: /theme/i });
     await expect(themeBtn).toBeVisible();

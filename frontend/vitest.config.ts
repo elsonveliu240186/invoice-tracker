@@ -28,6 +28,7 @@ export default mergeConfig(
           'src/mocks/**',
           'src/**/*.d.ts',
           'src/**/types.ts',
+          'src/**/model/artifact.ts',
           // Vendored shadcn/ui primitives — pure presentational wrappers around Radix
           'src/shared/ui/button.tsx',
           'src/shared/ui/input.tsx',

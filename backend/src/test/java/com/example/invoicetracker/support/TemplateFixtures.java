@@ -165,6 +165,39 @@ public final class TemplateFixtures {
     }
 
     /**
+     * Returns a valid DOCX that contains a {@code word/vbaProject.bin} entry,
+     * simulating a macro-infected template.
+     *
+     * @return DOCX bytes with a VBA project entry
+     * @throws IOException if construction fails
+     */
+    public static byte[] docxWithVbaMacros() throws IOException {
+        byte[] realDocx = minimalDocx();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (ZipInputStream zin = new ZipInputStream(new ByteArrayInputStream(realDocx));
+             ZipOutputStream zout = new ZipOutputStream(out)) {
+            ZipEntry entry;
+            Set<String> written = new HashSet<>();
+            while ((entry = zin.getNextEntry()) != null) {
+                String name = entry.getName();
+                if (written.contains(name)) {
+                    zin.closeEntry();
+                    continue;
+                }
+                written.add(name);
+                zout.putNextEntry(new ZipEntry(name));
+                zout.write(zin.readAllBytes());
+                zout.closeEntry();
+            }
+            // Inject the VBA project binary entry
+            zout.putNextEntry(new ZipEntry("word/vbaProject.bin"));
+            zout.write(new byte[]{(byte) 0xD0, (byte) 0xCF, 0x11, (byte) 0xE0}); // OLE2 magic
+            zout.closeEntry();
+        }
+        return out.toByteArray();
+    }
+
+    /**
      * Returns raw bytes that are NOT a ZIP (plain text).
      *
      * @return non-DOCX bytes

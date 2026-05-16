@@ -24,7 +24,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ENV LIBREOFFICE_BIN=/usr/bin/soffice
 
-RUN mkdir -p /app/templates /app/lo-profiles && chown app:app /app/templates /app/lo-profiles
+RUN mkdir -p /app/templates /app/lo-profiles /app/generated/invoices \
+    && chown -R app:app /app/templates /app/lo-profiles /app/generated
 
 USER app
 ENTRYPOINT ["java", "-jar", "app.jar"]

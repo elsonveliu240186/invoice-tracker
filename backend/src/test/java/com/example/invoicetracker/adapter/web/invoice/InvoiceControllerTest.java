@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -261,6 +262,33 @@ class InvoiceControllerTest {
         mvc.perform(patch("/api/v1/invoices/{id}/mark-paid", id))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("INVOICE_NOT_FOUND"));
+    }
+
+    @Test
+    @WithMockUser
+    void delete_returns_204_on_success() throws Exception {
+        mvc.perform(delete("/api/v1/invoices/{id}", invoiceId))
+            .andExpect(status().isNoContent());
+
+        org.mockito.Mockito.verify(invoiceService).deleteInvoice(invoiceId);
+    }
+
+    @Test
+    @WithMockUser
+    void delete_returns_404_for_unknown_id() throws Exception {
+        UUID id = UUID.randomUUID();
+        org.mockito.Mockito.doThrow(new InvoiceNotFoundException(id))
+            .when(invoiceService).deleteInvoice(id);
+
+        mvc.perform(delete("/api/v1/invoices/{id}", id))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("INVOICE_NOT_FOUND"));
+    }
+
+    @Test
+    void delete_returns_401_without_auth() throws Exception {
+        mvc.perform(delete("/api/v1/invoices/{id}", invoiceId))
+            .andExpect(status().isUnauthorized());
     }
 
     @Test

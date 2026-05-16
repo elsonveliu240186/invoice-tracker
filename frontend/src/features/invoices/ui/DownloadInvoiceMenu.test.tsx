@@ -6,6 +6,7 @@ import i18n from '@/shared/lib/i18n';
 import { server } from '@/mocks/server';
 import { http, HttpResponse } from 'msw';
 import { resetMockInvoices } from '@/mocks/handlers';
+import type { InvoiceArtifactsMetadata } from '../model/artifact';
 import { DownloadInvoiceMenu } from './DownloadInvoiceMenu';
 
 vi.mock('sonner', () => ({
@@ -27,10 +28,30 @@ beforeEach(async () => {
   vi.mocked(downloadInvoicePdf).mockResolvedValue(undefined);
 });
 
-function renderMenu() {
+const MOCK_METADATA = {
+  pdf: {
+    format: 'PDF' as const,
+    generatedAt: '2026-05-14T10:00:00Z',
+    sizeBytes: 12345,
+    sha256: 'abc',
+  },
+  docx: {
+    format: 'DOCX' as const,
+    generatedAt: '2026-05-14T10:00:00Z',
+    sizeBytes: 9876,
+    sha256: 'def',
+  },
+};
+
+function renderMenu(metadata: InvoiceArtifactsMetadata | null = null) {
   return render(
     <I18nextProvider i18n={i18n}>
-      <DownloadInvoiceMenu invoiceId="inv-uuid-1" invoiceNumber="INV-2026-0001" />
+      <DownloadInvoiceMenu
+        invoiceId="inv-uuid-1"
+        invoiceNumber="INV-2026-0001"
+        metadata={metadata}
+        onRegenerated={vi.fn()}
+      />
     </I18nextProvider>,
   );
 }
@@ -100,6 +121,45 @@ describe('DownloadInvoiceMenu', () => {
     renderMenu();
     await user.click(screen.getByTestId('btn-download-menu'));
     await user.click(screen.getByTestId('btn-download-pdf'));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+  });
+
+  it('shows regenerate PDF and DOCX buttons when saved artifacts exist', async () => {
+    const user = userEvent.setup();
+    renderMenu(MOCK_METADATA);
+    await user.click(screen.getByTestId('btn-download-menu'));
+    expect(screen.getByTestId('btn-regenerate-pdf')).toBeInTheDocument();
+    expect(screen.getByTestId('btn-regenerate-docx')).toBeInTheDocument();
+  });
+
+  it('calls generateArtifact with overwrite=true when regenerate PDF is clicked', async () => {
+    server.use(
+      http.post('/api/v1/invoices/:id/generate', () =>
+        HttpResponse.json(
+          { format: 'PDF', generatedAt: '2026-05-14T10:00:00Z', sizeBytes: 12345, sha256: 'abc' },
+          { status: 201 },
+        ),
+      ),
+    );
+    const { toast } = await import('sonner');
+    const user = userEvent.setup();
+    renderMenu(MOCK_METADATA);
+    await user.click(screen.getByTestId('btn-download-menu'));
+    await user.click(screen.getByTestId('btn-regenerate-pdf'));
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+  });
+
+  it('shows error toast when regenerate DOCX fails', async () => {
+    server.use(
+      http.post('/api/v1/invoices/:id/generate', () =>
+        HttpResponse.json({ status: 502, code: 'PDF_CONVERSION_FAILED' }, { status: 502 }),
+      ),
+    );
+    const { toast } = await import('sonner');
+    const user = userEvent.setup();
+    renderMenu(MOCK_METADATA);
+    await user.click(screen.getByTestId('btn-download-menu'));
+    await user.click(screen.getByTestId('btn-regenerate-docx'));
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
   });
 });

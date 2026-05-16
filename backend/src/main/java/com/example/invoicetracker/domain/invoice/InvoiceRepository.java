@@ -96,4 +96,12 @@ public interface InvoiceRepository {
      * @return true if taken
      */
     boolean existsByNumberIgnoreCaseAndDeletedAtIsNull(String number);
+
+    /**
+     * Soft-deletes an invoice by setting its deletedAt timestamp.
+     *
+     * @param id the invoice UUID
+     * @throws InvoiceNotFoundException if not found or already soft-deleted
+     */
+    void softDelete(UUID id);
 }

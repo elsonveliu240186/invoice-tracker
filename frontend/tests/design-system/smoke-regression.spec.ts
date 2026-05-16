@@ -36,11 +36,32 @@ function stubClients(page: import('@playwright/test').Page) {
   );
 }
 
+// Stub dashboard stats so the dashboard page renders without errors.
+function stubDashboardStats(page: import('@playwright/test').Page) {
+  return page.route('**/api/v1/dashboard/stats', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        totalInvoices: 0,
+        draftCount: 0,
+        sentCount: 0,
+        paidCount: 0,
+        totalRevenue: 0,
+        paidRevenue: 0,
+        pendingRevenue: 0,
+        revenueByMonth: [],
+      }),
+    }),
+  );
+}
+
 test.describe('smoke regression — clients flow', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
   test.beforeEach(async ({ page }) => {
     await seedAuth(page);
     await stubClients(page);
+    await stubDashboardStats(page);
   });
 
   test('app loads at / without console errors', async ({ page }) => {
@@ -48,14 +69,14 @@ test.describe('smoke regression — clients flow', () => {
     page.on('pageerror', (err) => errors.push(err.message));
 
     await page.goto('/');
-    await page.waitForSelector('[data-testid="home-page"]');
+    await page.waitForSelector('[data-testid="dashboard-page"]');
 
     expect(errors).toHaveLength(0);
   });
 
   test('AppShell renders TopNav and Sidebar on home page', async ({ page }) => {
     await page.goto('/');
-    await page.waitForSelector('[data-testid="home-page"]');
+    await page.waitForSelector('[data-testid="dashboard-page"]');
 
     // TopNav header bar
     await expect(page.locator('header')).toBeVisible();
@@ -112,11 +133,14 @@ test.describe('smoke regression — clients flow', () => {
     await expect(searchInput).toHaveValue('test');
   });
 
-  test('home page CTA link navigates to /clients', async ({ page }) => {
+  test('sidebar Clients link navigates to /clients from dashboard', async ({ page }) => {
     await page.goto('/');
-    await page.waitForSelector('[data-testid="home-page"]');
+    await page.waitForSelector('[data-testid="dashboard-page"]');
 
-    await page.getByTestId('link-clients').click();
+    await page
+      .getByRole('link', { name: /clients/i })
+      .first()
+      .click();
     await expect(page).toHaveURL(/\/clients/);
     await expect(page.getByTestId('clients-page')).toBeVisible();
   });
@@ -134,13 +158,13 @@ test.describe('smoke regression — clients flow', () => {
 
   test('back navigation from /clients to / works', async ({ page }) => {
     await page.goto('/');
-    await page.waitForSelector('[data-testid="home-page"]');
+    await page.waitForSelector('[data-testid="dashboard-page"]');
 
     await page.goto('/clients');
     await page.waitForSelector('[data-testid="clients-page"]');
 
     await page.goBack();
     await expect(page).toHaveURL('/');
-    await expect(page.getByTestId('home-page')).toBeVisible();
+    await expect(page.getByTestId('dashboard-page')).toBeVisible();
   });
 });

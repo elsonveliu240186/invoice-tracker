@@ -1,10 +1,13 @@
-<<<<<<< HEAD
 import { NavLink, Link } from 'react-router';
-import { LayoutDashboard, Users, FileText, X, Settings, FileOutput } from 'lucide-react';
-=======
-import { NavLink } from 'react-router';
-import { LayoutDashboard, Users, FileText, X } from 'lucide-react';
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
+import {
+  LayoutDashboard,
+  Users,
+  FileText,
+  X,
+  Settings,
+  FileOutput,
+  LayoutTemplate,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 
@@ -14,13 +17,18 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string | undefined }>;
   disabled?: boolean;
   end?: boolean;
+  children?: NavItem[];
 }
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, end: true },
   { to: '/clients', labelKey: 'nav.clients', icon: Users },
-<<<<<<< HEAD
-  { to: '/invoices', labelKey: 'nav.invoices', icon: FileText },
+  {
+    to: '/invoices',
+    labelKey: 'nav.invoices',
+    icon: FileText,
+    children: [{ to: '/invoices/template', labelKey: 'nav.invoiceTemplate', icon: LayoutTemplate }],
+  },
 ];
 
 const SETTINGS_ITEMS: NavItem[] = [
@@ -29,9 +37,6 @@ const SETTINGS_ITEMS: NavItem[] = [
     labelKey: 'nav.settingsInvoiceTemplate',
     icon: FileOutput,
   },
-=======
-  { to: '/invoices', labelKey: 'nav.invoices', icon: FileText, disabled: true },
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
 ];
 
 interface SidebarProps {
@@ -73,7 +78,7 @@ export function Sidebar({ collapsed = false, drawerMode = false, onClose }: Side
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto p-2" aria-label="Main navigation">
         <ul className="space-y-1">
-          {NAV_ITEMS.map(({ to, labelKey, icon: Icon, disabled, end }) => (
+          {NAV_ITEMS.map(({ to, labelKey, icon: Icon, disabled, end, children }) => (
             <li key={to}>
               {disabled ? (
                 <span
@@ -81,11 +86,7 @@ export function Sidebar({ collapsed = false, drawerMode = false, onClose }: Side
                   title={t('nav.invoicesComingSoon')}
                   className={cn(
                     'flex cursor-not-allowed items-center gap-3 rounded-md px-3 py-2 text-sm font-medium opacity-50',
-<<<<<<< HEAD
                     'text-[var(--color-sidebar-text)]',
-=======
-                    'text-[var(--color-muted-foreground)]',
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
                   )}
                   data-testid="nav-item-disabled"
                 >
@@ -100,13 +101,8 @@ export function Sidebar({ collapsed = false, drawerMode = false, onClose }: Side
                       className={cn(
                         'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                         isActive
-<<<<<<< HEAD
                           ? 'bg-[var(--color-sidebar-active-bg)] text-[var(--color-sidebar-active-text)]'
                           : 'text-[var(--color-sidebar-text)] hover:bg-[var(--color-sidebar-hover-bg)] hover:text-[var(--color-sidebar-text)]',
-=======
-                          ? 'bg-[var(--color-accent)] text-[var(--color-accent-foreground)]'
-                          : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-accent-foreground)]',
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
                       )}
                     >
                       <Icon className="h-4 w-4 shrink-0" aria-hidden={true} />
@@ -114,6 +110,33 @@ export function Sidebar({ collapsed = false, drawerMode = false, onClose }: Side
                     </span>
                   )}
                 </NavLink>
+              )}
+              {!collapsed && children && children.length > 0 && (
+                <ul
+                  className="ml-7 mt-0.5 space-y-0.5"
+                  data-testid={`nav-children-${to.replace(/\//g, '-').replace(/^-/, '')}`}
+                >
+                  {children.map(({ to: childTo, labelKey: childLabelKey, icon: ChildIcon }) => (
+                    <li key={childTo}>
+                      <NavLink to={childTo}>
+                        {({ isActive }) => (
+                          <span
+                            aria-current={isActive ? 'page' : undefined}
+                            className={cn(
+                              'flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors',
+                              isActive
+                                ? 'bg-[var(--color-sidebar-active-bg)] text-[var(--color-sidebar-active-text)]'
+                                : 'text-[var(--color-sidebar-text)] hover:bg-[var(--color-sidebar-hover-bg)] hover:text-[var(--color-sidebar-text)]',
+                            )}
+                          >
+                            <ChildIcon className="h-3.5 w-3.5 shrink-0" aria-hidden={true} />
+                            <span>{t(childLabelKey)}</span>
+                          </span>
+                        )}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
               )}
             </li>
           ))}

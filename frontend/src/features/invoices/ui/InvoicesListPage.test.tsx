@@ -204,4 +204,76 @@ describe('InvoicesListPage', () => {
     await user.click(screen.getByTestId('btn-next-page'));
     await waitFor(() => expect(screen.getByText('INV-002')).toBeInTheDocument());
   });
+
+  it('renders manage template link', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('invoices-loading')).not.toBeInTheDocument());
+    expect(screen.getByTestId('link-manage-template')).toBeInTheDocument();
+  });
+
+  it('clicking prev page navigates back after going forward', async () => {
+    const page0: InvoicePage = {
+      content: [
+        {
+          id: 'inv-1',
+          number: 'INV-001',
+          clientId: 'c1',
+          clientEmail: null,
+          issueDate: '2026-01-01',
+          dueDate: '2026-02-01',
+          taxRate: '0',
+          lines: [],
+          subtotal: '100',
+          total: '100',
+          status: 'DRAFT',
+          lastSentAt: null,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ],
+      page: 0,
+      size: 1,
+      totalElements: 2,
+      totalPages: 2,
+    };
+    const page1: InvoicePage = {
+      content: [
+        {
+          id: 'inv-2',
+          number: 'INV-002',
+          clientId: 'c1',
+          clientEmail: null,
+          issueDate: '2026-01-02',
+          dueDate: '2026-02-02',
+          taxRate: '0',
+          lines: [],
+          subtotal: '200',
+          total: '200',
+          status: 'PAID',
+          lastSentAt: null,
+          createdAt: '2026-01-02T00:00:00Z',
+          updatedAt: '2026-01-02T00:00:00Z',
+        },
+      ],
+      page: 1,
+      size: 1,
+      totalElements: 2,
+      totalPages: 2,
+    };
+    let callCount = 0;
+    server.use(
+      http.get('/api/v1/invoices', () => {
+        callCount++;
+        return HttpResponse.json(callCount <= 1 ? page0 : callCount === 2 ? page1 : page0);
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('invoices-loading')).not.toBeInTheDocument());
+    await user.click(screen.getByTestId('btn-next-page'));
+    await waitFor(() => expect(screen.getByText('INV-002')).toBeInTheDocument());
+    await user.click(screen.getByTestId('btn-prev-page'));
+    await waitFor(() => expect(screen.getByText('INV-001')).toBeInTheDocument());
+  });
 });

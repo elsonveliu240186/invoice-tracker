@@ -73,6 +73,16 @@ class FilesystemInvoiceTemplateStoreTest {
     }
 
     @Test
+    void upload_rejects_docx_with_vba_macros() throws IOException {
+        byte[] macroDocx = TemplateFixtures.docxWithVbaMacros();
+
+        assertThatThrownBy(() -> store.replace(
+            new ByteArrayInputStream(macroDocx), macroDocx.length))
+            .isInstanceOf(InvalidTemplateException.class)
+            .hasMessageContaining("VBA macros");
+    }
+
+    @Test
     void replace_rejects_external_relationships() throws IOException {
         byte[] evilDocx = TemplateFixtures.docxWithExternalRelationship();
 

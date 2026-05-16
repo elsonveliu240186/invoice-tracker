@@ -45,19 +45,32 @@ public class InvoiceService {
     private final InvoicePdfRenderer pdfRenderer;
     private final InvoiceMailer mailer;
     private final CompanyProperties companyProperties;
+    private final InvoiceArtifactService artifactService;
 
+    /**
+     * Constructs the service.
+     *
+     * @param invoiceRepository invoice persistence port
+     * @param clientRepository  client persistence port
+     * @param pdfRenderer       PDF renderer
+     * @param mailer            email sender
+     * @param companyProperties company configuration
+     * @param artifactService   artefact use-case service
+     */
     public InvoiceService(
         InvoiceRepository invoiceRepository,
         ClientRepository clientRepository,
         InvoicePdfRenderer pdfRenderer,
         InvoiceMailer mailer,
-        CompanyProperties companyProperties
+        CompanyProperties companyProperties,
+        InvoiceArtifactService artifactService
     ) {
         this.invoiceRepository = invoiceRepository;
         this.clientRepository = clientRepository;
         this.pdfRenderer = pdfRenderer;
         this.mailer = mailer;
         this.companyProperties = companyProperties;
+        this.artifactService = artifactService;
     }
 
     /**
@@ -178,7 +191,9 @@ public class InvoiceService {
             throw new InvoiceHasNoRecipientException(id);
         }
 
-        byte[] pdfBytes = pdfRenderer.render(invoice, client, companyProperties);
+        // Prefer saved PDF artefact; fall back to live rendering if absent
+        byte[] pdfBytes = artifactService.findPdfBytes(id)
+            .orElseGet(() -> pdfRenderer.render(invoice, client, companyProperties));
         mailer.send(invoice, toEmail, pdfBytes, companyProperties, client.name());
 
         Instant sentAt = Instant.now();
@@ -203,5 +218,17 @@ public class InvoiceService {
         Invoice updated = invoiceRepository.markPaid(id);
         log.info("Invoice {} marked as PAID", id);
         return updated;
+    }
+
+    /**
+     * Soft-deletes an invoice and lazily removes all of its generated artefacts.
+     *
+     * @param id the invoice UUID
+     * @throws InvoiceNotFoundException if not found or already soft-deleted
+     */
+    public void deleteInvoice(UUID id) {
+        artifactService.deleteAll(id);
+        invoiceRepository.softDelete(id);
+        log.info("Invoice {} soft-deleted", id);
     }
 }

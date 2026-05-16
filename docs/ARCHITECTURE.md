@@ -32,14 +32,14 @@ C4Container
 
 ## Components — Backend (C4 — level 3)
 
-Updated by FEAT-20260514-01 (Dashboard upgrade). FEAT-20260513-03 added InvoiceRenderController, InvoiceRenderService, PoiTlInvoiceDocxRenderer, LibreOfficePdfConverter, DocxThenPdfInvoicePdfRenderer, and InvoiceTemplateController. FEAT-20260513-02 added InvoiceController, InvoiceService, OpenPdfInvoiceRenderer, JavaMailInvoiceMailer, and InvoiceRepositoryAdapter. Previous update: FEAT-20260512-02 (authentication modernization).
+Updated by FEAT-20260514-02 (invoice template editor and full lifecycle). FEAT-20260514-01 added DashboardController/Service and MarkAsPaid. FEAT-20260513-03 added InvoiceRenderController, InvoiceRenderService, PoiTlInvoiceDocxRenderer, LibreOfficePdfConverter, DocxThenPdfInvoicePdfRenderer, and InvoiceTemplateController. FEAT-20260513-02 added InvoiceController, InvoiceService, OpenPdfInvoiceRenderer, JavaMailInvoiceMailer, and InvoiceRepositoryAdapter. Previous update: FEAT-20260512-02 (authentication modernization).
 
 ```mermaid
 flowchart TB
     subgraph adapter_web["adapter.web"]
         ctl[ClientController]
         auth_ctl[AuthController<br/>/api/v1/auth/*]
-        inv_ctl[InvoiceController<br/>/api/v1/invoices — CRUD + /pdf + /send-email<br/>+ PATCH /{id}/mark-paid]
+        inv_ctl[InvoiceController<br/>/api/v1/invoices — CRUD + /pdf + /send-email<br/>+ PATCH /{id}/mark-paid + DELETE /{id}<br/>+ GET /{id}/preview-pdf<br/>+ POST /{id}/generate<br/>+ GET /{id}/generated<br/>+ GET /{id}/generated/metadata]
         dash_ctl[DashboardController<br/>GET /api/v1/dashboard/stats]
         render_ctl[InvoiceRenderController<br/>/api/v1/invoices/{id}/docx<br/>/docx-pdf  /docx-email]
         tpl_ctl[InvoiceTemplateController<br/>/api/v1/settings/invoice-template]
@@ -47,24 +47,30 @@ flowchart TB
     subgraph application["application"]
         svc[ClientService]
         auth_svc[AuthService]
-        inv_svc[InvoiceService<br/>markAsPaid / sendEmail / ...]
+        inv_svc[InvoiceService<br/>markAsPaid / sendEmail / delete ...]
+        inv_art_svc[InvoiceArtifactService<br/>previewPdf / generate / streamGenerated<br/>metadata / deleteAll]
         dash_svc[DashboardService<br/>getStats — Clock-injected<br/>zero-fills revenueByMonth]
         render_svc[InvoiceRenderService<br/>renderDocx / renderPdf / sendEmail]
         tpl_store_port[InvoiceTemplateStore port]
+        art_store_port[GeneratedArtifactStore port]
         docx_port[InvoiceDocxRenderer port]
         pdf_conv_port[InvoicePdfConverter port]
+        art_props[GeneratedArtifactProperties<br/>app.invoice.generated.*]
     end
     subgraph domain["domain"]
-        entities[Client, AppUser, Invoice, InvoiceLine]
+        entities[Client, AppUser, Invoice, InvoiceLine<br/>GeneratedArtifact record<br/>ArtifactFormat enum PDF/DOCX]
         status[InvoiceStatus enum<br/>DRAFT / SENT / PAID]
-        repos[ClientRepository, AppUserRepository, InvoiceRepository<br/>countByStatus / revenueByStatus / revenueByMonth]
-        exceptions[InvoiceHasNoRecipientException<br/>PdfConversionFailedException]
+        repos[ClientRepository, AppUserRepository, InvoiceRepository<br/>GeneratedArtifactRepository<br/>countByStatus / revenueByStatus / revenueByMonth]
+        exceptions[InvoiceHasNoRecipientException<br/>PdfConversionFailedException<br/>GeneratedArtifactNotFoundException<br/>ArtifactAlreadyExistsException<br/>ArtifactTooLargeException]
     end
     subgraph adapter_persistence["adapter.persistence"]
-        jpa[ClientRepositoryAdapter<br/>AppUserRepositoryAdapter<br/>InvoiceRepositoryAdapter<br/>markPaid / revenueByMonth JPQL]
+        jpa[ClientRepositoryAdapter<br/>AppUserRepositoryAdapter<br/>InvoiceRepositoryAdapter<br/>GeneratedArtifactRepositoryAdapter<br/>markPaid / softDelete / revenueByMonth JPQL]
     end
     subgraph adapter_template["adapter.template"]
-        fs_store[FilesystemInvoiceTemplateStore<br/>atomic replace / ZIP validation / SSRF scan]
+        fs_store[FilesystemInvoiceTemplateStore<br/>atomic replace / ZIP validation / SSRF scan<br/>VBA macro rejection]
+    end
+    subgraph adapter_artifact["adapter.artifact"]
+        fs_art_store[FilesystemGeneratedArtifactStore<br/>atomic write via tmp+move / SHA-256<br/>canonical path / size cap / path-traversal guard]
     end
     subgraph adapter_rendering["application.invoice (impls)"]
         poi[PoiTlInvoiceDocxRenderer<br/>poi-tl + LoopRowTableRenderPolicy]
@@ -75,11 +81,12 @@ flowchart TB
     subgraph config["config"]
         sec[SecurityConfig]
         mail_cfg[InvoiceMailerAutoConfig<br/>conditional JavaMailSender]
-        app_cfg[AppConfig<br/>Clock.systemUTC bean]
+        app_cfg[AppConfig<br/>Clock.systemUTC bean<br/>@EnableConfigurationProperties(GeneratedArtifactProperties)]
     end
     subgraph infra_ext["External"]
-        db[(Postgres<br/>invoices.status VARCHAR(10)<br/>ix_invoices_status partial index)]
+        db[(Postgres<br/>invoices / invoice_lines<br/>invoice_generated_artifacts NEW<br/>app_users / clients)]
         fs[(FS ./templates/invoice-template.docx)]
+        gen_fs[(FS ./generated/invoices/&lt;id&gt;.pdf|.docx<br/>named Docker volume generated_invoices)]
         lo_bin([soffice headless binary])
         smtp[MailHog / SMTP]
         cp[(Classpath default template)]
@@ -87,16 +94,22 @@ flowchart TB
     ctl --> svc
     auth_ctl --> auth_svc
     inv_ctl --> inv_svc
+    inv_ctl --> inv_art_svc
     dash_ctl --> dash_svc
     render_ctl --> render_svc
     tpl_ctl --> tpl_store_port
     dash_svc --> repos
     inv_svc --> repos
+    inv_svc --> inv_art_svc
+    inv_art_svc --> render_svc
+    inv_art_svc --> art_store_port
+    inv_art_svc --> repos
     render_svc --> docx_port
     render_svc --> pdf_conv_port
     render_svc --> mailer
     render_svc --> repos
     tpl_store_port -.implemented by.-> fs_store
+    art_store_port -.implemented by.-> fs_art_store
     docx_port -.implemented by.-> poi
     pdf_conv_port -.implemented by.-> lo
     composed --> poi
@@ -105,11 +118,81 @@ flowchart TB
     jpa --> db
     fs_store --> fs
     fs_store -. fallback .-> cp
+    fs_art_store --> gen_fs
     lo --> lo_bin
     mailer --> smtp
     sec -.permits.- auth_ctl
     app_cfg -.provides Clock.-> dash_svc
 ```
+
+## Invoice artifact lifecycle (FEAT-20260514-02)
+
+```mermaid
+flowchart LR
+    subgraph FE["React SPA — src/features/invoices"]
+      list[InvoicesListPage] -->|"Manage template"| tplMgr[InvoiceTemplateManagerPage<br/>/invoices/template]
+      list --> detail[InvoiceDetailPage]
+      detail --> preview[PreviewInvoiceButton<br/>blob iframe modal]
+      detail --> gen[GenerateInvoiceButton<br/>PDF / DOCX dropdown]
+      detail --> dl[DownloadInvoiceMenu<br/>saved-vs-live logic]
+      detail --> send[SendInvoiceButton<br/>uses saved bytes if present]
+      detail --> badge[GeneratedArtifactBadge]
+      tplMgr -.reuses.-> tplForm[TemplateUploadForm]
+      tplMgr --> placeholderRef[PlaceholderReferenceCard]
+      preview --> api1[invoicePreviewApi.ts]
+      gen --> api2[generatedArtifactApi.ts]
+      dl --> api2
+      send --> api3[invoicesApi.sendInvoiceEmail]
+      api1 -->|"GET /preview-pdf"| BE
+      api2 -->|"POST /generate, GET /generated"| BE
+      api3 -->|"POST /send-email"| BE
+    end
+    subgraph BE["Spring Boot — adapter.web.invoice"]
+      ctl[InvoiceController<br/>+ /preview-pdf<br/>+ /generate<br/>+ /generated<br/>+ /generated/metadata<br/>+ DELETE /{id}]
+      svc[InvoiceArtifactService<br/>application.invoice]
+      renderSvc[InvoiceRenderService<br/>existing]
+      store[FilesystemGeneratedArtifactStore<br/>adapter.artifact]
+      jpa[GeneratedArtifactRepositoryAdapter<br/>adapter.persistence.invoice]
+    end
+    subgraph DB[(Postgres)]
+      t_inv[invoices]
+      t_art[invoice_generated_artifacts<br/>NEW — V8 migration]
+    end
+    subgraph FS[(Filesystem)]
+      gen_dir["./generated/invoices/&lt;id&gt;.pdf|.docx<br/>Docker named volume generated_invoices"]
+    end
+    ctl --> svc
+    svc --> renderSvc
+    svc --> store
+    svc --> jpa
+    store --> gen_dir
+    jpa --> t_art
+    t_art -. FK .-> t_inv
+```
+
+**New `invoice_generated_artifacts` table** (Flyway `V8__create_invoice_generated_artifacts.sql`):
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID PK | |
+| `invoice_id` | UUID FK → invoices | `ON DELETE CASCADE` |
+| `format` | VARCHAR(8) | `CHECK IN ('PDF','DOCX')` |
+| `relative_path` | VARCHAR(512) | Relative to `app.invoice.generated.path`; never absolute |
+| `size_bytes` | BIGINT | `CHECK >= 0` |
+| `sha256` | CHAR(64) | SHA-256 hex of persisted bytes |
+| `generated_at` | TIMESTAMPTZ | Default `now()` |
+| `deleted_at` | TIMESTAMPTZ | Soft-delete; orphaned when invoice deleted |
+| `version` | BIGINT | Optimistic lock |
+
+Partial unique index: `ux_iga_invoice_format_active ON invoice_generated_artifacts (invoice_id, format) WHERE deleted_at IS NULL` — mirrors ADR-002 pattern.
+
+**Configuration** (`app.invoice.generated.*` via `GeneratedArtifactProperties`):
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `app.invoice.generated.path` | `./generated/invoices` | Filesystem root for stored artefacts |
+| `app.invoice.generated.max-bytes-per-artifact` | `26214400` (25 MiB) | Reject renders exceeding this size |
+| `app.invoice.generated.enabled` | `true` | Feature flag |
 
 ## Invoice rendering pipeline (FEAT-20260513-03)
 
@@ -168,7 +251,11 @@ flowchart LR
 ## Components — Frontend
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 Updated by FEAT-20260514-01 (Dashboard upgrade, palette migration, invoice status). Previous update: FEAT-20260513-02 (Invoice PDF + email) and FEAT-20260513-01 (Design system, dark-mode fixes, responsive layout, form alignment).
+=======
+Updated by FEAT-20260514-02 (invoice template editor and full lifecycle). Previous update: FEAT-20260514-01 (Dashboard upgrade, palette migration, invoice status).
+>>>>>>> feat/FEAT-20260514-02-invoice-lifecycle
 
 **Design system** — see [`docs/DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) for the full token reference, primitive component API, dark-mode guide, breakpoint contract, and ESLint enforcement rule.
 
@@ -245,27 +332,50 @@ flowchart LR
     subgraph InvoicesFeature[src/features/invoices]
       invDetailPage[InvoiceDetailPage<br/>StatusBadge in header<br/>MarkAsPaidButton in actions]
       viewPdfBtn[ViewPdfButton<br/>Dialog + iframe]
-      sendInvBtn[SendInvoiceButton<br/>AlertDialog + spinner + toast]
+      previewBtn[PreviewInvoiceButton<br/>blob iframe modal<br/>Open-in-new-tab + downloads]
+      genBtn[GenerateInvoiceButton<br/>PDF/DOCX dropdown<br/>loading + toast + refetch]
+      dlMenu[DownloadInvoiceMenu<br/>saved-vs-live logic<br/>Regenerate sub-item]
+      sendInvBtn[SendInvoiceButton<br/>AlertDialog + spinner + toast<br/>saved-PDF subtitle]
       sentBadge[InvoiceSentBadge]
+      artBadge[GeneratedArtifactBadge<br/>"Generated PDF · 14 May 2026"]
       invStatusBadge[StatusBadge<br/>DRAFT / SENT / PAID<br/>CSS token classes + i18n]
       markPaidBtn[MarkAsPaidButton<br/>hidden when PAID<br/>toast + onPaid callback]
+      tplMgrPage[InvoiceTemplateManagerPage<br/>/invoices/template<br/>reuses TemplateUploadForm]
+      placeholderCard[PlaceholderReferenceCard<br/>Copy buttons for all tokens]
       markPaidApi[markInvoicePaid.ts<br/>PATCH /api/v1/invoices/{id}/mark-paid]
       useMarkPaid[useMarkInvoicePaid<br/>loading / error state]
       invApi[invoicesApi.ts<br/>getInvoice / getInvoicePdfUrl / sendInvoiceEmail]
+      artApi[generatedArtifactApi.ts<br/>getArtifactsMetadata / generateArtifact<br/>downloadGeneratedArtifact / getPreviewPdfBlobUrl]
+      useArtMeta[useGeneratedArtifactsMetadata]
       useInv[useInvoice / useSendInvoice<br/>React-Query]
       invSchema[Invoice + InvoiceLine zod schemas]
+      artModel[artifact.ts<br/>ArtifactFormat / GeneratedArtifact<br/>InvoiceArtifactsMetadata]
       invDetailPage --> viewPdfBtn
+      invDetailPage --> previewBtn
+      invDetailPage --> genBtn
+      invDetailPage --> dlMenu
       invDetailPage --> sendInvBtn
       invDetailPage --> sentBadge
+      invDetailPage --> artBadge
       invDetailPage --> invStatusBadge
       invDetailPage --> markPaidBtn
       markPaidBtn --> useMarkPaid
       useMarkPaid --> markPaidApi
+      previewBtn --> artApi
+      genBtn --> artApi
+      dlMenu --> artApi
+      artBadge --> useArtMeta
+      useArtMeta --> artApi
+      artApi --> artModel
       invDetailPage --> invApi
       invDetailPage --> useInv
       invApi --> invSchema
+<<<<<<< HEAD
 =======
 >>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
+=======
+      tplMgrPage --> placeholderCard
+>>>>>>> feat/FEAT-20260514-02-invoice-lifecycle
     end
     subgraph AuthFeature[src/features/auth]
       forms[LoginForm / RegisterForm / ForgotPasswordForm]
@@ -300,10 +410,15 @@ flowchart LR
       useThemeColor[useThemeColor.ts<br/>getComputedStyle + MutationObserver]
     end
     guard_p --> invoiceDetail[InvoiceDetailPage /invoices/:id]
+    guard_p --> invoiceTplMgr[InvoiceTemplateManagerPage /invoices/template]
     invoiceDetail --> InvoicesFeature
+<<<<<<< HEAD
 =======
     end
 >>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
+=======
+    invoiceTplMgr --> InvoicesFeature
+>>>>>>> feat/FEAT-20260514-02-invoice-lifecycle
     dash --> DashboardFeature
     clients --> ClientsFeature
     detail --> ClientsFeature
@@ -474,8 +589,32 @@ flowchart LR
 - **Why**: Zero-filling in SQL via a `generate_series` / calendar join is Postgres-specific and adds complexity to the native query. Doing it in Java keeps the SQL simple, is trivially testable with a mocked repository, and allows the fixed `Clock` injection to drive both the window computation and the test assertions deterministically.
 - **Trade-offs**: A month boundary that falls exactly at midnight UTC could theoretically shift the 6-month window between two sequential calls if the system clock is consulted more than once. The injected `Clock` instance (fixed in tests, `Clock.systemUTC()` in production) is read once per `getStats()` call and shared across the window computation and the merge — there is no inconsistency within a single request.
 
+<<<<<<< HEAD
 =======
 >>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
+=======
+### ADR-023 — FEAT-20260514-02: Filesystem-based generated artifact store for v1; port design allows S3 swap
+
+- **Date**: 2026-05-15
+- **Decision**: Generated PDF/DOCX artefacts are stored on the local filesystem under `app.invoice.generated.path` (default `./generated/invoices`). The `GeneratedArtifactStore` port (write/read/delete) is the only abstraction callers touch; `FilesystemGeneratedArtifactStore` is the concrete adapter. A Docker named volume `generated_invoices:/app/generated/invoices` is declared in `docker-compose.yml` to survive container restarts.
+- **Why**: The filesystem is the simplest store for a single-tenant v1 deployment. The port contract intentionally matches an S3-style API (write returns a `relativePath` key; read takes that key). Swapping to S3 requires only a new `S3GeneratedArtifactStore` bean — zero changes to `InvoiceArtifactService`.
+- **Trade-offs**: Local FS does not survive host rehydration without the named volume; data is not replicated. For multi-host deployments a shared mount or object storage adapter is required. Storage growth is bounded by the 25 MiB per-artifact cap but not automatically evicted — a cleanup job (`FEAT-artifact-cleanup`) is tracked.
+
+### ADR-024 — FEAT-20260514-02: `overwrite=false` default prevents accidental clobber on `/generate`
+
+- **Date**: 2026-05-15
+- **Decision**: `POST /api/v1/invoices/{id}/generate` defaults to `overwrite=false`. A call that would clobber an existing active artefact returns `409 ARTIFACT_ALREADY_EXISTS`. The "Regenerate" flow passes `overwrite=true` explicitly. There is no implicit auto-invalidation when the template is replaced.
+- **Why**: Immutability is the primary value of the persisted artefact — a client emailed "Invoice #007, PDF generated on 14 May" should be able to re-download the exact same bytes. Auto-invalidating would undermine this. The Regenerate action surfaces the intent explicitly and bumps `generated_at` + `sha256`.
+- **Trade-offs**: If `overwrite=true` is called twice the second call succeeds and bumps `generated_at` (not idempotent). Idempotency-keys are out of scope for v1. Users must use Regenerate deliberately.
+
+### ADR-025 — FEAT-20260514-02: VBA macro rejection added to `FilesystemInvoiceTemplateStore`
+
+- **Date**: 2026-05-15
+- **Decision**: Template upload now checks for the presence of `word/vbaProject.bin` inside the DOCX ZIP. Any template containing that entry is rejected with `415 INVALID_TEMPLATE_TYPE ("DOCX contains VBA macros")`.
+- **Why**: VBA macros in a server-rendered DOCX are a code-execution vector. LibreOffice headless will execute macro events on document open unless macros are explicitly disabled at the profile level. Rejecting at upload is simpler and more secure than disabling macros at the LibreOffice CLI level (which requires profile configuration that may be overridden).
+- **Trade-offs**: Legitimate templates with embedded macros are unusable. This is intentional — macros are not part of the poi-tl token-substitution feature set; any DOCX that requires macros for rendering is unsupported.
+
+>>>>>>> feat/FEAT-20260514-02-invoice-lifecycle
 ### ADR-008 — FEAT-20260512-01: Dual toast system during transition (sonner + legacy)
 
 - **Date**: 2026-05-12

@@ -32,6 +32,8 @@
     "invoices": "Invoices",
     "invoicesComingSoon": "Coming soon",
     "settings": "Settings",
+    "settingsInvoiceTemplate": "Invoice Template",
+    "invoiceTemplate": "Manage template",
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar",
     "openMenu": "Open navigation menu",
@@ -57,12 +59,30 @@
     "activity": {
       "title": "Recent activity",
       "empty": "Activity will appear here once you start invoicing."
-    }
+    },
+    "welcome": {
+      "title": "Welcome back, {{name}}",
+      "subtitle": "Here's an overview of your invoicing activity."
+    },
+    "cards": {
+      "totalInvoices": "Total Invoices",
+      "totalRevenue": "Total Revenue",
+      "paidInvoices": "Paid Invoices",
+      "pending": "Pending",
+      "draft": "{{count}} draft"
+    },
+    "charts": {
+      "revenueByMonth": "Revenue by Month",
+      "invoiceStatus": "Invoice Status"
+    },
+    "error": "Failed to load dashboard data."
   },
   "clients": {
     "title": "Clients",
     "newClient": "New client",
     "searchPlaceholder": "Search by name or email…",
+    "clearSearch": "Clear search",
+    "resetFilters": "Reset filters",
     "statusFilter": "Status",
     "status": {
       "all": "All",
@@ -176,6 +196,122 @@
       "registered": "Account created! You can now sign in.",
       "passwordResetSent": "If that email is registered, a reset link is on its way.",
       "signedOut": "You have been signed out."
+    }
+  },
+  "invoices": {
+    "list": {
+      "empty": "No invoices yet."
+    },
+    "fields": {
+      "number": "Invoice #",
+      "issueDate": "Issue date",
+      "dueDate": "Due date",
+      "total": "Total"
+    },
+    "detail": {
+      "title": "Invoice",
+      "backToList": "Back to invoices",
+      "issueDate": "Issue date",
+      "dueDate": "Due date"
+    },
+    "actions": {
+      "viewPdf": "View PDF",
+      "preview": "Preview",
+      "generate": "Generate & Save",
+      "generatePdf": "Generate PDF",
+      "generateDocx": "Generate DOCX",
+      "regenerate": "Regenerate",
+      "downloadSavedPdf": "Download saved PDF",
+      "downloadSavedDocx": "Download saved DOCX",
+      "sendToClient": "Send to Client",
+      "openInNewTab": "Open in new tab",
+      "download": "Download",
+      "downloadDocx": "Download DOCX",
+      "downloadPdf": "Download PDF",
+      "markAsPaid": "Mark as Paid"
+    },
+    "preview": {
+      "title": "Invoice Preview"
+    },
+    "generate": {
+      "title": "Generate & Save"
+    },
+    "badge": {
+      "generatedPdf": "Generated PDF",
+      "generatedDocx": "Generated DOCX"
+    },
+    "template": {
+      "title": "Manage Invoice Template",
+      "intro": "Upload a DOCX template and use placeholders to customise your invoices.",
+      "back": "Back to invoices",
+      "copyPlaceholder": "Copied!",
+      "placeholders": {
+        "title": "Placeholder reference",
+        "company": "Company",
+        "client": "Client",
+        "invoice": "Invoice",
+        "lines": "Line items"
+      }
+    },
+    "lines": {
+      "description": "Description",
+      "quantity": "Qty",
+      "unitPrice": "Unit price",
+      "lineTotal": "Total"
+    },
+    "totals": {
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "total": "Total"
+    },
+    "status": {
+      "sentOn": "Sent on {{date}}",
+      "DRAFT": "Draft",
+      "SENT": "Sent",
+      "PAID": "Paid"
+    },
+    "confirm": {
+      "send": {
+        "title": "Send invoice to client?",
+        "description": "This will email the invoice PDF to the client's registered email address.",
+        "subtitle": "Will use saved PDF if generated, otherwise renders live."
+      }
+    },
+    "toast": {
+      "sendSuccess": "Invoice sent successfully",
+      "sendFailed": "Failed to send invoice",
+      "noRecipient": "Invoice has no recipient email address",
+      "pdfConversionFailed": "PDF conversion failed. Please try again.",
+      "downloadFailed": "Download failed. Please try again.",
+      "markPaidSuccess": "Invoice marked as paid.",
+      "markPaidFailed": "Could not mark invoice as paid.",
+      "generateSuccess": "Invoice generated and saved",
+      "generateFailed": "Failed to generate invoice",
+      "regenerated": "Invoice regenerated",
+      "previewFailed": "Failed to load preview"
+    },
+    "errors": {
+      "notFound": "Invoice not found",
+      "deliveryFailed": "Email delivery failed. Please try again."
+    }
+  },
+  "settings": {
+    "invoiceTemplate": {
+      "title": "Invoice Template",
+      "currentFilename": "Current template",
+      "uploadedAt": "Uploaded at",
+      "isDefaultWarning": "Using the default sample template. Upload your own to customise invoices.",
+      "uploadButton": "Upload template",
+      "downloadCurrent": "Download current template",
+      "helpDocx": "Upload a .docx file (max 5 MB) to use as your invoice template.",
+      "errors": {
+        "invalidType": "Only .docx files are accepted.",
+        "tooLarge": "File must be smaller than 5 MB."
+      },
+      "toast": {
+        "uploadSuccess": "Template uploaded successfully",
+        "uploadFailed": "Failed to upload template. Please try again."
+      }
     }
   },
   "errors": {

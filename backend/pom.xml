@@ -274,6 +274,9 @@
                                 <exclude>**/adapter/persistence/invoice/InvoiceLineEntity*</exclude>
                                 <exclude>**/adapter/persistence/invoice/InvoiceRepositoryAdapter*</exclude>
                                 <exclude>**/adapter/persistence/invoice/InvoiceEntityMapper*</exclude>
+                                <exclude>**/adapter/persistence/invoice/GeneratedArtifactEntity*</exclude>
+                                <exclude>**/adapter/persistence/invoice/GeneratedArtifactRepositoryAdapter*</exclude>
+                                <exclude>**/adapter/persistence/invoice/GeneratedArtifactEntityMapper*</exclude>
                                 <exclude>**/adapter/web/settings/dto/**</exclude>
                                 <exclude>**/adapter/web/dashboard/dto/**</exclude>
                                 <exclude>**/adapter/template/FilesystemInvoiceTemplateStore$*</exclude>

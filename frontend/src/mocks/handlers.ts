@@ -2,6 +2,10 @@ import { http, HttpResponse } from 'msw';
 import type { Client, ClientPage } from '@/features/clients/model/types';
 import type { Invoice } from '@/features/invoices/model/types';
 import type { TemplateMetadata, UploadTemplateResponse } from '@/features/settings/model/types';
+import type {
+  InvoiceArtifactsMetadata,
+  GeneratedArtifact,
+} from '@/features/invoices/model/artifact';
 
 let _idCounter = 1;
 
@@ -77,7 +81,6 @@ export function seedMany(n: number): Client[] {
   return clients;
 }
 
-<<<<<<< HEAD
 // ── Invoice mock data ─────────────────────────────────────────────────────────
 
 const BASE_INVOICE: Invoice = {
@@ -130,8 +133,14 @@ export function resetMockTemplateMetadata(): void {
   mockTemplateMetadata = { ...DEFAULT_TEMPLATE_METADATA };
 }
 
-=======
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
+// ── Generated artifacts mock state ───────────────────────────────────────────
+
+export let mockArtifactsMetadata: Record<string, InvoiceArtifactsMetadata> = {};
+
+export function resetMockArtifactsMetadata(): void {
+  mockArtifactsMetadata = {};
+}
+
 export const handlers = [
   // ── Auth endpoints ────────────────────────────────────────────────────────
 
@@ -447,6 +456,117 @@ export const handlers = [
       isDefault: false,
     };
     return HttpResponse.json(response);
+  }),
+
+  // ── Generated artifact endpoints ──────────────────────────────────────────
+
+  // GET /api/v1/invoices/:id/preview-pdf — returns minimal PDF bytes
+  http.get('/api/v1/invoices/:id/preview-pdf', ({ params }) => {
+    const invoice = defaultInvoices.find((inv) => inv.id === params['id']);
+    if (!invoice) {
+      return HttpResponse.json(
+        {
+          type: 'about:blank',
+          title: 'Not Found',
+          status: 404,
+          detail: 'Invoice not found',
+          code: 'INVOICE_NOT_FOUND',
+        },
+        { status: 404 },
+      );
+    }
+    const pdfContent = '%PDF-1.4\n' + '0'.repeat(1100);
+    return new HttpResponse(pdfContent, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="invoice-${invoice.number}.pdf"`,
+        'Cache-Control': 'private, no-store',
+      },
+    });
+  }),
+
+  // POST /api/v1/invoices/:id/generate — persists and returns artifact metadata
+  http.post('/api/v1/invoices/:id/generate', ({ params, request }) => {
+    const invoice = defaultInvoices.find((inv) => inv.id === params['id']);
+    if (!invoice) {
+      return HttpResponse.json(
+        { status: 404, code: 'INVOICE_NOT_FOUND', detail: 'Invoice not found' },
+        { status: 404 },
+      );
+    }
+    const url = new URL(request.url);
+    const format = (url.searchParams.get('format') ?? 'PDF').toUpperCase() as 'PDF' | 'DOCX';
+    const artifact: GeneratedArtifact = {
+      format,
+      generatedAt: new Date().toISOString(),
+      sizeBytes: 12345,
+      sha256: 'abc123def456abc123def456abc123def456abc123def456abc123def456abc1',
+    };
+    // Persist to mock metadata store
+    if (format === 'PDF') {
+      mockArtifactsMetadata[invoice.id] = {
+        ...(mockArtifactsMetadata[invoice.id] ?? { pdf: null, docx: null }),
+        pdf: artifact,
+      };
+    } else {
+      mockArtifactsMetadata[invoice.id] = {
+        ...(mockArtifactsMetadata[invoice.id] ?? { pdf: null, docx: null }),
+        docx: artifact,
+      };
+    }
+    return HttpResponse.json(artifact, { status: 201 });
+  }),
+
+  // GET /api/v1/invoices/:id/generated — streams persisted artifact bytes
+  http.get('/api/v1/invoices/:id/generated', ({ params, request }) => {
+    const invoice = defaultInvoices.find((inv) => inv.id === params['id']);
+    if (!invoice) {
+      return HttpResponse.json(
+        { status: 404, code: 'INVOICE_NOT_FOUND', detail: 'Invoice not found' },
+        { status: 404 },
+      );
+    }
+    const url = new URL(request.url);
+    const format = (url.searchParams.get('format') ?? 'PDF').toUpperCase();
+    const meta = mockArtifactsMetadata[invoice.id];
+    const artifact = format === 'PDF' ? meta?.pdf : meta?.docx;
+    if (!artifact) {
+      return HttpResponse.json(
+        { status: 404, code: 'GENERATED_ARTIFACT_NOT_FOUND', detail: 'Not generated yet' },
+        { status: 404 },
+      );
+    }
+    const ext = format === 'PDF' ? 'pdf' : 'docx';
+    const contentType =
+      format === 'PDF'
+        ? 'application/pdf'
+        : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    const body = format === 'PDF' ? '%PDF-1.4\n' + '0'.repeat(1100) : 'PK\x03\x04';
+    return new HttpResponse(body, {
+      status: 200,
+      headers: {
+        'Content-Type': contentType,
+        'Content-Disposition': `attachment; filename="invoice-${invoice.number}.${ext}"`,
+        'Cache-Control': 'private, no-store',
+      },
+    });
+  }),
+
+  // GET /api/v1/invoices/:id/generated/metadata — returns artifact metadata JSON
+  http.get('/api/v1/invoices/:id/generated/metadata', ({ params }) => {
+    const invoice = defaultInvoices.find((inv) => inv.id === params['id']);
+    if (!invoice) {
+      return HttpResponse.json(
+        { status: 404, code: 'INVOICE_NOT_FOUND', detail: 'Invoice not found' },
+        { status: 404 },
+      );
+    }
+    const meta: InvoiceArtifactsMetadata = mockArtifactsMetadata[invoice.id] ?? {
+      pdf: null,
+      docx: null,
+    };
+    return HttpResponse.json(meta);
   }),
 
   // ── Dashboard endpoints ───────────────────────────────────────────────────

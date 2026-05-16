@@ -34,6 +34,10 @@ public interface InvoiceJpaRepository extends JpaRepository<InvoiceEntity, UUID>
         + "WHERE i.id = :id AND i.deletedAt IS NULL AND i.status = 'DRAFT'")
     int markSentIfDraft(@Param("id") UUID id);
 
+    @Modifying
+    @Query("UPDATE InvoiceEntity i SET i.deletedAt = :ts WHERE i.id = :id AND i.deletedAt IS NULL")
+    int softDelete(@Param("id") UUID id, @Param("ts") Instant ts);
+
     @EntityGraph(attributePaths = "lines")
     @Query(
         "SELECT i FROM InvoiceEntity i WHERE i.deletedAt IS NULL "

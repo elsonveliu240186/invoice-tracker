@@ -95,6 +95,15 @@ public class InvoiceRepositoryAdapter implements InvoiceRepository {
     }
 
     @Override
+    @Transactional
+    public void softDelete(UUID id) {
+        int updated = jpaRepository.softDelete(id, Instant.now());
+        if (updated == 0) {
+            throw new InvoiceNotFoundException(id);
+        }
+    }
+
+    @Override
     public List<Object[]> countByStatus() {
         return jpaRepository.countByStatus();
     }

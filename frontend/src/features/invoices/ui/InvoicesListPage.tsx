@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { FileText } from 'lucide-react';
+import { FileText, Settings } from 'lucide-react';
 import { useInvoices } from '../api/useInvoices';
 import { StatusBadge } from './StatusBadge';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
+import { Button } from '@/shared/ui/button';
 
 export function InvoicesListPage() {
   const { t } = useTranslation();
@@ -15,7 +16,15 @@ export function InvoicesListPage() {
 
   return (
     <div data-testid="invoices-list-page">
-      <PageHeader title={t('nav.invoices')} />
+      <div className="mb-4 flex items-center justify-between">
+        <PageHeader title={t('nav.invoices')} />
+        <Link to="/invoices/template" data-testid="link-manage-template">
+          <Button variant="outline" size="sm">
+            <Settings className="mr-2 h-4 w-4" aria-hidden="true" />
+            {t('nav.invoiceTemplate')}
+          </Button>
+        </Link>
+      </div>
 
       {loading && (
         <div className="space-y-2" data-testid="invoices-loading">

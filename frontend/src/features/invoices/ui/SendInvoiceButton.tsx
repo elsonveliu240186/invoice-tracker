@@ -52,6 +52,9 @@ export function SendInvoiceButton({ invoiceId, hasRecipient, onSent }: SendInvoi
           <DialogHeader>
             <DialogTitle>{t('invoices.confirm.send.title')}</DialogTitle>
             <DialogDescription>{t('invoices.confirm.send.description')}</DialogDescription>
+            <DialogDescription data-testid="send-confirm-subtitle">
+              {t('invoices.confirm.send.subtitle')}
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button

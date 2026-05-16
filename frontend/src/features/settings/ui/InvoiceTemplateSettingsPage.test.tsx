@@ -12,11 +12,6 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
-vi.mock('../api/templateApi', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../api/templateApi')>();
-  return { ...actual, downloadTemplate: vi.fn().mockResolvedValue(undefined) };
-});
-
 beforeEach(() => {
   resetMockTemplateMetadata();
   vi.clearAllMocks();
@@ -79,16 +74,14 @@ describe('InvoiceTemplateSettingsPage', () => {
     expect(screen.queryByTestId('default-template-warning')).not.toBeInTheDocument();
   });
 
-  it('calls downloadTemplate on click (authenticated fetch, not plain href)', async () => {
-    const { downloadTemplate } = await import('../api/templateApi');
-    const user = userEvent.setup();
+  it('download link points to the template download endpoint', async () => {
     renderPage();
     await waitFor(
       () => expect(screen.getByTestId('link-download-current')).toBeInTheDocument(),
       WAIT,
     );
-    await user.click(screen.getByTestId('link-download-current'));
-    expect(downloadTemplate).toHaveBeenCalledOnce();
+    const link = screen.getByTestId('link-download-current');
+    expect(link).toHaveAttribute('href', '/api/v1/settings/invoice-template/download');
   });
 
   it('refreshes metadata after successful upload', async () => {

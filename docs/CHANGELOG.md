@@ -5,6 +5,62 @@ All notable changes to this project will be documented in this file. Format: [Ke
 ## [Unreleased]
 
 ### Added
+- **Invoice template editor and full lifecycle** (FEAT-20260514-02) — _no breaking changes_:
+  Closes the invoice delivery lifecycle end-to-end. Backend: new Flyway migration
+  `V8__create_invoice_generated_artifacts.sql` — `invoice_generated_artifacts` table
+  (`id UUID PK`, `invoice_id FK`, `format VARCHAR(8) CHECK IN ('PDF','DOCX')`,
+  `relative_path VARCHAR(512)`, `size_bytes BIGINT`, `sha256 CHAR(64)`,
+  `generated_at TIMESTAMPTZ`, `deleted_at TIMESTAMPTZ`, `version BIGINT`; partial unique
+  `ux_iga_invoice_format_active (invoice_id, format) WHERE deleted_at IS NULL`);
+  new `InvoiceArtifactService` wrapping `InvoiceRenderService` + `FilesystemGeneratedArtifactStore`
+  + `GeneratedArtifactRepositoryAdapter`; four new REST endpoints:
+  `GET /api/v1/invoices/{id}/preview-pdf` (live render, no persist, `Cache-Control: private, no-store`),
+  `POST /api/v1/invoices/{id}/generate?format=PDF|DOCX&overwrite=false` → `201 GeneratedArtifactResponse`
+  (`{ format, generatedAt, sizeBytes, sha256 }`),
+  `GET /api/v1/invoices/{id}/generated?format=PDF|DOCX` → streams saved bytes,
+  `GET /api/v1/invoices/{id}/generated/metadata` → `InvoiceArtifactsMetadataResponse`
+  (`{ pdf: GeneratedArtifactResponse|null, docx: GeneratedArtifactResponse|null }`);
+  new `DELETE /api/v1/invoices/{id}` → `204` (soft-deletes invoice + calls
+  `artifactService.deleteAll(id)` to orphan artefact rows and remove on-disk files);
+  `InvoiceService.sendEmail` updated to call `artifactService.findPdfBytes(id)` first —
+  reuses persisted PDF when present, falls back to live render; three new error codes:
+  `GENERATED_ARTIFACT_NOT_FOUND` (404), `ARTIFACT_ALREADY_EXISTS` (409), `ARTIFACT_TOO_LARGE` (413);
+  `GeneratedArtifactProperties` (`@ConfigurationProperties("app.invoice.generated")`) with
+  `path` (default `./generated/invoices`), `maxBytesPerArtifact` (25 MiB), `enabled`;
+  Docker named volume `generated_invoices:/app/generated/invoices`; Dockerfile creates
+  `/app/generated/invoices` with non-root `appuser` ownership;
+  security fix: `FilesystemInvoiceTemplateStore.validateZipStructure()` now rejects DOCX
+  files containing `word/vbaProject.bin` (`415 INVALID_TEMPLATE_TYPE "DOCX contains VBA macros"`).
+  Frontend: new route `/invoices/template` → `InvoiceTemplateManagerPage` (reuses
+  `TemplateUploadForm` + new `PlaceholderReferenceCard` with copy buttons for all
+  `{{company.*}}`, `{{client.*}}`, `{{invoice.*}}`, `{{lines}}` tokens; back link to
+  `/invoices`); "Manage template" link added to `InvoicesListPage` toolbar and sidebar
+  child nav item `nav.invoiceTemplate`; `PreviewInvoiceButton` — shadcn `Dialog` fetching
+  blob via `getPreviewPdfBlobUrl(id)`, `<iframe sandbox="allow-same-origin">`, revoking
+  object URL on unmount, "Open in new tab" + "Download PDF" + "Download DOCX" actions;
+  `GenerateInvoiceButton` — shadcn `DropdownMenu` ("Generate PDF" / "Generate DOCX"),
+  loading state per format, Sonner toast on success/failure, `onGenerated` callback;
+  `GeneratedArtifactBadge` — small `Badge` "Generated PDF · 14 May 2026" /
+  "Generated DOCX · ..." (hidden when neither present); `DownloadInvoiceMenu` extended —
+  accepts `metadata: InvoiceArtifactsMetadata`; when saved artefact exists labels item
+  "Download saved PDF/DOCX" and hits `GET /generated?format=...`; adds "Regenerate"
+  item calling `generateArtifact(id, fmt, true)` (overwrite); falls back to on-the-fly
+  `/pdf` and `/docx` endpoints when no saved artefact; `SendInvoiceButton` updated —
+  adds subtitle "Will use saved PDF if generated, otherwise renders live." to confirm
+  dialog (backend already auto-selects); `InvoiceDetailPage` action row order:
+  `PreviewInvoiceButton`, `GenerateInvoiceButton`, `DownloadInvoiceMenu`,
+  `SendInvoiceButton`, `MarkAsPaidButton`, `GeneratedArtifactBadge`, `InvoiceSentBadge`;
+  `generatedArtifactApi.ts` + `useGeneratedArtifactsMetadata` hook + `artifact.ts` types;
+  MSW handlers for all four new endpoints; i18n keys added under `invoices.preview.*`,
+  `invoices.generate.*`, `invoices.actions.*`, `invoices.template.*`,
+  `invoices.toast.generateSuccess/generateFailed/regenerated/previewFailed`,
+  `invoices.badge.generatedPdf/generatedDocx`, `nav.invoiceTemplate`. Coverage gates
+  maintained: backend JaCoCo 95%/95% lines/branches (278 unit + IT tests);
+  frontend Vitest 98.35%/92.22%/95.76%/98.35% (661 tests across 87 files).
+  Review required 2 iterations (1 failure — ESLint 5 errors, fixed).
+  Security required 1 iteration (1 required fix — VBA macro rejection, applied immediately).
+  QA passed first attempt: 245 specs, 163 pass, 17 skip (pre-existing), 0 new failures.
+
 - **Dashboard upgrade — stats, charts, centralized Coolors palette, invoice status, palette switcher** (FEAT-20260514-01) — _no breaking changes_:
   Full dashboard overhaul replacing the placeholder KPI page. Backend: `GET /api/v1/dashboard/stats`
   returns `{ totalInvoices, draftCount, sentCount, paidCount, totalRevenue, paidRevenue,

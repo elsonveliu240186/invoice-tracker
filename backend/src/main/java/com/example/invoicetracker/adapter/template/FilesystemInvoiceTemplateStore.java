@@ -3,8 +3,9 @@ package com.example.invoicetracker.adapter.template;
 import com.example.invoicetracker.application.template.InvalidTemplateException;
 import com.example.invoicetracker.application.template.InvoiceTemplateProperties;
 import com.example.invoicetracker.application.template.InvoiceTemplateStore;
-import com.example.invoicetracker.application.template.TemplateTooLargeException;
 import com.example.invoicetracker.application.template.TemplateMetadata;
+import com.example.invoicetracker.application.template.TemplateNotFoundException;
+import com.example.invoicetracker.application.template.TemplateTooLargeException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -46,6 +47,7 @@ public class FilesystemInvoiceTemplateStore implements InvoiceTemplateStore {
     /** ZIP magic bytes: PK\x03\x04 */
     private static final byte[] ZIP_MAGIC = {0x50, 0x4B, 0x03, 0x04};
     private static final String WORD_DOCUMENT_ENTRY = "word/document.xml";
+    private static final String WORD_VBA_PROJECT_ENTRY = "word/vbaProject.bin";
 
     private final InvoiceTemplateProperties props;
     private final Path canonicalTargetPath;
@@ -76,6 +78,9 @@ public class FilesystemInvoiceTemplateStore implements InvoiceTemplateStore {
         }
         // Classpath fallback
         ClassPathResource resource = new ClassPathResource(props.classpathDefault());
+        if (!resource.exists()) {
+            throw new TemplateNotFoundException();
+        }
         return resource.getInputStream();
     }
 
@@ -174,8 +179,12 @@ public class FilesystemInvoiceTemplateStore implements InvoiceTemplateStore {
         try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(content))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
-                if (WORD_DOCUMENT_ENTRY.equals(entry.getName())) {
+                String name = entry.getName();
+                if (WORD_DOCUMENT_ENTRY.equals(name)) {
                     foundWordDocument = true;
+                }
+                if (WORD_VBA_PROJECT_ENTRY.equals(name)) {
+                    throw new InvalidTemplateException("DOCX contains VBA macros");
                 }
                 zis.closeEntry();
             }

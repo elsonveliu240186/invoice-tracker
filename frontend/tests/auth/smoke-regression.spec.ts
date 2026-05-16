@@ -56,6 +56,25 @@ async function mockClientsList(page: import('@playwright/test').Page) {
   );
 }
 
+async function stubDashboardStats(page: import('@playwright/test').Page) {
+  await page.route('**/api/v1/dashboard/stats', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        totalInvoices: 0,
+        draftCount: 0,
+        sentCount: 0,
+        paidCount: 0,
+        totalRevenue: 0,
+        paidRevenue: 0,
+        pendingRevenue: 0,
+        revenueByMonth: [],
+      }),
+    }),
+  );
+}
+
 // ── Adjacent flow regressions ─────────────────────────────────────────────────
 
 test.describe('smoke regression — auth adjacent flows', () => {
@@ -64,6 +83,7 @@ test.describe('smoke regression — auth adjacent flows', () => {
   test.beforeEach(async ({ page }) => {
     await seedAuthSession(page);
     await mockClientsList(page);
+    await stubDashboardStats(page);
   });
 
   test('app loads at / without console errors when authenticated', async ({ page }) => {
@@ -71,14 +91,14 @@ test.describe('smoke regression — auth adjacent flows', () => {
     page.on('pageerror', (err) => errors.push(err.message));
 
     await page.goto('/');
-    await page.waitForSelector('[data-testid="home-page"]');
+    await page.waitForSelector('[data-testid="dashboard-page"]');
 
     expect(errors).toHaveLength(0);
   });
 
   test('AppShell TopNav and Sidebar render on home page when authenticated', async ({ page }) => {
     await page.goto('/');
-    await page.waitForSelector('[data-testid="home-page"]');
+    await page.waitForSelector('[data-testid="dashboard-page"]');
 
     await expect(page.locator('header')).toBeVisible();
     await expect(page.getByTestId('desktop-sidebar')).toBeVisible();
@@ -87,7 +107,7 @@ test.describe('smoke regression — auth adjacent flows', () => {
 
   test('/clients route is navigable via sidebar link when authenticated', async ({ page }) => {
     await page.goto('/');
-    await page.waitForSelector('[data-testid="home-page"]');
+    await page.waitForSelector('[data-testid="dashboard-page"]');
 
     await page
       .getByRole('link', { name: /clients/i })
@@ -113,7 +133,7 @@ test.describe('smoke regression — auth adjacent flows', () => {
     });
     await seedAuthSession(page);
     await page.goto('/');
-    await page.waitForSelector('[data-testid="home-page"]');
+    await page.waitForSelector('[data-testid="dashboard-page"]');
 
     const themeBtn = page.getByRole('button', { name: /theme/i });
     await expect(themeBtn).toBeVisible();
@@ -137,24 +157,27 @@ test.describe('smoke regression — auth adjacent flows', () => {
     expect(bodyText).toContain('Page not found');
   });
 
-  test('home CTA link-clients navigates to /clients', async ({ page }) => {
+  test('dashboard page is accessible via sidebar Dashboard link', async ({ page }) => {
     await page.goto('/');
-    await page.waitForSelector('[data-testid="home-page"]');
+    await page.waitForSelector('[data-testid="dashboard-page"]');
 
-    await page.getByTestId('link-clients').click();
-    await expect(page).toHaveURL(/\/clients/);
-    await expect(page.getByTestId('clients-page')).toBeVisible();
+    await page
+      .getByRole('link', { name: /dashboard/i })
+      .first()
+      .click();
+    await expect(page).toHaveURL('/');
+    await expect(page.getByTestId('dashboard-page')).toBeVisible();
   });
 
   test('back navigation from /clients to / works when authenticated', async ({ page }) => {
     await page.goto('/');
-    await page.waitForSelector('[data-testid="home-page"]');
+    await page.waitForSelector('[data-testid="dashboard-page"]');
 
     await page.goto('/clients');
     await page.waitForSelector('[data-testid="clients-page"]');
 
     await page.goBack();
     await expect(page).toHaveURL('/');
-    await expect(page.getByTestId('home-page')).toBeVisible();
+    await expect(page.getByTestId('dashboard-page')).toBeVisible();
   });
 });

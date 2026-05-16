@@ -126,6 +126,26 @@ describe('ClientsPage', () => {
     expect(screen.getByDisplayValue('Acme Corp')).toBeInTheDocument();
   });
 
+  it('submits edit form and updates client in the list', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument());
+
+    const editButtons = screen.getAllByTestId('btn-edit');
+    await user.click(editButtons[0]!);
+    expect(screen.getByTestId('client-form-sheet')).toBeInTheDocument();
+
+    // Clear and retype name
+    const nameInput = screen.getByLabelText(/name/i);
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Acme Corp Updated');
+
+    await user.click(screen.getByTestId('btn-submit'));
+    await waitFor(() => expect(screen.queryByTestId('client-form-sheet')).not.toBeInTheDocument(), {
+      timeout: 3000,
+    });
+  });
+
   it('closes the sheet when the X button is clicked', async () => {
     const user = userEvent.setup();
     renderPage();
