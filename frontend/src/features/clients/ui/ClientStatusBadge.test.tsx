@@ -3,7 +3,6 @@ import { describe, it, expect } from 'vitest';
 import { ClientStatusBadge } from './ClientStatusBadge';
 
 describe('ClientStatusBadge', () => {
-<<<<<<< HEAD
   it('renders Active badge for ACTIVE status', () => {
     render(<ClientStatusBadge status="ACTIVE" />);
     expect(screen.getByTestId('status-badge-active')).toBeInTheDocument();
@@ -14,21 +13,15 @@ describe('ClientStatusBadge', () => {
     render(<ClientStatusBadge status="INACTIVE" />);
     expect(screen.getByTestId('status-badge-inactive')).toBeInTheDocument();
     expect(screen.getByText('Inactive')).toBeInTheDocument();
-=======
-  it('renders ACTIVE badge with success variant', () => {
-    render(<ClientStatusBadge status="ACTIVE" />);
-    const badge = screen.getByTestId('status-badge');
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveAttribute('data-variant', 'success');
-    expect(badge).toHaveTextContent('Active');
   });
 
-  it('renders INACTIVE badge with muted variant', () => {
+  it('ACTIVE badge has data-variant="success"', () => {
+    render(<ClientStatusBadge status="ACTIVE" />);
+    expect(screen.getByTestId('status-badge-active')).toHaveAttribute('data-variant', 'success');
+  });
+
+  it('INACTIVE badge has data-variant="muted"', () => {
     render(<ClientStatusBadge status="INACTIVE" />);
-    const badge = screen.getByTestId('status-badge');
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveAttribute('data-variant', 'muted');
-    expect(badge).toHaveTextContent('Inactive');
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
+    expect(screen.getByTestId('status-badge-inactive')).toHaveAttribute('data-variant', 'muted');
   });
 });

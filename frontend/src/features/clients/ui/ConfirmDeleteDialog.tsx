@@ -34,11 +34,7 @@ export function ConfirmDeleteDialog({
       <DialogContent data-testid="confirm-delete-dialog">
         <DialogHeader>
           <DialogTitle>{t('clients.delete.title')}</DialogTitle>
-<<<<<<< HEAD
           <DialogDescription className="text-[var(--color-muted-foreground)]">
-=======
-          <DialogDescription className="text-muted-foreground">
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
             {t('clients.delete.description', { name: clientName })}
           </DialogDescription>
         </DialogHeader>

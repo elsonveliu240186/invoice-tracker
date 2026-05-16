@@ -270,8 +270,6 @@ describe('useAuthStore', () => {
     });
   });
 
-<<<<<<< HEAD
-=======
   describe('clearError', () => {
     it('sets error to null', async () => {
       const { useAuthStore } = await import('./useAuthStore');
@@ -281,7 +279,6 @@ describe('useAuthStore', () => {
     });
   });
 
->>>>>>> feat/FEAT-20260516-01-expense-tracking
   describe('setSession', () => {
     it('sets user, status=authenticated and clears error', async () => {
       const { useAuthStore } = await import('./useAuthStore');

@@ -1,22 +1,4 @@
 import { render, screen, waitFor } from '@testing-library/react';
-<<<<<<< HEAD
-import { describe, it, expect, beforeEach } from 'vitest';
-import { MemoryRouter, Route, Routes } from 'react-router';
-import { I18nextProvider } from 'react-i18next';
-import i18n from '@/shared/lib/i18n';
-import { http, HttpResponse } from 'msw';
-import { server } from '@/mocks/server';
-import { resetMockClients } from '@/mocks/handlers';
-import { ClientDetailPage } from './ClientDetailPage';
-
-function renderPage(id: string) {
-  return render(
-    <MemoryRouter initialEntries={[`/clients/${id}`]}>
-      <I18nextProvider i18n={i18n}>
-        <Routes>
-          <Route path="/clients/:id" element={<ClientDetailPage />} />
-        </Routes>
-=======
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -45,22 +27,17 @@ function renderDetail(id = 'uuid-1') {
             />
           </Routes>
         </ToastProvider>
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
       </I18nextProvider>
     </MemoryRouter>,
   );
 }
 
-describe('ClientDetailPage', () => {
-<<<<<<< HEAD
-  beforeEach(() => {
-    resetMockClients();
-  });
+// Alias for tests that use renderPage instead of renderDetail
+function renderPage(id: string) {
+  return renderDetail(id);
+}
 
-  it('shows loading state initially', async () => {
-    renderPage('uuid-1');
-    // Loading state appears briefly
-=======
+describe('ClientDetailPage', () => {
   it('shows loading skeleton initially', () => {
     renderDetail();
     expect(screen.getByTestId('client-detail-loading')).toBeInTheDocument();
@@ -193,7 +170,6 @@ describe('ClientDetailPage', () => {
       return actual;
     });
     renderDetail();
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
     await waitFor(() => {
       expect(
         screen.getByTestId('client-detail-loading') ||
@@ -202,43 +178,6 @@ describe('ClientDetailPage', () => {
       ).toBeInTheDocument();
     });
   });
-<<<<<<< HEAD
-
-  it('renders client details after data loads', async () => {
-    renderPage('uuid-1');
-    await waitFor(() => {
-      expect(screen.getByTestId('client-detail-page')).toBeInTheDocument();
-    });
-    expect(screen.getByText('Acme Corp')).toBeInTheDocument();
-    expect(screen.getByText('acme@example.com')).toBeInTheDocument();
-  });
-
-  it('shows not-found state for unknown client id', async () => {
-    renderPage('unknown-id');
-    await waitFor(() => {
-      expect(screen.getByTestId('client-detail-not-found')).toBeInTheDocument();
-    });
-  });
-
-  it('renders back-to-clients link', async () => {
-    renderPage('uuid-1');
-    await waitFor(() => {
-      expect(screen.getByTestId('client-detail-page')).toBeInTheDocument();
-    });
-    expect(screen.getByTestId('back-to-clients')).toBeInTheDocument();
-  });
-
-  it('shows ACTIVE status badge for client without deletedAt', async () => {
-    renderPage('uuid-1');
-    await waitFor(() => {
-      expect(screen.getByTestId('client-detail-page')).toBeInTheDocument();
-    });
-    expect(screen.getByTestId('status-badge-active')).toBeInTheDocument();
-  });
-<<<<<<< HEAD
-=======
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
-=======
 
   it('renders phone when client has a phone number', async () => {
     server.use(
@@ -279,5 +218,4 @@ describe('ClientDetailPage', () => {
     await waitFor(() => expect(screen.getByTestId('client-detail-page')).toBeInTheDocument());
     expect(screen.getByText('123 Main St, Springfield')).toBeInTheDocument();
   });
->>>>>>> feat/FEAT-20260516-01-expense-tracking
 });

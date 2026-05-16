@@ -29,16 +29,23 @@ const clients: Client[] = [
 ];
 
 function renderTable(props: Partial<React.ComponentProps<typeof ClientTable>> = {}) {
+  const onView = vi.fn();
   const onEdit = vi.fn();
   const onDelete = vi.fn();
   render(
     <MemoryRouter>
       <I18nextProvider i18n={i18n}>
-        <ClientTable clients={clients} onEdit={onEdit} onDelete={onDelete} {...props} />
+        <ClientTable
+          clients={clients}
+          onView={onView}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          {...props}
+        />
       </I18nextProvider>
     </MemoryRouter>,
   );
-  return { onEdit, onDelete };
+  return { onView, onEdit, onDelete };
 }
 
 describe('ClientTable', () => {
@@ -66,9 +73,9 @@ describe('ClientTable', () => {
 
   it('renders status badge for each row', () => {
     renderTable();
-    const badges = screen.getAllByTestId('status-badge');
+    // Clients default to ACTIVE (no deletedAt) so badge testid is "status-badge-active"
+    const badges = screen.getAllByTestId('status-badge-active');
     expect(badges).toHaveLength(2);
-    // Both default to ACTIVE since no status field on Client type
     expect(badges[0]).toHaveAttribute('data-variant', 'success');
   });
 
@@ -82,6 +89,14 @@ describe('ClientTable', () => {
   it('renders empty state when no clients', () => {
     renderTable({ clients: [] });
     expect(screen.getByTestId('empty-state')).toBeInTheDocument();
+  });
+
+  it('calls onView when view button is clicked', async () => {
+    const user = userEvent.setup();
+    const { onView } = renderTable();
+    const viewButtons = screen.getAllByTestId('btn-view');
+    await user.click(viewButtons[0]!);
+    expect(onView).toHaveBeenCalledWith(clients[0]);
   });
 
   it('calls onEdit when edit button is clicked', async () => {

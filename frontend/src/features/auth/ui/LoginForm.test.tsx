@@ -114,8 +114,6 @@ describe('LoginForm', () => {
     expect(screen.getByRole('link', { name: /create account/i })).toBeInTheDocument();
   });
 
-<<<<<<< HEAD
-=======
   it('shows root error message for non-401 server errors', async () => {
     server.use(
       mswHttp.post('/api/v1/auth/login', () =>
@@ -133,7 +131,6 @@ describe('LoginForm', () => {
     });
   });
 
->>>>>>> feat/FEAT-20260516-01-expense-tracking
   it('navigates to / after successful Google sign-in', async () => {
     const { signInWithPopup } = await import('firebase/auth');
     vi.mocked(signInWithPopup).mockResolvedValueOnce({

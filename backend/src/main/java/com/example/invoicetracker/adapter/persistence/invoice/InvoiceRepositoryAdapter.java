@@ -120,16 +120,6 @@ public class InvoiceRepositoryAdapter implements InvoiceRepository {
 
     @Override
     @Transactional
-    public void softDelete(UUID id) {
-        InvoiceEntity entity = entityManager.find(InvoiceEntity.class, id);
-        if (entity == null || entity.getDeletedAt() != null) {
-            throw new InvoiceNotFoundException(id);
-        }
-        entity.setDeletedAt(java.time.Instant.now());
-    }
-
-    @Override
-    @Transactional
     public Invoice update(Invoice invoice) {
         InvoiceEntity managed = entityManager.find(InvoiceEntity.class, invoice.id());
         if (managed == null || managed.getDeletedAt() != null) {

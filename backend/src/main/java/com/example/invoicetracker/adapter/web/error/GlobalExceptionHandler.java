@@ -6,12 +6,9 @@ import com.example.invoicetracker.application.template.TemplateTooLargeException
 import com.example.invoicetracker.domain.UserEmailTakenException;
 import com.example.invoicetracker.domain.client.ClientEmailTakenException;
 import com.example.invoicetracker.domain.client.ClientNotFoundException;
-<<<<<<< HEAD
+import com.example.invoicetracker.domain.expense.ExpenseNotFoundException;
 import com.example.invoicetracker.domain.invoice.ArtifactAlreadyExistsException;
 import com.example.invoicetracker.domain.invoice.ArtifactTooLargeException;
-=======
-import com.example.invoicetracker.domain.expense.ExpenseNotFoundException;
->>>>>>> feat/FEAT-20260516-01-expense-tracking
 import com.example.invoicetracker.domain.invoice.EmailDeliveryFailedException;
 import com.example.invoicetracker.domain.invoice.GeneratedArtifactNotFoundException;
 import com.example.invoicetracker.domain.invoice.InvoiceHasNoRecipientException;

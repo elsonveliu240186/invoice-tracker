@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { FileText, Plus, Eye, Pencil, Trash2, X, Send, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -188,10 +188,19 @@ export function InvoicesListPage() {
       <PageHeader
         title={t('nav.invoices')}
         actions={
-          <Button onClick={openCreate} data-testid="btn-new-invoice">
-            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-            {t('invoices.form.title.create')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/invoices/template"
+              className="text-sm text-[var(--color-primary)] hover:underline"
+              data-testid="link-manage-template"
+            >
+              {t('invoices.manageTemplate', 'Manage Template')}
+            </Link>
+            <Button onClick={openCreate} data-testid="btn-new-invoice">
+              <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+              {t('invoices.form.title.create')}
+            </Button>
+          </div>
         }
       />
 

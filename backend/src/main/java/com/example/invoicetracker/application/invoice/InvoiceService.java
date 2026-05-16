@@ -330,7 +330,6 @@ public class InvoiceService {
         return updated;
     }
 
-<<<<<<< HEAD
     /**
      * Soft-deletes an invoice and lazily removes all of its generated artefacts.
      *
@@ -339,9 +338,6 @@ public class InvoiceService {
      */
     public void deleteInvoice(UUID id) {
         artifactService.deleteAll(id);
-=======
-    public void deleteInvoice(UUID id) {
->>>>>>> feat/FEAT-20260516-01-expense-tracking
         invoiceRepository.softDelete(id);
         log.info("Invoice {} soft-deleted", id);
     }

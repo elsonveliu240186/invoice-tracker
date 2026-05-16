@@ -24,18 +24,11 @@ describe('Sidebar', () => {
     expect(screen.getByText('Invoices')).toBeInTheDocument();
   });
 
-<<<<<<< HEAD
   it('Invoices nav item is a link (no longer disabled)', () => {
     renderSidebar();
     // Now that the Invoices feature is live, the item is a NavLink, not a disabled span
     expect(screen.queryByTestId('nav-item-disabled')).not.toBeInTheDocument();
     expect(screen.getByText('Invoices')).toBeInTheDocument();
-=======
-  it('Invoices item is disabled with aria-disabled="true"', () => {
-    renderSidebar();
-    const invoicesItem = screen.getByTestId('nav-item-disabled');
-    expect(invoicesItem).toHaveAttribute('aria-disabled', 'true');
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
   });
 
   it('marks the active route with aria-current="page" on Clients', () => {
@@ -55,7 +48,6 @@ describe('Sidebar', () => {
     expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
     expect(screen.queryByText('Clients')).not.toBeInTheDocument();
     expect(screen.queryByText('Invoices')).not.toBeInTheDocument();
-<<<<<<< HEAD
   });
 
   it('renders the Settings section with Invoice Template link', () => {
@@ -95,8 +87,6 @@ describe('Sidebar', () => {
     renderSidebar({ collapsed: true });
     expect(screen.queryByText('Settings')).not.toBeInTheDocument();
     expect(screen.queryByText('Invoice Template')).not.toBeInTheDocument();
-=======
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
   });
 
   it('shows close button in drawer mode', () => {

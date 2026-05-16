@@ -4,11 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/shared/lib/i18n';
 import { useAuthStore } from '@/features/auth/model/useAuthStore';
-<<<<<<< HEAD
 import { resetMockClients, resetMockInvoices } from '@/mocks/handlers';
-=======
-import { resetMockClients } from '@/mocks/handlers';
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
 import { App } from './App';
 
 beforeEach(() => {
@@ -26,10 +22,7 @@ beforeEach(() => {
   }));
   useAuthStore.setState({ user: null, status: 'unauthenticated', error: null });
   resetMockClients();
-<<<<<<< HEAD
   resetMockInvoices();
-=======
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
 });
 
 afterEach(() => {
@@ -84,11 +77,7 @@ describe('App — unauthenticated', () => {
 describe('App — authenticated', () => {
   it('renders dashboard page at / when authenticated', async () => {
     renderAppAuthenticated('/');
-<<<<<<< HEAD
     await waitFor(() => expect(screen.getByTestId('dashboard-page')).toBeInTheDocument());
-=======
-    await waitFor(() => expect(screen.getByTestId('home-page')).toBeInTheDocument());
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
   });
 
   it('renders clients page at /clients when authenticated', async () => {
@@ -111,16 +100,11 @@ describe('App — authenticated', () => {
 
   it('redirects authenticated user from /login to /', async () => {
     renderAppAuthenticated('/login');
-<<<<<<< HEAD
     await waitFor(() => expect(screen.getByTestId('dashboard-page')).toBeInTheDocument());
-=======
-    await waitFor(() => expect(screen.getByTestId('home-page')).toBeInTheDocument());
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
   });
 
   it('redirects authenticated user from /register to /', async () => {
     renderAppAuthenticated('/register');
-<<<<<<< HEAD
     await waitFor(() => expect(screen.getByTestId('dashboard-page')).toBeInTheDocument());
   });
 
@@ -140,9 +124,6 @@ describe('App — authenticated', () => {
     await waitFor(() => {
       expect(screen.getByTestId('invoice-template-settings-page')).toBeInTheDocument();
     });
-=======
-    await waitFor(() => expect(screen.getByTestId('home-page')).toBeInTheDocument());
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
   });
 
   it('renders 404 empty state for unknown protected routes', () => {

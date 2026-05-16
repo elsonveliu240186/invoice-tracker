@@ -389,7 +389,6 @@ class InvoiceServiceTest {
     }
 
     @Test
-<<<<<<< HEAD
     void sendEmail_uses_saved_pdf_when_present() {
         UUID id = UUID.randomUUID();
         UUID clientId = UUID.randomUUID();
@@ -450,14 +449,10 @@ class InvoiceServiceTest {
 
     @Test
     void deleteInvoice_calls_artifact_deleteAll_then_soft_deletes() {
-=======
-    void deleteInvoice_soft_deletes() {
->>>>>>> feat/FEAT-20260516-01-expense-tracking
         UUID id = UUID.randomUUID();
 
         service.deleteInvoice(id);
 
-<<<<<<< HEAD
         verify(artifactService).deleteAll(id);
         verify(invoiceRepository).softDelete(id);
     }
@@ -474,8 +469,4 @@ class InvoiceServiceTest {
         // artifactService.deleteAll is called first, softDelete propagates the exception
         verify(artifactService).deleteAll(id);
     }
-=======
-        verify(invoiceRepository).softDelete(id);
-    }
->>>>>>> feat/FEAT-20260516-01-expense-tracking
 }

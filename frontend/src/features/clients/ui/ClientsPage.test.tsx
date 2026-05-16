@@ -136,11 +136,7 @@ describe('ClientsPage', () => {
     expect(screen.getByTestId('client-form-sheet')).toBeInTheDocument();
 
     // Clear and retype name
-<<<<<<< HEAD
-    const nameInput = screen.getByLabelText(/name/i);
-=======
     const nameInput = screen.getByTestId('input-name');
->>>>>>> feat/FEAT-20260516-01-expense-tracking
     await user.clear(nameInput);
     await user.type(nameInput, 'Acme Corp Updated');
 
@@ -357,7 +353,6 @@ describe('ClientsPage', () => {
 
     expect(screen.getByTestId('status-filter-trigger')).toHaveTextContent(/active/i);
   });
-<<<<<<< HEAD
 
   it('clear-button-appears: X button is visible when search is non-empty, hidden when empty', async () => {
     const user = userEvent.setup();
@@ -412,6 +407,4 @@ describe('ClientsPage', () => {
     expect(screen.getByTestId('status-filter-trigger')).toHaveTextContent(/all/i);
     expect(screen.queryByTestId('btn-clear-search')).not.toBeInTheDocument();
   });
-=======
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
 });

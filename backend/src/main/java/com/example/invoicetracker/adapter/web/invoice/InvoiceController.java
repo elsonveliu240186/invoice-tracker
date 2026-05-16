@@ -8,11 +8,8 @@ import com.example.invoicetracker.adapter.web.invoice.dto.InvoiceArtifactsMetada
 import com.example.invoicetracker.adapter.web.invoice.dto.InvoiceLineDto;
 import com.example.invoicetracker.adapter.web.invoice.dto.InvoiceResponse;
 import com.example.invoicetracker.adapter.web.invoice.dto.SendEmailResponse;
-<<<<<<< HEAD
-import com.example.invoicetracker.application.invoice.InvoiceArtifactService;
-=======
 import com.example.invoicetracker.adapter.web.invoice.dto.UpdateInvoiceRequest;
->>>>>>> feat/FEAT-20260516-01-expense-tracking
+import com.example.invoicetracker.application.invoice.InvoiceArtifactService;
 import com.example.invoicetracker.application.invoice.InvoiceService;
 import com.example.invoicetracker.domain.invoice.ArtifactFormat;
 import com.example.invoicetracker.domain.invoice.GeneratedArtifact;
@@ -179,13 +176,6 @@ public class InvoiceController {
         return ResponseEntity.ok(toResponse(updated));
     }
 
-<<<<<<< HEAD
-    /**
-     * Soft-deletes an invoice and its generated artefacts.
-     *
-     * @param id the invoice UUID
-     * @return 204 No Content on success
-=======
 
     /**
      * Updates an existing DRAFT invoice.
@@ -210,8 +200,7 @@ public class InvoiceController {
     }
 
     /**
-     * Soft-deletes an invoice.
->>>>>>> feat/FEAT-20260516-01-expense-tracking
+     * Soft-deletes an invoice and its generated artefacts.
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete an invoice (soft-delete)")
@@ -220,7 +209,6 @@ public class InvoiceController {
         return ResponseEntity.noContent().build();
     }
 
-<<<<<<< HEAD
     /**
      * Streams a live PDF preview — never persists to disk.
      *
@@ -305,8 +293,6 @@ public class InvoiceController {
     ) {
         return ResponseEntity.ok(artifactService.metadata(id));
     }
-=======
->>>>>>> feat/FEAT-20260516-01-expense-tracking
 
     private InvoiceResponse toResponse(Invoice invoice) {
         List<InvoiceLineDto> lineDtos = invoice.lines().stream()

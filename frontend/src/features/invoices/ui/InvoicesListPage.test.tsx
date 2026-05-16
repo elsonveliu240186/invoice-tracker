@@ -209,12 +209,12 @@ describe('InvoicesListPage', () => {
     await waitFor(() => expect(screen.getByText('INV-002')).toBeInTheDocument());
   });
 
-<<<<<<< HEAD
   it('renders manage template link', async () => {
     renderPage();
     await waitFor(() => expect(screen.queryByTestId('invoices-loading')).not.toBeInTheDocument());
     expect(screen.getByTestId('link-manage-template')).toBeInTheDocument();
-=======
+  });
+
   it('renders New Invoice button', async () => {
     renderPage();
     await waitFor(() => expect(screen.queryByTestId('invoices-loading')).not.toBeInTheDocument());
@@ -317,7 +317,6 @@ describe('InvoicesListPage', () => {
     await waitFor(() => expect(toast.success).toHaveBeenCalled(), { timeout: 3000 });
 
     vi.restoreAllMocks();
->>>>>>> feat/FEAT-20260516-01-expense-tracking
   });
 
   it('clicking prev page navigates back after going forward', async () => {
@@ -385,8 +384,6 @@ describe('InvoicesListPage', () => {
     await user.click(screen.getByTestId('btn-prev-page'));
     await waitFor(() => expect(screen.getByText('INV-001')).toBeInTheDocument());
   });
-<<<<<<< HEAD
-=======
 
   it('search input shows clear button and clearSearch resets it', async () => {
     const user = userEvent.setup();
@@ -485,5 +482,4 @@ describe('InvoicesListPage', () => {
     // Still shows default invoice which is DRAFT
     expect(screen.getByText('INV-2026-0001')).toBeInTheDocument();
   });
->>>>>>> feat/FEAT-20260516-01-expense-tracking
 });
