@@ -151,6 +151,12 @@
             <version>3.0.3</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j-core</artifactId>
+            <version>8.10.1</version>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>
