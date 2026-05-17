@@ -41,3 +41,5 @@ Build verification (`mvnw -Pfast verify` + `pnpm vitest run`) is now required be
 2. Implement auth rate-limiting (A04/A07) — required by security audit
 3. Re-run `/run-security invoice-tracker FEAT-20260516-01` after rate-limiting is added
 4. Re-run `/run-qa invoice-tracker FEAT-20260516-01` after security passes
+- `Documenting -> Shipping` at 2026-05-17T06:10:00Z — docs agent stalled; user approved skip. devops agent: branch feat/FEAT-20260516-01-expense-tracking-category-dashboard created, 21 files staged and committed (feat(expenses): expense tracking with category dashboard), pushed to origin.
+- `Shipping -> Done` at 2026-05-17T06:14:16Z — PR #10 opened and squash-merged to main. PR URL: https://github.com/elsonveliu240186/invoice-tracker/pull/10

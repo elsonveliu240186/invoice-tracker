@@ -1,11 +1,13 @@
 {
   "id": "FEAT-20260516-01",
   "title": "Expense Tracking with Category Dashboard",
-  "state": "Documenting",
+  "state": "Done",
   "created_at": "2026-05-16T00:00:00Z",
+  "pr_url": "https://github.com/elsonveliu240186/invoice-tracker/pull/10",
+  "merged_at": "2026-05-17T06:14:16Z",
   "failures": {
     "review": 0,
-    "security": 0,
+    "security": 2,
     "qa": 0
   }
 }
