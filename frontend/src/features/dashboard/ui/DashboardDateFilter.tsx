@@ -56,7 +56,7 @@ export function DashboardDateFilter({ from, to, onChange }: DashboardDateFilterP
           align="end"
           sideOffset={6}
           className="z-50 w-72 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-lg"
-          onInteractOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => { (e as { preventDefault(): void }).preventDefault(); }}
         >
           <div className="space-y-3">
             <div className="space-y-1">
