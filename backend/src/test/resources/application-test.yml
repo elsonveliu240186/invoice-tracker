@@ -1,4 +1,7 @@
 app:
+  auth:
+    rate-limit:
+      capacity: 10000
   invoice:
     # Override template-path to a non-existent path so tests can control it via tmp dirs
     template-path: ${java.io.tmpdir}/it-test-templates/invoice-template.docx

@@ -312,7 +312,7 @@ export function InvoicesListPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => navigate(`/invoices/${invoice.id}`)}
+                        onClick={() => void navigate(`/invoices/${invoice.id}`)}
                         aria-label={t('invoices.actions.preview')}
                         data-testid={`btn-preview-${invoice.id}`}
                       >

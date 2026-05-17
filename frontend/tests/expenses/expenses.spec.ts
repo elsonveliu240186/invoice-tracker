@@ -134,25 +134,6 @@ async function stubEmptySummary(page: Page, month = CURRENT_MONTH) {
   );
 }
 
-async function stubDashboard(page: Page) {
-  await page.route('**/api/v1/dashboard/stats', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        totalInvoices: 0,
-        draftCount: 0,
-        sentCount: 0,
-        paidCount: 0,
-        totalRevenue: 0,
-        paidRevenue: 0,
-        pendingRevenue: 0,
-        revenueByMonth: [],
-      }),
-    }),
-  );
-}
-
 // ── AC-1: /expenses page loads with dashboard and empty state ─────────────────
 
 test.describe('AC-1: /expenses page loads with dashboard and empty state', () => {

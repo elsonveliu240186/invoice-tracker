@@ -75,8 +75,7 @@ describe('InvoiceForm', () => {
 
   it('shows nextNumber as placeholder when provided', () => {
     renderForm({ nextNumber: 'INV-2026-0001' });
-    const input = screen.getByTestId('input-number') as HTMLInputElement;
-    expect(input.placeholder).toBe('INV-2026-0001');
+    expect(screen.getByTestId('input-number')).toHaveAttribute('placeholder', 'INV-2026-0001');
   });
 
   it('shows client dropdown when typing in client search', async () => {
@@ -97,9 +96,7 @@ describe('InvoiceForm', () => {
       WAIT,
     );
     await user.click(screen.getByTestId('client-option-uuid-1'));
-    expect((screen.getByTestId('input-client-search') as HTMLInputElement).value).toContain(
-      'Acme Corp',
-    );
+    expect(screen.getByTestId('input-client-search')).toHaveDisplayValue(/Acme Corp/);
   });
 
   it('adds a line item when Add Line is clicked', async () => {
@@ -231,9 +228,9 @@ describe('InvoiceForm', () => {
       updatedAt: '2026-05-15T00:00:00Z',
     };
     renderForm({ initial });
-    expect((screen.getByTestId('input-number') as HTMLInputElement).value).toBe('INV-2026-0001');
-    expect((screen.getByTestId('input-issue-date') as HTMLInputElement).value).toBe('2026-05-15');
-    expect((screen.getByTestId('input-due-date') as HTMLInputElement).value).toBe('2026-06-15');
+    expect(screen.getByTestId('input-number')).toHaveValue('INV-2026-0001');
+    expect(screen.getByTestId('input-issue-date')).toHaveValue('2026-05-15');
+    expect(screen.getByTestId('input-due-date')).toHaveValue('2026-06-15');
   });
 
   it('emits payload on valid submit', async () => {
@@ -410,7 +407,7 @@ describe('InvoiceForm', () => {
     await user.click(screen.getByTestId('btn-submit'));
     // Now type in the number field — the onChange handler should fire
     await user.type(screen.getByTestId('input-number'), 'INV-2026-0001');
-    expect((screen.getByTestId('input-number') as HTMLInputElement).value).toBe('INV-2026-0001');
+    expect(screen.getByTestId('input-number')).toHaveValue('INV-2026-0001');
   });
 
   it('typing in issue date field updates value', async () => {
@@ -418,7 +415,7 @@ describe('InvoiceForm', () => {
     renderForm();
     await user.click(screen.getByTestId('btn-submit'));
     fireEvent.change(screen.getByTestId('input-issue-date'), { target: { value: '2026-05-15' } });
-    expect((screen.getByTestId('input-issue-date') as HTMLInputElement).value).toBe('2026-05-15');
+    expect(screen.getByTestId('input-issue-date')).toHaveValue('2026-05-15');
   });
 
   it('typing in due date field updates value', async () => {
@@ -426,7 +423,7 @@ describe('InvoiceForm', () => {
     renderForm();
     await user.click(screen.getByTestId('btn-submit'));
     fireEvent.change(screen.getByTestId('input-due-date'), { target: { value: '2026-06-15' } });
-    expect((screen.getByTestId('input-due-date') as HTMLInputElement).value).toBe('2026-06-15');
+    expect(screen.getByTestId('input-due-date')).toHaveValue('2026-06-15');
   });
 
   it('clearing client search input clears the selected client', async () => {

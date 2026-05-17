@@ -306,6 +306,14 @@ describe('InvoiceDetailPage', () => {
   });
 
   it('onGenerated callback: clicking Generate PDF triggers metadata refetch', async () => {
+    server.use(
+      http.post('/api/v1/invoices/:id/generate', () =>
+        HttpResponse.json(
+          { format: 'PDF', generatedAt: '2026-05-17T10:00:00Z', sizeBytes: 1024, sha256: 'abc' },
+          { status: 201 },
+        ),
+      ),
+    );
     const { toast } = await import('sonner');
     const user = userEvent.setup();
     renderPage();

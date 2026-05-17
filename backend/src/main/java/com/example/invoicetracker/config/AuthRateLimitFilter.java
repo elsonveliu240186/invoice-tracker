@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
@@ -18,16 +19,23 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Rate-limits authentication endpoints to 5 requests per IP per minute.
+ * Rate-limits authentication endpoints per IP per minute.
+ * Capacity defaults to 5 in production; override via {@code app.auth.rate-limit.capacity}.
  * Applies to /api/v1/auth/login and /api/v1/auth/register only.
  */
 @Component
 public class AuthRateLimitFilter extends OncePerRequestFilter {
 
-    private static final int CAPACITY = 5;
     private static final Duration REFILL_PERIOD = Duration.ofMinutes(1);
 
+    private final int capacity;
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
+
+    public AuthRateLimitFilter(
+        @Value("${app.auth.rate-limit.capacity:5}") int capacity
+    ) {
+        this.capacity = capacity;
+    }
 
     @Override
     protected void doFilterInternal(
@@ -66,9 +74,9 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
         return request.getRemoteAddr();
     }
 
-    private static Bucket newBucket() {
+    private Bucket newBucket() {
         return Bucket.builder()
-            .addLimit(Bandwidth.classic(CAPACITY, Refill.intervally(CAPACITY, REFILL_PERIOD)))
+            .addLimit(Bandwidth.classic(capacity, Refill.intervally(capacity, REFILL_PERIOD)))
             .build();
     }
 }

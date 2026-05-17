@@ -29,7 +29,10 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest(webEnvironment = WebEnvironment.MOCK)
+@SpringBootTest(
+    webEnvironment = WebEnvironment.MOCK,
+    properties = "app.auth.rate-limit.capacity=10000"
+)
 @Testcontainers
 class AuthControllerTest {
 
