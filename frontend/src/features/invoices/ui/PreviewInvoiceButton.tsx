@@ -19,8 +19,10 @@ export function PreviewInvoiceButton({ invoiceId, invoiceNumber }: PreviewInvoic
 
   useEffect(() => {
     if (error) {
+      // Show toast first, then close dialog on next tick so Sonner has a render cycle.
       toast.error(t('invoices.toast.previewFailed'));
-      setOpen(false);
+      const tid = window.setTimeout(() => setOpen(false), 0);
+      return () => window.clearTimeout(tid);
     }
   }, [error, t]);
 
