@@ -213,6 +213,7 @@
     },
     "fields": {
       "number": "Invoice #",
+      "client": "Client",
       "issueDate": "Issue date",
       "dueDate": "Due date",
       "total": "Total"

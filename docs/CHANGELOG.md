@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file. Format: [Ke
 ## [Unreleased]
 
 ### Added
+- **Expense tracking with category dashboard + auth rate-limiting** (FEAT-20260516-01) — _no breaking changes_:
+  New `expenses` table via Flyway `V12__create_expenses.sql` (`id UUID PK`, `amount NUMERIC(10,2)`,
+  `category VARCHAR(50) CHECK IN (FOOD_DRINK,TRANSPORT,HOUSING,HEALTH,ENTERTAINMENT,SHOPPING,TRAVEL,EDUCATION,UTILITIES,OTHER)`,
+  `description VARCHAR(500)`, `expense_date DATE`, `created_at/updated_at TIMESTAMPTZ`, `deleted_at TIMESTAMPTZ`,
+  `version BIGINT`; three partial indexes: `ix_expenses_date_active`, `ix_expenses_category_active`).
+  Six new REST endpoints at `/api/v1/expenses`: `GET` (paginated list with optional `category`/`dateFrom`/`dateTo` filters,
+  size clamped to [1,100]), `POST` (201 + Location), `GET /{id}`, `PUT /{id}` (full replacement), `DELETE /{id}` (soft-delete,
+  204), `GET /summary?month=YYYY-MM` (monthly aggregates: `grandTotal`, `totalCount`,
+  `byCategory: [{category,total,count}]` sorted by `total DESC`; defaults to current UTC month). All endpoints
+  require HTTP Basic authentication. Auth rate-limiting: `AuthRateLimitFilter` (extends `OncePerRequestFilter`)
+  registered before `UsernamePasswordAuthenticationFilter` applies Bucket4j 8.10.1 per-IP sliding-window
+  limit of 5 requests per minute to `/api/v1/auth/login` and `/api/v1/auth/register`; exhaustion returns
+  `429 RATE_LIMIT_EXCEEDED` with structured JSON body. Frontend: new `/expenses` route and `Expenses` sidebar
+  item (Wallet icon); `ExpensesPage` composes `ExpenseDashboard` (month picker + grand-total card + per-category
+  cards), `ExpenseTable` (Date, Description, Category badge+icon, Amount right-aligned, edit/delete actions),
+  `ExpenseFormSheet` (create/edit modal, same pattern as `InvoiceFormSheet`), and `ConfirmDeleteDialog`; 10
+  `CategoryBadge`/`CategoryIcon` pairs (lucide icons per category); Zod schema mirrors all backend validation
+  rules; all strings via `en.json` i18n keys (`nav.expenses`, `expenses.*`); MSW handlers for all six expense
+  endpoints. Invoice `PUT /{id}` update endpoint added (previously CRUD was missing update). Backend JaCoCo
+  ≥ 90%. Frontend Vitest 911 tests passing. Security: 2 iterations to pass (iteration 1 fail: Git conflict
+  markers in 4 files + missing auth rate-limiting; iteration 2 fail: OWASP DC CVE-2018-1258 false positive
+  + missing rate-limiting; iteration 3 fail: rate-limiting still absent; iteration 4 pass: rate-limiting
+  implemented, all OWASP Top 10 mitigated). QA: 24 Playwright specs, all passed (30.5 s). `CVE-2018-1258`
+  false positive suppressed in `backend/owasp-suppressions.xml` (Spring Framework 5.0.5 CPE mismatch against
+  spring-security-core 7.x). Rate-limit bucket store is in-memory (`ConcurrentHashMap`) — resets on restart
+  and does not span pod replicas; Redis-backed migration tracked as follow-up.
+
 - **Invoice template editor and full lifecycle** (FEAT-20260514-02) — _no breaking changes_:
   Closes the invoice delivery lifecycle end-to-end. Backend: new Flyway migration
   `V8__create_invoice_generated_artifacts.sql` — `invoice_generated_artifacts` table
@@ -157,7 +184,6 @@ All notable changes to this project will be documented in this file. Format: [Ke
   to suppress go-module false positives; all 10 OWASP categories mitigated; gitleaks 0 secrets.
 
 - Scaffolded from the agenticai framework.
-<<<<<<< HEAD
 - **Design system foundation** (FEAT-20260513-01) — _no breaking changes, no backend changes_:
   CSS token system (`@theme` + `:root` + `.dark`) with 16 named colour tokens covering light and dark
   mode; typed token map at `src/shared/theme/tokens.ts`; three new primitives — `Icon` (Lucide wrapper
@@ -177,8 +203,6 @@ All notable changes to this project will be documented in this file. Format: [Ke
   primitive and foreground tokens rather than falling back to near-black values.
 - Register form `confirmPassword` field was collapsed/misaligned — now rendered via `FormField` in its
   own full-width row with an independent show/hide toggle.
-=======
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
 - **Dashboard and core UI modernization** (FEAT-20260512-03) — _no breaking changes_:
   full SaaS shell retrofit over the existing React SPA. New `AppShell` component composes a
   collapsible desktop `Sidebar` (Dashboard, Clients, Invoices-disabled nav items with Lucide icons

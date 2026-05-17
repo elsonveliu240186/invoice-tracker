@@ -281,6 +281,7 @@ export function InvoicesListPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t('invoices.fields.number')}</TableHead>
+                <TableHead>{t('invoices.fields.client', 'Client')}</TableHead>
                 <TableHead>{t('invoices.fields.issueDate')}</TableHead>
                 <TableHead>{t('invoices.fields.dueDate')}</TableHead>
                 <TableHead>{t('invoices.fields.status', 'Status')}</TableHead>
@@ -292,6 +293,12 @@ export function InvoicesListPage() {
               {filteredInvoices.map((invoice) => (
                 <TableRow key={invoice.id} data-testid="invoice-row">
                   <TableCell className="font-medium">{invoice.number}</TableCell>
+                  <TableCell
+                    className="text-[var(--color-muted-foreground)]"
+                    data-testid={`invoice-client-${invoice.id}`}
+                  >
+                    {invoice.clientNameSnapshot ?? '—'}
+                  </TableCell>
                   <TableCell>{invoice.issueDate}</TableCell>
                   <TableCell>{invoice.dueDate}</TableCell>
                   <TableCell>

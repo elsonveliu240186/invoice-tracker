@@ -473,6 +473,43 @@ describe('InvoicesListPage', () => {
     }
   });
 
+  it('renders Client column header', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('invoices-loading')).not.toBeInTheDocument());
+    expect(screen.getByText('Client')).toBeInTheDocument();
+  });
+
+  it('shows clientNameSnapshot in the client cell', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('invoices-loading')).not.toBeInTheDocument());
+    expect(screen.getByTestId('invoice-client-inv-uuid-1')).toHaveTextContent('Acme Corp');
+  });
+
+  it('shows dash when clientNameSnapshot is null', async () => {
+    resetMockInvoices([
+      {
+        id: 'inv-no-snap',
+        number: 'INV-NOSNAP',
+        clientId: 'c1',
+        clientEmail: null,
+        clientNameSnapshot: null,
+        issueDate: '2026-01-01',
+        dueDate: '2026-02-01',
+        taxRate: '0',
+        lines: [],
+        subtotal: '100',
+        total: '100',
+        status: 'DRAFT',
+        lastSentAt: null,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+    ]);
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('invoices-loading')).not.toBeInTheDocument());
+    expect(screen.getByTestId('invoice-client-inv-no-snap')).toHaveTextContent('—');
+  });
+
   it('status filter: selecting DRAFT shows only matching invoices', async () => {
     const user = userEvent.setup();
     renderPage();
