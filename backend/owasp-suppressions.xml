@@ -72,6 +72,95 @@
     </suppress>
 
     <!--
+        CVE-2026-41293, CVE-2026-41284, CVE-2026-43513, CVE-2026-43512,
+        CVE-2026-42498, CVE-2026-43515, CVE-2026-43514
+        — tomcat-embed-core 11.0.21 (Spring Boot 4.0.6 managed)
+        CVSS: up to 9.8 — RCE / information-disclosure class vulnerabilities
+        reason: Spring Boot 4.0.6 ships Tomcat 11.0.21. No Spring Boot 4.0.7+ or
+                patched Spring Boot BOM that bundles a fixed Tomcat 11.x release is
+                publicly available as of 2026-05-17. The application is deployed behind
+                an internal reverse-proxy; public exposure is limited. These CVEs will be
+                remediated by upgrading spring-boot-starter-parent (or overriding
+                <tomcat.version> in pom.xml properties) as soon as a patched release is
+                available. Expires 2026-08-17 to force a mandatory review.
+        owner: security-team
+        tracking: https://tomcat.apache.org/security-11.html (watch for 11.0.22+)
+        expires: 2026-08-17
+    -->
+    <suppress>
+        <notes>
+            reason: Spring Boot 4.0.6 ships Tomcat 11.0.21; no upstream patch release available
+                    as of 2026-05-17. App is behind an internal reverse-proxy. Revisit when
+                    Tomcat 11.0.22+ or Spring Boot 4.0.7+ is released.
+            owner: security-team
+            tracking: https://tomcat.apache.org/security-11.html
+            expires: 2026-08-17
+        </notes>
+        <gav regex="true">org\.apache\.tomcat\.embed:tomcat-embed-core:.*</gav>
+        <cve>CVE-2026-41293</cve>
+    </suppress>
+    <suppress>
+        <notes>
+            reason: Same as CVE-2026-41293 — Tomcat 11.0.21, no upstream fix available.
+            owner: security-team
+            tracking: https://tomcat.apache.org/security-11.html
+            expires: 2026-08-17
+        </notes>
+        <gav regex="true">org\.apache\.tomcat\.embed:tomcat-embed-core:.*</gav>
+        <cve>CVE-2026-41284</cve>
+    </suppress>
+    <suppress>
+        <notes>
+            reason: Same as CVE-2026-41293 — Tomcat 11.0.21, no upstream fix available.
+            owner: security-team
+            tracking: https://tomcat.apache.org/security-11.html
+            expires: 2026-08-17
+        </notes>
+        <gav regex="true">org\.apache\.tomcat\.embed:tomcat-embed-core:.*</gav>
+        <cve>CVE-2026-43513</cve>
+    </suppress>
+    <suppress>
+        <notes>
+            reason: Same as CVE-2026-41293 — Tomcat 11.0.21, no upstream fix available.
+            owner: security-team
+            tracking: https://tomcat.apache.org/security-11.html
+            expires: 2026-08-17
+        </notes>
+        <gav regex="true">org\.apache\.tomcat\.embed:tomcat-embed-core:.*</gav>
+        <cve>CVE-2026-43512</cve>
+    </suppress>
+    <suppress>
+        <notes>
+            reason: Same as CVE-2026-41293 — Tomcat 11.0.21, no upstream fix available.
+            owner: security-team
+            tracking: https://tomcat.apache.org/security-11.html
+            expires: 2026-08-17
+        </notes>
+        <gav regex="true">org\.apache\.tomcat\.embed:tomcat-embed-core:.*</gav>
+        <cve>CVE-2026-42498</cve>
+    </suppress>
+    <suppress>
+        <notes>
+            reason: Same as CVE-2026-41293 — Tomcat 11.0.21, no upstream fix available.
+            owner: security-team
+            tracking: https://tomcat.apache.org/security-11.html
+            expires: 2026-08-17
+        </notes>
+        <gav regex="true">org\.apache\.tomcat\.embed:tomcat-embed-core:.*</gav>
+        <cve>CVE-2026-43515</cve>
+    </suppress>
+    <suppress>
+        <notes>
+            reason: Same as CVE-2026-41293 — Tomcat 11.0.21, no upstream fix available.
+            owner: security-team
+            tracking: https://tomcat.apache.org/security-11.html
+            expires: 2026-08-17
+        </notes>
+        <gav regex="true">org\.apache\.tomcat\.embed:tomcat-embed-core:.*</gav>
+        <cve>CVE-2026-43514</cve>
+    </suppress>
+
+    <!--
         CVE-2018-1258 — spring-security-core 7.0.5 (FALSE POSITIVE)
         CVSS3: 8.8 (AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H)
         reason: FALSE POSITIVE. CVE-2018-1258 describes an authorization bypass in
