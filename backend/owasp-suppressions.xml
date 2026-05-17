@@ -71,4 +71,40 @@
         <cve>CVE-2025-15104</cve>
     </suppress>
 
+    <!--
+        CVE-2018-1258 — spring-security-core 7.0.5 (FALSE POSITIVE)
+        CVSS3: 8.8 (AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H)
+        reason: FALSE POSITIVE. CVE-2018-1258 describes an authorization bypass in
+                Spring Framework 5.0.5 (specifically that point release) when combined
+                with any version of Spring Security. The vulnerability was fixed in
+                Spring Framework 5.0.6 (released May 2018).
+
+                OWASP Dependency-Check's CPE matcher matches the broad NVD CPE
+                cpe:2.3:a:pivotal_software:spring_security:* against spring-security-core-7.0.5.jar,
+                producing this false positive. The affected component is Spring Framework 5.0.5,
+                NOT Spring Security 7.x.
+
+                This project uses Spring Boot 4.0.6 which ships Spring Framework 6.x / 7.x —
+                confirming this is a false positive. The CVE does not apply to any version of
+                the spring-security-core artifact itself; it applies to a specific version of
+                spring-framework (which is a different artifact).
+
+                Reference: https://pivotal.io/security/cve-2018-1258
+        owner: security-team
+        tracking: https://github.com/jeremylong/DependencyCheck/issues (known DC false-positive pattern)
+        expires: 2026-08-17
+    -->
+    <suppress>
+        <notes>
+            reason: FALSE POSITIVE. CVE-2018-1258 is a Spring Framework 5.0.5 vulnerability
+                    (fixed in 5.0.6). OWASP DC CPE matcher incorrectly matches spring-security-core
+                    7.x. This project runs Spring Boot 4 / Spring Framework 6+, which is unaffected.
+            owner: security-team
+            tracking: https://pivotal.io/security/cve-2018-1258
+            expires: 2026-08-17
+        </notes>
+        <gav regex="true">org\.springframework\.security:spring-security-core:.*</gav>
+        <cve>CVE-2018-1258</cve>
+    </suppress>
+
 </suppressions>

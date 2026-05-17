@@ -15,7 +15,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.Currency;
 import java.util.HashMap;
 import java.util.List;
@@ -119,8 +118,7 @@ public class PoiTlInvoiceDocxRenderer implements InvoiceDocxRenderer {
                 return templateBytes;
             }
 
-            List<InvoiceLine> lines =
-                invoice.lines() != null ? invoice.lines() : Collections.emptyList();
+            List<InvoiceLine> lines = invoice.lines();
 
             // Insert one properly-rooted row per line item after the template row (index 1).
             for (int i = 0; i < lines.size(); i++) {
@@ -151,16 +149,22 @@ public class PoiTlInvoiceDocxRenderer implements InvoiceDocxRenderer {
     ) {
         // poi-tl resolves {{a.b}} as nested access: model.get("a") → object → .b property.
         // Use nested maps so {{company.name}}, {{invoice.number}} etc. resolve correctly.
+        // Snapshot fields (captured at invoice creation) take precedence over live data so that
+        // the rendered document reflects the state at time of invoicing, not the current state.
         Map<String, Object> companyMap = new HashMap<>();
-        companyMap.put("name", nullSafe(company.name()));
-        companyMap.put("address", nullSafe(company.address()));
-        companyMap.put("email", nullSafe(company.email()));
-        companyMap.put("taxId", nullSafe(company.taxId()));
+        companyMap.put("name",     firstNonBlank(invoice.companyNameSnapshot(),    company.name()));
+        companyMap.put("address",  firstNonBlank(invoice.companyAddressSnapshot(), company.address()));
+        companyMap.put("email",    nullSafe(company.email()));
+        companyMap.put("taxId",    firstNonBlank(invoice.companyVatSnapshot(),     company.vatNumber(), company.taxId()));
+        companyMap.put("vatNumber", firstNonBlank(invoice.companyVatSnapshot(),    company.vatNumber()));
+        companyMap.put("iban",     firstNonBlank(invoice.companyIbanSnapshot(),    company.iban()));
+        companyMap.put("swift",    firstNonBlank(invoice.companySwiftSnapshot(),   company.swiftBic()));
+        companyMap.put("bankName", firstNonBlank(invoice.companyBankNameSnapshot(), company.bankName()));
 
         Map<String, Object> clientMap = new HashMap<>();
-        clientMap.put("name", nullSafe(client.name()));
-        clientMap.put("email", nullSafe(client.email()));
-        clientMap.put("address", nullSafe(client.address()));
+        clientMap.put("name",    firstNonBlank(invoice.clientNameSnapshot(),    client.name()));
+        clientMap.put("email",   nullSafe(client.email()));
+        clientMap.put("address", firstNonBlank(invoice.clientAddressSnapshot(), client.address()));
 
         BigDecimal subtotal = invoice.subtotal().setScale(2, RoundingMode.HALF_EVEN);
         BigDecimal taxAmount = invoice.total().subtract(subtotal)
@@ -188,17 +192,18 @@ public class PoiTlInvoiceDocxRenderer implements InvoiceDocxRenderer {
         return value != null ? value : "";
     }
 
-    private String formatAmount(BigDecimal amount, NumberFormat fmt) {
-        if (amount == null) {
-            return "";
+    private String firstNonBlank(String... candidates) {
+        for (String c : candidates) {
+            if (c != null && !c.isBlank()) return c;
         }
+        return "";
+    }
+
+    private String formatAmount(BigDecimal amount, NumberFormat fmt) {
         return fmt.format(amount.setScale(2, RoundingMode.HALF_EVEN));
     }
 
     private String formatTaxRate(BigDecimal taxRate) {
-        if (taxRate == null) {
-            return "0%";
-        }
         BigDecimal pct = taxRate.multiply(BigDecimal.valueOf(100)).stripTrailingZeros();
         return pct.toPlainString() + "%";
     }

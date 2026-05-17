@@ -157,6 +157,44 @@
       "name": "Clients",
       "item": [
         {
+          "name": "Dashboard KPI — Count Clients (size=1)",
+          "description": "Used by DashboardPage to read totalElements for the Total Clients KPI card. Added by FEAT-20260512-03.",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/clients?size=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "clients"],
+              "query": [
+                { "key": "size", "value": "1", "description": "Minimal page to read totalElements only" }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('totalElements is a number', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('totalElements').that.is.a('number');",
+                  "  pm.environment.set('kpiTotalClients', body.totalElements);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "List Clients",
           "request": {
             "method": "GET",
@@ -640,6 +678,326 @@
                   "pm.test('200 OK', () => pm.response.to.have.status(200));",
                   "pm.test('response has lastSentAt', () => {",
                   "  pm.expect(pm.response.json()).to.have.property('lastSentAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Invoice (FEAT-20260514-02)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 No Content', () => pm.response.to.have.status(204));",
+                  "pm.test('response body is empty', () => {",
+                  "  pm.expect(pm.response.text()).to.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Invoice Artifact Management (FEAT-20260514-02)",
+      "item": [
+        {
+          "name": "Preview Invoice PDF (live, no persist)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/preview-pdf",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "preview-pdf"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Content-Type is application/pdf', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
+                  "});",
+                  "pm.test('Content-Disposition is inline', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Disposition')).to.include('inline');",
+                  "});",
+                  "pm.test('Cache-Control is private no-store', () => {",
+                  "  pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Generate & Save PDF",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/generate?format=PDF&overwrite=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "generate"],
+              "query": [
+                { "key": "format", "value": "PDF", "description": "PDF or DOCX" },
+                { "key": "overwrite", "value": "false", "description": "true to replace existing artefact (Regenerate)" }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('response has artifact metadata', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('format').that.eql('PDF');",
+                  "  pm.expect(body).to.have.property('generatedAt');",
+                  "  pm.expect(body).to.have.property('sizeBytes').that.is.a('number');",
+                  "  pm.expect(body).to.have.property('sha256').that.is.a('string').with.lengthOf(64);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Generate & Save DOCX",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/generate?format=DOCX&overwrite=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "generate"],
+              "query": [
+                { "key": "format", "value": "DOCX", "description": "PDF or DOCX" },
+                { "key": "overwrite", "value": "false", "description": "true to replace existing artefact (Regenerate)" }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('response has artifact metadata', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('format').that.eql('DOCX');",
+                  "  pm.expect(body).to.have.property('generatedAt');",
+                  "  pm.expect(body).to.have.property('sizeBytes').that.is.a('number');",
+                  "  pm.expect(body).to.have.property('sha256').that.is.a('string').with.lengthOf(64);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Regenerate PDF (overwrite=true)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/generate?format=PDF&overwrite=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "generate"],
+              "query": [
+                { "key": "format", "value": "PDF" },
+                { "key": "overwrite", "value": "true", "description": "Regenerate flow — replaces existing artefact" }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "pm.test('response has updated generatedAt', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('generatedAt');",
+                  "  pm.expect(body).to.have.property('sha256');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Download Saved PDF",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/generated?format=PDF",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "generated"],
+              "query": [
+                { "key": "format", "value": "PDF", "description": "PDF or DOCX" }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Content-Type is application/pdf', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
+                  "});",
+                  "pm.test('Content-Disposition is attachment', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Disposition')).to.include('attachment');",
+                  "});",
+                  "pm.test('Cache-Control is private no-store', () => {",
+                  "  pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Download Saved DOCX",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/generated?format=DOCX",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "generated"],
+              "query": [
+                { "key": "format", "value": "DOCX", "description": "PDF or DOCX" }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Content-Type is DOCX', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('wordprocessingml.document');",
+                  "});",
+                  "pm.test('Content-Disposition is attachment', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Disposition')).to.include('attachment');",
+                  "});",
+                  "pm.test('Cache-Control is private no-store', () => {",
+                  "  pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Generated Artifacts Metadata",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/generated/metadata",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "generated", "metadata"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('response has pdf and docx keys', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('pdf');",
+                  "  pm.expect(body).to.have.property('docx');",
+                  "});",
+                  "pm.test('non-null entries have expected fields', () => {",
+                  "  const body = pm.response.json();",
+                  "  ['pdf', 'docx'].forEach(key => {",
+                  "    if (body[key] !== null) {",
+                  "      pm.expect(body[key]).to.have.property('format');",
+                  "      pm.expect(body[key]).to.have.property('generatedAt');",
+                  "      pm.expect(body[key]).to.have.property('sizeBytes').that.is.a('number');",
+                  "      pm.expect(body[key]).to.have.property('sha256').that.is.a('string');",
+                  "    }",
+                  "  });",
                   "});"
                 ]
               }

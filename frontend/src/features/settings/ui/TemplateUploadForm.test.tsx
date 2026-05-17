@@ -105,6 +105,17 @@ describe('TemplateUploadForm', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
   });
 
+  it('upload button is disabled when file input is cleared after selection', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const input = screen.getByTestId('template-file-input');
+    await user.upload(input, makeDocxFile());
+    expect(screen.getByTestId('btn-upload-template')).not.toBeDisabled();
+    // Clear by uploading empty file list via fireEvent
+    fireEvent.change(input, { target: { files: [] } });
+    expect(screen.getByTestId('btn-upload-template')).toBeDisabled();
+  });
+
   it('disables button while upload is pending', async () => {
     let resolveUpload!: () => void;
     server.use(

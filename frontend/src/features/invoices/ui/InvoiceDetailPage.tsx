@@ -2,12 +2,16 @@ import { useParams, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft } from 'lucide-react';
 import { useInvoice } from '../api/useInvoice';
-import { ViewPdfButton } from './ViewPdfButton';
+import { useGeneratedArtifactsMetadata } from '../api/useGeneratedArtifactsMetadata';
 import { DownloadInvoiceMenu } from './DownloadInvoiceMenu';
 import { SendInvoiceButton } from './SendInvoiceButton';
 import { InvoiceSentBadge } from './InvoiceSentBadge';
 import { StatusBadge } from './StatusBadge';
 import { MarkAsPaidButton } from './MarkAsPaidButton';
+import { PreviewInvoiceButton } from './PreviewInvoiceButton';
+import { ViewPdfButton } from './ViewPdfButton';
+import { GenerateInvoiceButton } from './GenerateInvoiceButton';
+import { GeneratedArtifactBadge } from './GeneratedArtifactBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
@@ -16,6 +20,9 @@ export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const { data: invoice, loading, error, refetch } = useInvoice(id ?? null);
+  const { data: artifactsMetadata, refetch: refetchMetadata } = useGeneratedArtifactsMetadata(
+    id ?? null,
+  );
 
   if (loading) {
     return (
@@ -153,7 +160,14 @@ export function InvoiceDetailPage() {
       {/* Action row */}
       <div className="flex items-center gap-3 flex-wrap" data-testid="invoice-action-row">
         <ViewPdfButton invoiceId={invoice.id} invoiceNumber={invoice.number} />
-        <DownloadInvoiceMenu invoiceId={invoice.id} invoiceNumber={invoice.number} />
+        <PreviewInvoiceButton invoiceId={invoice.id} invoiceNumber={invoice.number} />
+        <GenerateInvoiceButton invoiceId={invoice.id} onGenerated={() => void refetchMetadata()} />
+        <DownloadInvoiceMenu
+          invoiceId={invoice.id}
+          invoiceNumber={invoice.number}
+          metadata={artifactsMetadata}
+          onRegenerated={() => void refetchMetadata()}
+        />
         <SendInvoiceButton
           invoiceId={invoice.id}
           hasRecipient={!!invoice.clientEmail}
@@ -164,6 +178,7 @@ export function InvoiceDetailPage() {
           status={invoice.status}
           onPaid={() => void refetch()}
         />
+        <GeneratedArtifactBadge metadata={artifactsMetadata} />
         <InvoiceSentBadge lastSentAt={invoice.lastSentAt} />
       </div>
     </div>

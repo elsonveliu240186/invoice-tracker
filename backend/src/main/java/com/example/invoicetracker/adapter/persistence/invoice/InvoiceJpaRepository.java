@@ -34,6 +34,10 @@ public interface InvoiceJpaRepository extends JpaRepository<InvoiceEntity, UUID>
         + "WHERE i.id = :id AND i.deletedAt IS NULL AND i.status = 'DRAFT'")
     int markSentIfDraft(@Param("id") UUID id);
 
+    @Modifying
+    @Query("UPDATE InvoiceEntity i SET i.deletedAt = :ts WHERE i.id = :id AND i.deletedAt IS NULL")
+    int softDelete(@Param("id") UUID id, @Param("ts") Instant ts);
+
     @EntityGraph(attributePaths = "lines")
     @Query(
         "SELECT i FROM InvoiceEntity i WHERE i.deletedAt IS NULL "
@@ -91,4 +95,24 @@ public interface InvoiceJpaRepository extends JpaRepository<InvoiceEntity, UUID>
         nativeQuery = true
     )
     List<Object[]> revenueByMonth(@Param("months") int months);
+
+    /**
+     * Returns the maximum invoice number for the given year prefix.
+     * Numbers are expected in the format {@code INV-YYYY-NNNN}.
+     *
+     * @param yearPrefix e.g. "INV-2026-"
+     * @return the max number string, or null if none exist
+     */
+    @Query("SELECT MAX(i.number) FROM InvoiceEntity i "
+        + "WHERE i.deletedAt IS NULL AND i.number LIKE :yearPrefix")
+    String findMaxNumberByYearPrefix(@Param("yearPrefix") String yearPrefix);
+
+    /**
+     * Acquires a Postgres advisory transaction lock to serialise concurrent invoice numbering.
+     *
+     * @param lockKey the lock key (hashtext of a constant string + year)
+     */
+    @Modifying
+    @Query(value = "SELECT pg_advisory_xact_lock(:lockKey)", nativeQuery = true)
+    void acquireAdvisoryLock(@Param("lockKey") long lockKey);
 }

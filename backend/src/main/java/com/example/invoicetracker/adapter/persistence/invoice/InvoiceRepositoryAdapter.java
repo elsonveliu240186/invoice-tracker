@@ -95,6 +95,15 @@ public class InvoiceRepositoryAdapter implements InvoiceRepository {
     }
 
     @Override
+    @Transactional
+    public void softDelete(UUID id) {
+        int updated = jpaRepository.softDelete(id, Instant.now());
+        if (updated == 0) {
+            throw new InvoiceNotFoundException(id);
+        }
+    }
+
+    @Override
     public List<Object[]> countByStatus() {
         return jpaRepository.countByStatus();
     }
@@ -107,5 +116,22 @@ public class InvoiceRepositoryAdapter implements InvoiceRepository {
     @Override
     public List<Object[]> revenueByMonth(int months) {
         return jpaRepository.revenueByMonth(months);
+    }
+
+    @Override
+    @Transactional
+    public Invoice update(Invoice invoice) {
+        InvoiceEntity managed = entityManager.find(InvoiceEntity.class, invoice.id());
+        if (managed == null || managed.getDeletedAt() != null) {
+            throw new InvoiceNotFoundException(invoice.id());
+        }
+        mapper.updateEntity(managed, invoice);
+        return mapper.toDomain(managed);
+    }
+
+    @Override
+    public String findMaxNumberForYear(int year) {
+        String prefix = "INV-" + year + "-%";
+        return jpaRepository.findMaxNumberByYearPrefix(prefix);
     }
 }

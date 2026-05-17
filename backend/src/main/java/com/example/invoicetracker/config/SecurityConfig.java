@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
  * Security configuration: HTTP Basic for all /api/v1/** endpoints.
@@ -32,9 +33,13 @@ public class SecurityConfig {
     private String defaultUserPassword;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(
+        HttpSecurity http,
+        AuthRateLimitFilter authRateLimitFilter
+    ) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
+            .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers(
                     "/api/v1/auth/**",

@@ -407,3 +407,176 @@ sequenceDiagram
     Hook-->>FE: refetch invoice
     FE-->>U: badge flips to PAID, button hides, toast "Invoice marked as paid"
 ```
+
+---
+
+### FEAT-20260514-02 — Invoice template editor and full lifecycle
+
+#### 4a. Happy path — preview, generate, download
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant FE as InvoiceDetailPage
+    participant Prev as PreviewInvoiceButton
+    participant Gen as GenerateInvoiceButton
+    participant DL as DownloadInvoiceMenu
+    participant API as Backend
+    participant SVC as InvoiceArtifactService
+    participant FS as Filesystem
+    participant DB as Postgres
+    U->>FE: open /invoices/:id
+    FE->>API: GET /api/v1/invoices/{id}
+    FE->>API: GET /api/v1/invoices/{id}/generated/metadata
+    API-->>FE: { pdf: null, docx: null }
+    U->>Prev: click Preview
+    Prev->>API: GET /api/v1/invoices/{id}/preview-pdf
+    API->>SVC: previewPdf(id)
+    SVC->>SVC: render on-the-fly (no persist)
+    API-->>Prev: 200 application/pdf (blob)
+    Prev-->>U: iframe blob URL in modal
+    U->>Gen: click "Generate & Save" → PDF
+    Gen->>API: POST /api/v1/invoices/{id}/generate?format=PDF
+    API->>SVC: generate(id, PDF)
+    SVC->>SVC: pdfRenderer.render(...)
+    SVC->>FS: write ./generated/invoices/{id}.pdf
+    SVC->>DB: upsert invoice_generated_artifacts (id, PDF, path, size, sha256)
+    API-->>Gen: 201 { format:PDF, generatedAt, sizeBytes }
+    Gen-->>FE: refetch metadata → badge "Generated PDF · ..."
+    U->>DL: Download → PDF
+    DL->>API: GET /api/v1/invoices/{id}/generated?format=PDF
+    API->>SVC: streamGenerated(id, PDF)
+    SVC->>DB: lookup row
+    SVC->>FS: read file
+    API-->>DL: 200 application/pdf
+    DL-->>U: browser save dialog
+```
+
+#### 4b. Send email with saved PDF
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant FE as InvoiceDetailPage
+    participant Send as SendInvoiceButton
+    participant API as Backend
+    participant INV_SVC as InvoiceService
+    participant ART_SVC as InvoiceArtifactService
+    participant FS as Filesystem
+    participant MAIL as InvoiceMailer
+    participant SMTP as MailHog
+    U->>Send: click "Send by Email" (confirm dialog)
+    Send->>API: POST /api/v1/invoices/{id}/send-email
+    API->>INV_SVC: sendEmail(id)
+    INV_SVC->>ART_SVC: findPdfBytes(id)
+    ART_SVC->>FS: read ./generated/invoices/{id}.pdf
+    FS-->>ART_SVC: byte[]
+    ART_SVC-->>INV_SVC: Optional<byte[]> present
+    Note over INV_SVC: skips pdfRenderer.render — uses saved bytes
+    INV_SVC->>MAIL: send(to=client.email, pdfBytes)
+    MAIL->>SMTP: SMTP DATA
+    SMTP-->>MAIL: 250 OK
+    INV_SVC->>INV_SVC: updateLastSentAt(id, now)
+    API-->>Send: 200 { lastSentAt }
+    Send-->>U: toast "Sent" + badge "Sent on …"
+```
+
+#### 4c. Edge case — regenerate after template change
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant Tpl as InvoiceTemplateManagerPage
+    participant FE as InvoiceDetailPage
+    participant API as Backend
+    participant SVC as InvoiceArtifactService
+    U->>Tpl: upload new template.docx
+    Tpl->>API: POST /api/v1/settings/invoice-template
+    API-->>Tpl: 200 (template replaced)
+    Note over Tpl,API: existing artefacts are NOT auto-invalidated
+    U->>FE: open /invoices/:id
+    FE-->>U: badge still shows old "Generated PDF · 12 May"
+    U->>FE: click "Regenerate" in DownloadMenu
+    FE->>API: POST /api/v1/invoices/{id}/generate?format=PDF&overwrite=true
+    API->>SVC: generate(id, PDF, overwrite=true)
+    SVC->>SVC: render with new template
+    SVC->>API: persist; bump generated_at
+    API-->>FE: 200 { format:PDF, generatedAt: now, sha256 changed }
+    FE-->>U: badge updated, toast "Regenerated"
+```
+
+---
+
+### FEAT-20260516-01 — Expense tracking with category dashboard
+
+#### 4a. Create expense — dashboard refresh (happy path)
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant FE as ExpensesPage
+    participant Sheet as ExpenseFormSheet
+    participant API as React hooks
+    participant BE as ExpenseController
+    participant SVC as ExpenseService
+    participant DB as Postgres
+    U->>FE: click "+ New Expense"
+    FE->>Sheet: open(editing=null)
+    U->>Sheet: fill amount/category/date, submit
+    Sheet->>Sheet: Zod parse — form values
+    Sheet->>API: useCreateExpense.mutate(payload)
+    API->>BE: POST /api/v1/expenses (Basic auth)
+    BE->>BE: @Valid CreateExpenseRequest
+    BE->>SVC: ExpenseService.create(cmd)
+    SVC->>DB: INSERT into expenses
+    DB-->>SVC: 1 row
+    SVC-->>BE: Expense domain record
+    BE-->>API: 201 + ExpenseResponse + Location
+    API-->>Sheet: resolved
+    Sheet->>FE: onClose + onSubmitted
+    FE->>API: useExpenses.refetch() + useExpenseSummary.refetch()
+    API->>BE: GET /api/v1/expenses?... and /summary?month=...
+    BE-->>API: updated list + summary
+    API-->>FE: new state
+    FE-->>U: toast "Expense created", updated cards + table
+```
+
+#### 4b. Edge case — change month (no expenses present)
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant FE as ExpensesPage
+    participant Dash as ExpenseDashboard
+    participant API as useExpenseSummary
+    participant BE as ExpenseController
+    U->>Dash: select month=2025-12
+    Dash->>FE: onMonthChange("2025-12")
+    FE->>API: refetch with month=2025-12
+    API->>BE: GET /api/v1/expenses/summary?month=2025-12
+    BE-->>API: {grandTotal:"0.00", totalCount:0, byCategory:[]}
+    API-->>FE: empty summary
+    FE-->>U: render EmptyState "No expenses for December 2025" inside dashboard area; expense table also filtered to that month shows empty row
+```
+
+#### 4c. Auth rate-limit — brute-force protection
+
+```mermaid
+sequenceDiagram
+    actor A as Attacker
+    participant Filter as AuthRateLimitFilter
+    participant BE as AuthController
+    participant Bucket as Bucket4j (in-memory)
+    loop First 5 requests in 1-minute window
+        A->>Filter: POST /api/v1/auth/login
+        Filter->>Bucket: tryConsume(1) for IP
+        Bucket-->>Filter: true (tokens remain)
+        Filter->>BE: pass through
+        BE-->>A: 401 Unauthorized
+    end
+    A->>Filter: POST /api/v1/auth/login (6th attempt)
+    Filter->>Bucket: tryConsume(1) for IP
+    Bucket-->>Filter: false (bucket empty)
+    Filter-->>A: 429 Too Many Requests {code:"RATE_LIMIT_EXCEEDED"}
+    Note over Filter: BE is never reached
+```

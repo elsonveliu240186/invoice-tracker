@@ -41,6 +41,10 @@ app:
     template-path: ./templates/invoice-template.docx
     max-template-bytes: 5242880
     classpath-default: templates/invoice-template.docx
+    generated:
+      path: ./generated/invoices
+      max-bytes-per-artifact: 26214400
+      enabled: true
   libreoffice:
     binary: ${LIBREOFFICE_BIN:soffice}
     timeout-seconds: 20

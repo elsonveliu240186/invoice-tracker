@@ -35,14 +35,35 @@ function stubClients(page: import('@playwright/test').Page) {
   );
 }
 
+// Stub dashboard stats so the dashboard page renders without errors.
+function stubDashboardStats(page: import('@playwright/test').Page) {
+  return page.route('**/api/v1/dashboard/stats', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        totalInvoices: 0,
+        draftCount: 0,
+        sentCount: 0,
+        paidCount: 0,
+        totalRevenue: 0,
+        paidRevenue: 0,
+        pendingRevenue: 0,
+        revenueByMonth: [],
+      }),
+    }),
+  );
+}
+
 test.describe('smoke', () => {
   test.beforeEach(async ({ page }) => {
     await seedAuth(page);
+    await stubDashboardStats(page);
   });
 
   test('home page renders', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByTestId('home-page')).toBeVisible();
+    await expect(page.getByTestId('dashboard-page')).toBeVisible();
     await expect(page.getByRole('heading', { name: /welcome/i })).toBeVisible();
   });
 
@@ -56,7 +77,7 @@ test.describe('smoke', () => {
       window.localStorage.removeItem('it.theme');
     });
     await page.goto('/');
-    await page.waitForSelector('[data-testid="home-page"]');
+    await page.waitForSelector('[data-testid="dashboard-page"]');
 
     const themeBtn = page.getByRole('button', { name: /theme/i });
     await expect(themeBtn).toBeVisible();
@@ -76,7 +97,7 @@ test.describe('smoke', () => {
   test('/clients route is navigable via sidebar', async ({ page }) => {
     await stubClients(page);
     await page.goto('/');
-    await page.waitForSelector('[data-testid="home-page"]');
+    await page.waitForSelector('[data-testid="dashboard-page"]');
 
     await page
       .getByRole('link', { name: /clients/i })

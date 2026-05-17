@@ -1,4 +1,268 @@
 ignore:
-  - package:
+  # False positives: the flatted npm package (node_modules/.pnpm/flatted@3.4.2/...)
+  # includes a Go reference implementation file (golang/pkg/flatted/flatted.go).
+  # Grype inferred stdlib go1.20.12 from this Go source, but there is no compiled
+  # Go binary in the project. The application is Java/Spring Boot + TypeScript.
+  # All Go stdlib CVEs below are not applicable to this project.
+  # Suppression owner: security-team
+  # Expiry: 2026-08-16 (90 days from 2026-05-16)
+  - vulnerability: CVE-2023-45288
+    package:
+      name: stdlib
       type: go-module
-    reason: "Go runtime CVEs from tooling binaries inside node_modules (esbuild, vite internal go binaries). Project has zero Go source files and no go.mod."
+  - vulnerability: CVE-2024-24787
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2024-24784
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2024-24791
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2023-24531
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2024-24785
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2024-24783
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2023-45289
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-22871
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2023-45290
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2024-34156
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2024-24790
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2024-34158
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2024-45336
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2024-45341
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-4673
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-39820
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2024-34155
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-25679
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-61725
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-61723
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-61726
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-0913
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-58186
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-27143
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-47906
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-68121
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-42499
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-58185
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-39836
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-32281
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-32280
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-32283
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-47907
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-58187
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-33814
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-33811
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-61729
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-27140
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-47912
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-61728
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-61724
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-22866
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-58189
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-58183
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-61731
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-39817
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-27142
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-39826
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-58188
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-39825
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-32289
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-42501
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-61732
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-4674
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-39823
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-32282
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-61730
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-39819
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-61727
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-27144
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2024-24789
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-32288
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2026-27139
+    package:
+      name: stdlib
+      type: go-module
+  - vulnerability: CVE-2025-22873
+    package:
+      name: stdlib
+      type: go-module

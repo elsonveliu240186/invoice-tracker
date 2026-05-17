@@ -111,7 +111,8 @@ class PoiTlInvoiceDocxRendererTest {
             Instant.now(),
             Instant.now(),
             null,
-            null
+            null,
+            null, null, null, null, null, null, null, null
         );
         var client = InvoiceFixtures.client();
 
@@ -140,7 +141,8 @@ class PoiTlInvoiceDocxRendererTest {
             Instant.now(),
             Instant.now(),
             null,
-            null
+            null,
+            null, null, null, null, null, null, null, null
         );
         var client = InvoiceFixtures.client();
 
@@ -249,7 +251,8 @@ class PoiTlInvoiceDocxRendererTest {
             null, null,
             Collections.emptyList(),
             java.math.BigDecimal.ZERO, InvoiceStatus.DRAFT,
-            null, Instant.now(), Instant.now(), null, null
+            null, Instant.now(), Instant.now(), null, null,
+            null, null, null, null, null, null, null, null
         );
         var client = InvoiceFixtures.client();
 
@@ -258,6 +261,73 @@ class PoiTlInvoiceDocxRendererTest {
 
         byte[] docxBytes = renderer.render(nullDatesInvoice, client, company);
         assertThat(docxBytes).isNotEmpty();
+    }
+
+    @Test
+    void snapshot_fields_take_precedence_over_live_client_data() throws IOException {
+        // Invoice has snapshot "Snapshot Client Name"; live client has different name "Live Client"
+        UUID invoiceId = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
+        Invoice invoiceWithSnapshot = new Invoice(
+            invoiceId, "INV-SNAP-001", clientId,
+            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 2, 1),
+            List.of(InvoiceFixtures.line("Widget", 1, "50.00")),
+            new BigDecimal("0.10"), InvoiceStatus.DRAFT,
+            null, Instant.now(), Instant.now(), null, null,
+            "Snapshot Client Name", "Snapshot Client Address",
+            "Snapshot Company Name", "Snapshot Company Address",
+            "VAT-SNAP", "IBAN-SNAP", "SWIFT-SNAP", "Bank-SNAP"
+        );
+        var liveClient = InvoiceFixtures.client(clientId, "Live Client", "live@example.com");
+
+        when(templateStore.openTemplate())
+            .thenReturn(new ByteArrayInputStream(TemplateFixtures.minimalDocx()));
+
+        byte[] docxBytes = renderer.render(invoiceWithSnapshot, liveClient, company);
+
+        try (XWPFDocument doc = new XWPFDocument(new ByteArrayInputStream(docxBytes))) {
+            String allText = doc.getParagraphs().stream()
+                .map(XWPFParagraph::getText)
+                .reduce("", (a, b) -> a + " " + b)
+                + doc.getTables().stream()
+                    .flatMap(t -> t.getRows().stream())
+                    .flatMap(r -> r.getTableCells().stream())
+                    .map(c -> c.getText())
+                    .reduce("", (a, b) -> a + " " + b);
+            assertThat(allText).contains("Snapshot Client Name");
+            assertThat(allText).doesNotContain("Live Client");
+        }
+    }
+
+    @Test
+    void falls_back_to_live_data_when_snapshot_is_null() throws IOException {
+        // Invoice has null snapshots — should fall back to live client / company data
+        Invoice invoiceNullSnapshots = new Invoice(
+            UUID.randomUUID(), "INV-LIVE-001", UUID.randomUUID(),
+            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 2, 1),
+            List.of(InvoiceFixtures.line("Service", 1, "100.00")),
+            new BigDecimal("0.20"), InvoiceStatus.DRAFT,
+            null, Instant.now(), Instant.now(), null, null,
+            null, null, null, null, null, null, null, null
+        );
+        var liveClient = InvoiceFixtures.client(UUID.randomUUID(), "Live Fallback Corp", "live@example.com");
+
+        when(templateStore.openTemplate())
+            .thenReturn(new ByteArrayInputStream(TemplateFixtures.minimalDocx()));
+
+        byte[] docxBytes = renderer.render(invoiceNullSnapshots, liveClient, company);
+
+        try (XWPFDocument doc = new XWPFDocument(new ByteArrayInputStream(docxBytes))) {
+            String allText = doc.getParagraphs().stream()
+                .map(XWPFParagraph::getText)
+                .reduce("", (a, b) -> a + " " + b)
+                + doc.getTables().stream()
+                    .flatMap(t -> t.getRows().stream())
+                    .flatMap(r -> r.getTableCells().stream())
+                    .map(c -> c.getText())
+                    .reduce("", (a, b) -> a + " " + b);
+            assertThat(allText).contains("Live Fallback Corp");
+        }
     }
 
     @Test
@@ -274,5 +344,6 @@ class PoiTlInvoiceDocxRendererTest {
         assertThat(docxBytes[0] & 0xFF).isEqualTo(0x50);
         assertThat(docxBytes[1] & 0xFF).isEqualTo(0x4B);
     }
+
 
 }

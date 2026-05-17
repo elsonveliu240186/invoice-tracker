@@ -67,6 +67,7 @@ class ClientControllerTest {
     private Client makeClient(UUID id) {
         Instant now = Instant.now();
         return new Client(id, "Acme Corp", "acme@example.com", "+1 555-0100", "123 Main St",
+            "", "", "", "", "", "",
             now, now, null);
     }
 

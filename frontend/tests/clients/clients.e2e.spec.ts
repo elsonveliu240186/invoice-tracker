@@ -603,9 +603,10 @@ test.describe('smoke: regression', () => {
   });
 
   test('home page still renders correctly (AC-9 adjacent regression)', async ({ page }) => {
+    await setupApiMock(page, { onList: () => pageOf([ACME, GLOBEX]) });
     await page.goto('/');
     await expect(page.getByTestId('home-page')).toBeVisible();
-    await expect(page.getByRole('heading', { name: /welcome/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
     await expect(page.getByTestId('link-clients')).toBeVisible();
   });
 });

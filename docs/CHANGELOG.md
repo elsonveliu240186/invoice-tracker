@@ -5,6 +5,89 @@ All notable changes to this project will be documented in this file. Format: [Ke
 ## [Unreleased]
 
 ### Added
+- **Expense tracking with category dashboard + auth rate-limiting** (FEAT-20260516-01) — _no breaking changes_:
+  New `expenses` table via Flyway `V12__create_expenses.sql` (`id UUID PK`, `amount NUMERIC(10,2)`,
+  `category VARCHAR(50) CHECK IN (FOOD_DRINK,TRANSPORT,HOUSING,HEALTH,ENTERTAINMENT,SHOPPING,TRAVEL,EDUCATION,UTILITIES,OTHER)`,
+  `description VARCHAR(500)`, `expense_date DATE`, `created_at/updated_at TIMESTAMPTZ`, `deleted_at TIMESTAMPTZ`,
+  `version BIGINT`; three partial indexes: `ix_expenses_date_active`, `ix_expenses_category_active`).
+  Six new REST endpoints at `/api/v1/expenses`: `GET` (paginated list with optional `category`/`dateFrom`/`dateTo` filters,
+  size clamped to [1,100]), `POST` (201 + Location), `GET /{id}`, `PUT /{id}` (full replacement), `DELETE /{id}` (soft-delete,
+  204), `GET /summary?month=YYYY-MM` (monthly aggregates: `grandTotal`, `totalCount`,
+  `byCategory: [{category,total,count}]` sorted by `total DESC`; defaults to current UTC month). All endpoints
+  require HTTP Basic authentication. Auth rate-limiting: `AuthRateLimitFilter` (extends `OncePerRequestFilter`)
+  registered before `UsernamePasswordAuthenticationFilter` applies Bucket4j 8.10.1 per-IP sliding-window
+  limit of 5 requests per minute to `/api/v1/auth/login` and `/api/v1/auth/register`; exhaustion returns
+  `429 RATE_LIMIT_EXCEEDED` with structured JSON body. Frontend: new `/expenses` route and `Expenses` sidebar
+  item (Wallet icon); `ExpensesPage` composes `ExpenseDashboard` (month picker + grand-total card + per-category
+  cards), `ExpenseTable` (Date, Description, Category badge+icon, Amount right-aligned, edit/delete actions),
+  `ExpenseFormSheet` (create/edit modal, same pattern as `InvoiceFormSheet`), and `ConfirmDeleteDialog`; 10
+  `CategoryBadge`/`CategoryIcon` pairs (lucide icons per category); Zod schema mirrors all backend validation
+  rules; all strings via `en.json` i18n keys (`nav.expenses`, `expenses.*`); MSW handlers for all six expense
+  endpoints. Invoice `PUT /{id}` update endpoint added (previously CRUD was missing update). Backend JaCoCo
+  ≥ 90%. Frontend Vitest 911 tests passing. Security: 2 iterations to pass (iteration 1 fail: Git conflict
+  markers in 4 files + missing auth rate-limiting; iteration 2 fail: OWASP DC CVE-2018-1258 false positive
+  + missing rate-limiting; iteration 3 fail: rate-limiting still absent; iteration 4 pass: rate-limiting
+  implemented, all OWASP Top 10 mitigated). QA: 24 Playwright specs, all passed (30.5 s). `CVE-2018-1258`
+  false positive suppressed in `backend/owasp-suppressions.xml` (Spring Framework 5.0.5 CPE mismatch against
+  spring-security-core 7.x). Rate-limit bucket store is in-memory (`ConcurrentHashMap`) — resets on restart
+  and does not span pod replicas; Redis-backed migration tracked as follow-up.
+
+- **Invoice template editor and full lifecycle** (FEAT-20260514-02) — _no breaking changes_:
+  Closes the invoice delivery lifecycle end-to-end. Backend: new Flyway migration
+  `V8__create_invoice_generated_artifacts.sql` — `invoice_generated_artifacts` table
+  (`id UUID PK`, `invoice_id FK`, `format VARCHAR(8) CHECK IN ('PDF','DOCX')`,
+  `relative_path VARCHAR(512)`, `size_bytes BIGINT`, `sha256 CHAR(64)`,
+  `generated_at TIMESTAMPTZ`, `deleted_at TIMESTAMPTZ`, `version BIGINT`; partial unique
+  `ux_iga_invoice_format_active (invoice_id, format) WHERE deleted_at IS NULL`);
+  new `InvoiceArtifactService` wrapping `InvoiceRenderService` + `FilesystemGeneratedArtifactStore`
+  + `GeneratedArtifactRepositoryAdapter`; four new REST endpoints:
+  `GET /api/v1/invoices/{id}/preview-pdf` (live render, no persist, `Cache-Control: private, no-store`),
+  `POST /api/v1/invoices/{id}/generate?format=PDF|DOCX&overwrite=false` → `201 GeneratedArtifactResponse`
+  (`{ format, generatedAt, sizeBytes, sha256 }`),
+  `GET /api/v1/invoices/{id}/generated?format=PDF|DOCX` → streams saved bytes,
+  `GET /api/v1/invoices/{id}/generated/metadata` → `InvoiceArtifactsMetadataResponse`
+  (`{ pdf: GeneratedArtifactResponse|null, docx: GeneratedArtifactResponse|null }`);
+  new `DELETE /api/v1/invoices/{id}` → `204` (soft-deletes invoice + calls
+  `artifactService.deleteAll(id)` to orphan artefact rows and remove on-disk files);
+  `InvoiceService.sendEmail` updated to call `artifactService.findPdfBytes(id)` first —
+  reuses persisted PDF when present, falls back to live render; three new error codes:
+  `GENERATED_ARTIFACT_NOT_FOUND` (404), `ARTIFACT_ALREADY_EXISTS` (409), `ARTIFACT_TOO_LARGE` (413);
+  `GeneratedArtifactProperties` (`@ConfigurationProperties("app.invoice.generated")`) with
+  `path` (default `./generated/invoices`), `maxBytesPerArtifact` (25 MiB), `enabled`;
+  Docker named volume `generated_invoices:/app/generated/invoices`; Dockerfile creates
+  `/app/generated/invoices` with non-root `appuser` ownership;
+  security fix: `FilesystemInvoiceTemplateStore.validateZipStructure()` now rejects DOCX
+  files containing `word/vbaProject.bin` (`415 INVALID_TEMPLATE_TYPE "DOCX contains VBA macros"`).
+  Frontend: new route `/invoices/template` → `InvoiceTemplateManagerPage` (reuses
+  `TemplateUploadForm` + new `PlaceholderReferenceCard` with copy buttons for all
+  `{{company.*}}`, `{{client.*}}`, `{{invoice.*}}`, `{{lines}}` tokens; back link to
+  `/invoices`); "Manage template" link added to `InvoicesListPage` toolbar and sidebar
+  child nav item `nav.invoiceTemplate`; `PreviewInvoiceButton` — shadcn `Dialog` fetching
+  blob via `getPreviewPdfBlobUrl(id)`, `<iframe sandbox="allow-same-origin">`, revoking
+  object URL on unmount, "Open in new tab" + "Download PDF" + "Download DOCX" actions;
+  `GenerateInvoiceButton` — shadcn `DropdownMenu` ("Generate PDF" / "Generate DOCX"),
+  loading state per format, Sonner toast on success/failure, `onGenerated` callback;
+  `GeneratedArtifactBadge` — small `Badge` "Generated PDF · 14 May 2026" /
+  "Generated DOCX · ..." (hidden when neither present); `DownloadInvoiceMenu` extended —
+  accepts `metadata: InvoiceArtifactsMetadata`; when saved artefact exists labels item
+  "Download saved PDF/DOCX" and hits `GET /generated?format=...`; adds "Regenerate"
+  item calling `generateArtifact(id, fmt, true)` (overwrite); falls back to on-the-fly
+  `/pdf` and `/docx` endpoints when no saved artefact; `SendInvoiceButton` updated —
+  adds subtitle "Will use saved PDF if generated, otherwise renders live." to confirm
+  dialog (backend already auto-selects); `InvoiceDetailPage` action row order:
+  `PreviewInvoiceButton`, `GenerateInvoiceButton`, `DownloadInvoiceMenu`,
+  `SendInvoiceButton`, `MarkAsPaidButton`, `GeneratedArtifactBadge`, `InvoiceSentBadge`;
+  `generatedArtifactApi.ts` + `useGeneratedArtifactsMetadata` hook + `artifact.ts` types;
+  MSW handlers for all four new endpoints; i18n keys added under `invoices.preview.*`,
+  `invoices.generate.*`, `invoices.actions.*`, `invoices.template.*`,
+  `invoices.toast.generateSuccess/generateFailed/regenerated/previewFailed`,
+  `invoices.badge.generatedPdf/generatedDocx`, `nav.invoiceTemplate`. Coverage gates
+  maintained: backend JaCoCo 95%/95% lines/branches (278 unit + IT tests);
+  frontend Vitest 98.35%/92.22%/95.76%/98.35% (661 tests across 87 files).
+  Review required 2 iterations (1 failure — ESLint 5 errors, fixed).
+  Security required 1 iteration (1 required fix — VBA macro rejection, applied immediately).
+  QA passed first attempt: 245 specs, 163 pass, 17 skip (pre-existing), 0 new failures.
+
 - **Dashboard upgrade — stats, charts, centralized Coolors palette, invoice status, palette switcher** (FEAT-20260514-01) — _no breaking changes_:
   Full dashboard overhaul replacing the placeholder KPI page. Backend: `GET /api/v1/dashboard/stats`
   returns `{ totalInvoices, draftCount, sentCount, paidCount, totalRevenue, paidRevenue,

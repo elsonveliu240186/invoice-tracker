@@ -20,6 +20,27 @@ if (typeof URL.revokeObjectURL === 'undefined') {
   });
 }
 
+// ── Clipboard API stub ───────────────────────────────────────────────────────
+// jsdom does not implement navigator.clipboard; define a configurable stub so
+// individual tests can spy on writeText without Object.defineProperty failures.
+// Use try/catch: if the property is non-configurable in this jsdom version,
+// fall back to a direct assignment via Object.assign.
+try {
+  Object.defineProperty(navigator, 'clipboard', {
+    writable: true,
+    configurable: true,
+    value: {
+      writeText: vi.fn().mockResolvedValue(undefined),
+      readText: vi.fn().mockResolvedValue(''),
+    },
+  });
+} catch {
+  (navigator as unknown as Record<string, unknown>)['clipboard'] = {
+    writeText: vi.fn().mockResolvedValue(undefined),
+    readText: vi.fn().mockResolvedValue(''),
+  };
+}
+
 // ── matchMedia global stub ────────────────────────────────────────────────────
 // motion.ts calls window.matchMedia at module-evaluation time (for prefersReducedMotion).
 // We must stub it before any test file imports a component that depends on motion.ts.

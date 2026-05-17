@@ -180,6 +180,24 @@ class InvoiceTemplateControllerTest {
 
     @Test
     @WithMockUser
+    void upload_with_octet_stream_content_type_and_docx_extension_accepted() throws Exception {
+        // Cover: contentType != null && !equals(DOCX) but equals(OCTET_STREAM) → skip block
+        byte[] docxBytes = TemplateFixtures.minimalDocx();
+        MockMultipartFile file = new MockMultipartFile(
+            "file", "invoice-template.docx",
+            MediaType.APPLICATION_OCTET_STREAM_VALUE,
+            docxBytes);
+
+        when(templateStore.replace(any(), anyLong())).thenReturn(sampleMeta);
+
+        mvc.perform(multipart("/api/v1/settings/invoice-template")
+                .file(file)
+                .contentType(MediaType.MULTIPART_FORM_DATA))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser
     void upload_empty_file_returns_400() throws Exception {
         // Cover: file.isEmpty() → true branch in `file == null || file.isEmpty()`
         MockMultipartFile emptyFile = new MockMultipartFile(

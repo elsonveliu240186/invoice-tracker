@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, ExternalLink } from 'lucide-react';
+import { FileText, Download } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-import { getInvoicePdfUrl } from '../api/invoicesApi';
+import { usePdfBlobUrl } from '../api/usePdfBlobUrl';
+import { downloadInvoicePdf } from '../api/downloadInvoice';
 
 interface ViewPdfButtonProps {
   invoiceId: string;
@@ -13,7 +14,7 @@ interface ViewPdfButtonProps {
 export function ViewPdfButton({ invoiceId, invoiceNumber }: ViewPdfButtonProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const pdfUrl = getInvoicePdfUrl(invoiceId);
+  const { blobUrl, loading, error } = usePdfBlobUrl(invoiceId, open);
 
   return (
     <>
@@ -30,24 +31,34 @@ export function ViewPdfButton({ invoiceId, invoiceNumber }: ViewPdfButtonProps) 
             </DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-end mb-2">
-            <a
-              href={pdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => void downloadInvoicePdf(invoiceId, invoiceNumber)}
               className="inline-flex items-center gap-1 text-sm text-[var(--color-primary)] hover:underline"
               data-testid="link-open-in-new-tab"
             >
-              <ExternalLink className="h-3 w-3" aria-hidden="true" />
-              {t('invoices.actions.openInNewTab')}
-            </a>
+              <Download className="h-3 w-3" aria-hidden="true" />
+              {t('invoices.actions.download')}
+            </button>
           </div>
-          <iframe
-            src={pdfUrl}
-            title={`Invoice ${invoiceNumber} PDF`}
-            className="flex-1 w-full border-0 rounded"
-            sandbox="allow-same-origin"
-            data-testid="pdf-iframe"
-          />
+          {loading && (
+            <div className="flex flex-1 items-center justify-center text-sm text-[var(--color-muted-foreground)]">
+              {t('common.loading')}
+            </div>
+          )}
+          {error && (
+            <div className="flex flex-1 items-center justify-center text-sm text-[var(--color-destructive)]">
+              {t('invoices.toast.previewFailed')}
+            </div>
+          )}
+          {blobUrl && (
+            <iframe
+              src={blobUrl}
+              title={`Invoice ${invoiceNumber} PDF`}
+              className="flex-1 w-full border-0 rounded"
+              data-testid="pdf-iframe"
+            />
+          )}
         </DialogContent>
       </Dialog>
     </>

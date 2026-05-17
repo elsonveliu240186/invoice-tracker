@@ -42,6 +42,8 @@ services:
       MAIL_STARTTLS: "false"
     ports:
       - "8080:8080"
+    volumes:
+      - generated_invoices:/app/generated/invoices
     depends_on:
       postgres:
         condition: service_healthy
@@ -67,3 +69,4 @@ services:
 
 volumes:
   pgdata:
+  generated_invoices:

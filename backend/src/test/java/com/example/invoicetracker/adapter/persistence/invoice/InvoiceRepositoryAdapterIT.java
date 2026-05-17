@@ -76,7 +76,15 @@ class InvoiceRepositoryAdapterIT {
             now,
             now,
             null,
-            null
+            null,
+            "Test Client",
+            "123 Main St",
+            "Test Corp",
+            "456 Business Ave",
+            "VAT123",
+            "IBAN456",
+            "SWIFT789",
+            "Test Bank"
         );
     }
 
@@ -138,7 +146,11 @@ class InvoiceRepositoryAdapterIT {
             saved.id(), saved.number(), saved.clientId(),
             saved.issueDate(), saved.dueDate(), saved.lines(),
             saved.taxRate(), InvoiceStatus.DRAFT, null, saved.createdAt(), saved.updatedAt(),
-            now, null);
+            now, null,
+            saved.clientNameSnapshot(), saved.clientAddressSnapshot(),
+            saved.companyNameSnapshot(), saved.companyAddressSnapshot(),
+            saved.companyVatSnapshot(), saved.companyIbanSnapshot(),
+            saved.companySwiftSnapshot(), saved.companyBankNameSnapshot());
         adapter.save(deleted);
 
         Optional<Invoice> found = adapter.findByIdWithLines(saved.id());
@@ -203,13 +215,15 @@ class InvoiceRepositoryAdapterIT {
             UUID.randomUUID(), "INV-REV-001", clientId,
             today, today.plusDays(30),
             List.of(new InvoiceLine(UUID.randomUUID(), "Svc", 1, new BigDecimal("100.00"), 0)),
-            BigDecimal.ZERO, InvoiceStatus.DRAFT, null, now, now, null, null
+            BigDecimal.ZERO, InvoiceStatus.DRAFT, null, now, now, null, null,
+            "Test Client", "", "Test Corp", "", "", "", "", ""
         );
         Invoice inv2 = new Invoice(
             UUID.randomUUID(), "INV-REV-002", clientId,
             today, today.plusDays(30),
             List.of(new InvoiceLine(UUID.randomUUID(), "Svc", 1, new BigDecimal("150.00"), 0)),
-            BigDecimal.ZERO, InvoiceStatus.DRAFT, null, now, now, null, null
+            BigDecimal.ZERO, InvoiceStatus.DRAFT, null, now, now, null, null,
+            "Test Client", "", "Test Corp", "", "", "", "", ""
         );
         adapter.save(inv1);
         adapter.save(inv2);
@@ -249,7 +263,8 @@ class InvoiceRepositoryAdapterIT {
         Invoice otherInv = new Invoice(UUID.randomUUID(), "INV-OTHER-001", otherClientId,
             LocalDate.now(), LocalDate.now().plusDays(30),
             List.of(new InvoiceLine(UUID.randomUUID(), "Item", 1, new BigDecimal("10.00"), 0)),
-            BigDecimal.ZERO, InvoiceStatus.DRAFT, null, now, now, null, null);
+            BigDecimal.ZERO, InvoiceStatus.DRAFT, null, now, now, null, null,
+            "Other Client", "", "Other Corp", "", "", "", "", "");
         adapter.save(otherInv);
 
         org.springframework.data.domain.Page<Invoice> result = adapter.findAll(

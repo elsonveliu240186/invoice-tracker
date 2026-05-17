@@ -1,12 +1,18 @@
 package com.example.invoicetracker.adapter.web.error;
 
 import com.example.invoicetracker.application.template.InvalidTemplateException;
+import com.example.invoicetracker.application.template.TemplateNotFoundException;
 import com.example.invoicetracker.application.template.TemplateTooLargeException;
 import com.example.invoicetracker.domain.UserEmailTakenException;
 import com.example.invoicetracker.domain.client.ClientEmailTakenException;
 import com.example.invoicetracker.domain.client.ClientNotFoundException;
+import com.example.invoicetracker.domain.expense.ExpenseNotFoundException;
+import com.example.invoicetracker.domain.invoice.ArtifactAlreadyExistsException;
+import com.example.invoicetracker.domain.invoice.ArtifactTooLargeException;
 import com.example.invoicetracker.domain.invoice.EmailDeliveryFailedException;
+import com.example.invoicetracker.domain.invoice.GeneratedArtifactNotFoundException;
 import com.example.invoicetracker.domain.invoice.InvoiceHasNoRecipientException;
+import com.example.invoicetracker.domain.invoice.InvoiceNotEditableException;
 import com.example.invoicetracker.domain.invoice.InvoiceNotFoundException;
 import com.example.invoicetracker.domain.invoice.InvoiceNumberTakenException;
 import com.example.invoicetracker.domain.invoice.PdfConversionFailedException;
@@ -18,11 +24,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
@@ -32,6 +40,32 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    /**
+     * Handles unreadable/malformed request bodies (400).
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ProblemDetail handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Bad Request");
+        problem.setDetail("Request body is malformed or contains an invalid value.");
+        problem.setProperty("code", "VALIDATION_FAILED");
+        return problem;
+    }
+
+    /**
+     * Handles type mismatch on method arguments, e.g. bad enum or date format in query param (400).
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ProblemDetail handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Bad Request");
+        problem.setDetail("Invalid value for parameter: " + ex.getName());
+        problem.setProperty("code", "VALIDATION_FAILED");
+        return problem;
+    }
 
     /**
      * Handles bean-validation errors (400).
@@ -106,6 +140,19 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles expense-not-found (404).
+     */
+    @ExceptionHandler(ExpenseNotFoundException.class)
+    public ProblemDetail handleExpenseNotFound(ExpenseNotFoundException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Not Found");
+        problem.setDetail("Expense not found.");
+        problem.setProperty("code", "EXPENSE_NOT_FOUND");
+        return problem;
+    }
+
+    /**
      * Handles invoice-not-found (404).
      */
     @ExceptionHandler(InvoiceNotFoundException.class)
@@ -115,6 +162,19 @@ public class GlobalExceptionHandler {
         problem.setTitle("Not Found");
         problem.setDetail("Invoice not found.");
         problem.setProperty("code", "INVOICE_NOT_FOUND");
+        return problem;
+    }
+
+    /**
+     * Handles invoice not editable (409).
+     */
+    @ExceptionHandler(InvoiceNotEditableException.class)
+    public ProblemDetail handleInvoiceNotEditable(InvoiceNotEditableException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Conflict");
+        problem.setDetail("Invoice cannot be edited because it is not in DRAFT status.");
+        problem.setProperty("code", "INVOICE_NOT_EDITABLE");
         return problem;
     }
 
@@ -160,6 +220,16 @@ public class GlobalExceptionHandler {
     /**
      * Handles invalid template uploads (415).
      */
+    @ExceptionHandler(TemplateNotFoundException.class)
+    public ProblemDetail handleTemplateNotFound(TemplateNotFoundException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Template Not Found");
+        problem.setDetail(ex.getMessage());
+        problem.setProperty("code", "TEMPLATE_NOT_FOUND");
+        return problem;
+    }
+
     @ExceptionHandler(InvalidTemplateException.class)
     public ProblemDetail handleInvalidTemplate(InvalidTemplateException ex) {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
@@ -193,6 +263,45 @@ public class GlobalExceptionHandler {
         problem.setTitle("Template Too Large");
         problem.setDetail("Uploaded file exceeds the maximum allowed size.");
         problem.setProperty("code", "TEMPLATE_TOO_LARGE");
+        return problem;
+    }
+
+    /**
+     * Handles generated artefact not found (404).
+     */
+    @ExceptionHandler(GeneratedArtifactNotFoundException.class)
+    public ProblemDetail handleGeneratedArtifactNotFound(GeneratedArtifactNotFoundException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Not Found");
+        problem.setDetail("Generated artefact not found.");
+        problem.setProperty("code", "GENERATED_ARTIFACT_NOT_FOUND");
+        return problem;
+    }
+
+    /**
+     * Handles artefact already exists conflict (409).
+     */
+    @ExceptionHandler(ArtifactAlreadyExistsException.class)
+    public ProblemDetail handleArtifactAlreadyExists(ArtifactAlreadyExistsException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Conflict");
+        problem.setDetail("An artefact for this invoice and format already exists.");
+        problem.setProperty("code", "ARTIFACT_ALREADY_EXISTS");
+        return problem;
+    }
+
+    /**
+     * Handles artefact too large (413).
+     */
+    @ExceptionHandler(ArtifactTooLargeException.class)
+    public ProblemDetail handleArtifactTooLarge(ArtifactTooLargeException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.PAYLOAD_TOO_LARGE);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Payload Too Large");
+        problem.setDetail(ex.getMessage());
+        problem.setProperty("code", "ARTIFACT_TOO_LARGE");
         return problem;
     }
 

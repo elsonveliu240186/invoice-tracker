@@ -10,6 +10,7 @@ import java.util.UUID;
 /**
  * Domain record representing an invoice aggregate.
  * {@code clientEmail} is populated by the service layer when available (may be null if not joined).
+ * Snapshot fields capture the client and company billing details at the time of invoice creation.
  */
 public record Invoice(
     UUID id,
@@ -24,7 +25,15 @@ public record Invoice(
     Instant createdAt,
     Instant updatedAt,
     Instant deletedAt,
-    String clientEmail
+    String clientEmail,
+    String clientNameSnapshot,
+    String clientAddressSnapshot,
+    String companyNameSnapshot,
+    String companyAddressSnapshot,
+    String companyVatSnapshot,
+    String companyIbanSnapshot,
+    String companySwiftSnapshot,
+    String companyBankNameSnapshot
 ) {
 
     /**

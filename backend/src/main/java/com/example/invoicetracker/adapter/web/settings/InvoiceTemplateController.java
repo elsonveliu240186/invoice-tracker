@@ -128,7 +128,7 @@ public class InvoiceTemplateController {
      */
     @GetMapping("/download")
     @Operation(summary = "Download the active invoice template")
-    public ResponseEntity<byte[]> download() throws IOException {
+    public ResponseEntity<byte[]> download() throws IOException { // NOSONAR TemplateNotFoundException is unchecked
         byte[] bytes = templateStore.openTemplate().readAllBytes();
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION,

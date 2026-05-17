@@ -6,6 +6,7 @@ import com.example.invoicetracker.domain.client.ClientRepository;
 import com.example.invoicetracker.domain.invoice.Invoice;
 import com.example.invoicetracker.domain.invoice.InvoiceHasNoRecipientException;
 import com.example.invoicetracker.domain.invoice.InvoiceLine;
+import com.example.invoicetracker.domain.invoice.InvoiceNotEditableException;
 import com.example.invoicetracker.domain.invoice.InvoiceNotFoundException;
 import com.example.invoicetracker.domain.invoice.InvoiceNumberTakenException;
 import com.example.invoicetracker.domain.invoice.InvoiceRepository;
@@ -13,6 +14,7 @@ import com.example.invoicetracker.domain.invoice.InvoiceStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -45,30 +47,46 @@ public class InvoiceService {
     private final InvoicePdfRenderer pdfRenderer;
     private final InvoiceMailer mailer;
     private final CompanyProperties companyProperties;
+    private final InvoiceArtifactService artifactService;
 
+    /**
+     * Constructs the service.
+     *
+     * @param invoiceRepository invoice persistence port
+     * @param clientRepository  client persistence port
+     * @param pdfRenderer       PDF renderer
+     * @param mailer            email sender
+     * @param companyProperties company configuration
+     * @param artifactService   artefact use-case service
+     */
     public InvoiceService(
         InvoiceRepository invoiceRepository,
         ClientRepository clientRepository,
         InvoicePdfRenderer pdfRenderer,
         InvoiceMailer mailer,
-        CompanyProperties companyProperties
+        CompanyProperties companyProperties,
+        InvoiceArtifactService artifactService
     ) {
         this.invoiceRepository = invoiceRepository;
         this.clientRepository = clientRepository;
         this.pdfRenderer = pdfRenderer;
         this.mailer = mailer;
         this.companyProperties = companyProperties;
+        this.artifactService = artifactService;
     }
 
     /**
      * Creates a new invoice with DRAFT status.
+     * If {@code number} is null or blank, the server generates the next sequential number
+     * for the current year using an advisory lock.
+     * Snapshot fields are populated from the client at creation time.
      *
-     * @param number     the invoice number (must be unique)
+     * @param number     the invoice number (optional; null or blank triggers auto-generation)
      * @param clientId   the client UUID
      * @param issueDate  the issue date
      * @param dueDate    the due date
      * @param lines      the line items
-     * @param taxRate    the tax rate (0–1)
+     * @param taxRate    the tax rate (0-1)
      * @return the created invoice
      */
     public Invoice create(
@@ -79,15 +97,18 @@ public class InvoiceService {
         List<InvoiceLine> lines,
         BigDecimal taxRate
     ) {
-        clientRepository.findByIdAndDeletedAtIsNull(clientId)
+        Client client = clientRepository.findByIdAndDeletedAtIsNull(clientId)
             .orElseThrow(() -> new ClientNotFoundException(clientId));
-        if (invoiceRepository.existsByNumberIgnoreCaseAndDeletedAtIsNull(number)) {
-            throw new InvoiceNumberTakenException(number);
+        String resolvedNumber = (number == null || number.isBlank())
+            ? nextInvoiceNumber()
+            : number;
+        if (invoiceRepository.existsByNumberIgnoreCaseAndDeletedAtIsNull(resolvedNumber)) {
+            throw new InvoiceNumberTakenException(resolvedNumber);
         }
         Instant now = Instant.now();
         Invoice invoice = new Invoice(
             UUID.randomUUID(),
-            number,
+            resolvedNumber,
             clientId,
             issueDate,
             dueDate,
@@ -98,11 +119,109 @@ public class InvoiceService {
             now,
             now,
             null,
-            null
+            client.email(),
+            client.name(),
+            client.address() != null ? client.address() : "",
+            client.companyName(),
+            client.companyAddress(),
+            client.companyVatNumber(),
+            client.companyIban(),
+            client.companySwiftBic(),
+            client.companyBankName()
         );
         Invoice saved = invoiceRepository.save(invoice);
         log.info("Invoice created: {}", saved.id());
         return saved;
+    }
+
+    /**
+     * Updates an existing DRAFT invoice. Rejects non-DRAFT invoices with
+     * {@link InvoiceNotEditableException}.
+     * Always re-snapshots company details from the current client.
+     *
+     * @param id        the invoice UUID
+     * @param number    the invoice number (if null or blank, the existing number is retained)
+     * @param clientId  the client UUID
+     * @param issueDate the issue date
+     * @param dueDate   the due date
+     * @param lines     the replacement line items
+     * @param taxRate   the tax rate (0-1)
+     * @return the updated invoice
+     */
+    public Invoice update(
+        UUID id,
+        String number,
+        UUID clientId,
+        LocalDate issueDate,
+        LocalDate dueDate,
+        List<InvoiceLine> lines,
+        BigDecimal taxRate
+    ) {
+        Invoice existing = invoiceRepository.findByIdWithLines(id)
+            .orElseThrow(() -> new InvoiceNotFoundException(id));
+        if (existing.status() != InvoiceStatus.DRAFT) {
+            throw new InvoiceNotEditableException(id, existing.status());
+        }
+        Client client = clientRepository.findByIdAndDeletedAtIsNull(clientId)
+            .orElseThrow(() -> new ClientNotFoundException(clientId));
+
+        String resolvedNumber = (number == null || number.isBlank())
+            ? existing.number()
+            : number;
+
+        // Check uniqueness only when the number is changing
+        if (!resolvedNumber.equalsIgnoreCase(existing.number())
+            && invoiceRepository.existsByNumberIgnoreCaseAndDeletedAtIsNull(resolvedNumber)) {
+            throw new InvoiceNumberTakenException(resolvedNumber);
+        }
+
+        Instant now = Instant.now();
+        Invoice updated = new Invoice(
+            id,
+            resolvedNumber,
+            clientId,
+            issueDate,
+            dueDate,
+            lines,
+            taxRate,
+            InvoiceStatus.DRAFT,
+            existing.lastSentAt(),
+            existing.createdAt(),
+            now,
+            null,
+            client.email(),
+            client.name(),
+            client.address() != null ? client.address() : "",
+            client.companyName(),
+            client.companyAddress(),
+            client.companyVatNumber(),
+            client.companyIban(),
+            client.companySwiftBic(),
+            client.companyBankName()
+        );
+        Invoice saved = invoiceRepository.update(updated);
+        log.info("Invoice updated: {}", id);
+        return saved;
+    }
+
+    /**
+     * Generates the next sequential invoice number for the current year.
+     * Uses a Postgres advisory lock to prevent concurrent races.
+     *
+     * @return the generated number, e.g. {@code INV-2026-0001}
+     */
+    String nextInvoiceNumber() {
+        int year = Year.now().getValue();
+        String max = invoiceRepository.findMaxNumberForYear(year);
+        int next;
+        if (max == null) {
+            next = 1;
+        } else {
+            // Format: INV-YYYY-NNNN  - last segment is the sequence
+            String[] parts = max.split("-");
+            next = Integer.parseInt(parts[parts.length - 1]) + 1;
+        }
+        return String.format("INV-%d-%04d", year, next);
     }
 
     /**
@@ -123,7 +242,11 @@ public class InvoiceService {
             invoice.id(), invoice.number(), invoice.clientId(),
             invoice.issueDate(), invoice.dueDate(), invoice.lines(),
             invoice.taxRate(), invoice.status(), invoice.lastSentAt(), invoice.createdAt(),
-            invoice.updatedAt(), invoice.deletedAt(), email
+            invoice.updatedAt(), invoice.deletedAt(), email,
+            invoice.clientNameSnapshot(), invoice.clientAddressSnapshot(),
+            invoice.companyNameSnapshot(), invoice.companyAddressSnapshot(),
+            invoice.companyVatSnapshot(), invoice.companyIbanSnapshot(),
+            invoice.companySwiftSnapshot(), invoice.companyBankNameSnapshot()
         );
     }
 
@@ -178,14 +301,16 @@ public class InvoiceService {
             throw new InvoiceHasNoRecipientException(id);
         }
 
-        byte[] pdfBytes = pdfRenderer.render(invoice, client, companyProperties);
+        // Prefer saved PDF artefact; fall back to live rendering if absent
+        byte[] pdfBytes = artifactService.findPdfBytes(id)
+            .orElseGet(() -> pdfRenderer.render(invoice, client, companyProperties));
         mailer.send(invoice, toEmail, pdfBytes, companyProperties, client.name());
 
         Instant sentAt = Instant.now();
         Invoice updated = invoiceRepository.markSent(id, sentAt);
         log.info("Invoice {} marked sent at {}", id, sentAt);
 
-        // Transition DRAFT → SENT
+        // Transition DRAFT - SENT
         invoiceRepository.markSentIfDraft(id);
         log.info("Invoice {} status transitioned to SENT (if it was DRAFT)", id);
         return invoiceRepository.findByIdWithLines(id)
@@ -203,5 +328,17 @@ public class InvoiceService {
         Invoice updated = invoiceRepository.markPaid(id);
         log.info("Invoice {} marked as PAID", id);
         return updated;
+    }
+
+    /**
+     * Soft-deletes an invoice and lazily removes all of its generated artefacts.
+     *
+     * @param id the invoice UUID
+     * @throws InvoiceNotFoundException if not found or already soft-deleted
+     */
+    public void deleteInvoice(UUID id) {
+        artifactService.deleteAll(id);
+        invoiceRepository.softDelete(id);
+        log.info("Invoice {} soft-deleted", id);
     }
 }

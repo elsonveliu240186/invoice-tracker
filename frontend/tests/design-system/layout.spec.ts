@@ -54,13 +54,11 @@ test.describe('AppShell layout — desktop', () => {
     await page.goto('/');
     await page.waitForSelector('[data-testid="home-page"]');
 
-    // Sidebar: Dashboard and Clients are active NavLinks
+    // New sidebar: Dashboard, Clients, Invoices (disabled span, not a link)
     await expect(page.getByRole('link', { name: /dashboard/i }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: /clients/i }).first()).toBeVisible();
-    // At least 2 nav links present in the main navigation
-    const navLinks = page.locator('[aria-label="Main navigation"] a');
-    const count = await navLinks.count();
-    expect(count).toBeGreaterThanOrEqual(2);
+    // Invoices is a disabled nav item (span with aria-disabled), not a link
+    await expect(page.locator('[aria-disabled="true"]').first()).toBeVisible();
   });
 
   test('AC-9: clicking Clients nav link navigates to /clients', async ({ page }) => {

@@ -17,12 +17,25 @@ Most endpoints require **HTTP Basic** authentication. Include a valid `Authoriza
 
 Auth endpoints (`/api/v1/auth/**`) are **public** and do not require credentials.
 
+## Frontend routes (SPA — no backend involvement)
+
+The backend API is unchanged by FEAT-20260512-03. The following frontend-only routes were added or changed:
+
+| Path | Component | Notes |
+|------|-----------|-------|
+| `/` | `DashboardPage` | KPI cards (calls `GET /api/v1/clients?size=1`). Was `HomePage`. |
+| `/clients` | `ClientsPage` | Redesigned with shadcn Table; replaces previous scaffold layout. |
+| `/clients/:id` | `ClientDetailPage` | New route. Calls `GET /api/v1/clients/{id}`. |
+| `/login` | `LoginPage` | Unchanged. |
+| `/register` | `RegisterPage` | Unchanged. |
+| `/forgot-password` | `ForgotPasswordPage` | Unchanged. |
+
 ## Endpoints
 
 | Tag | Method | Path | Auth | Summary |
 |-----|--------|------|------|---------|
-| Auth | POST | `/api/v1/auth/login` | None (public) | Authenticate with email and password |
-| Auth | POST | `/api/v1/auth/register` | None (public) | Register a new user account |
+| Auth | POST | `/api/v1/auth/login` | None (public, rate-limited 5/min/IP) | Authenticate with email and password |
+| Auth | POST | `/api/v1/auth/register` | None (public, rate-limited 5/min/IP) | Register a new user account |
 | Auth | POST | `/api/v1/auth/forgot-password` | None (public) | Request a password reset (anti-enumeration) |
 | Clients | POST | `/api/v1/clients` | Required | Create a new client |
 | Clients | GET | `/api/v1/clients` | Required | List clients (paginated, searchable) |
@@ -36,9 +49,20 @@ Auth endpoints (`/api/v1/auth/**`) are **public** and do not require credentials
 | Invoices | PATCH | `/api/v1/invoices/{id}/mark-paid` | Required | Transition invoice status to PAID (idempotent) (FEAT-20260514-01) |
 | Invoices | GET | `/api/v1/invoices/{id}/pdf` | Required | Download invoice as PDF |
 | Invoices | POST | `/api/v1/invoices/{id}/send-email` | Required | Send invoice PDF by email to client |
+| Invoices | GET | `/api/v1/invoices/{id}/preview-pdf` | Required | Live-render invoice as PDF (no persist); for inline preview (FEAT-20260514-02) |
+| Invoices | POST | `/api/v1/invoices/{id}/generate` | Required | Render and persist a PDF or DOCX artefact (FEAT-20260514-02) |
+| Invoices | GET | `/api/v1/invoices/{id}/generated` | Required | Download a previously persisted artefact (FEAT-20260514-02) |
+| Invoices | GET | `/api/v1/invoices/{id}/generated/metadata` | Required | List what artefacts have been generated for an invoice (FEAT-20260514-02) |
+| Invoices | DELETE | `/api/v1/invoices/{id}` | Required | Soft-delete invoice and orphan all generated artefacts (FEAT-20260514-02) |
 | Invoice Rendering | GET | `/api/v1/invoices/{id}/docx` | Required | Download invoice as merged DOCX (FEAT-20260513-03) |
 | Invoice Rendering | GET | `/api/v1/invoices/{id}/docx-pdf` | Required | Download invoice PDF via DOCX-template + LibreOffice pipeline (FEAT-20260513-03) |
 | Invoice Rendering | POST | `/api/v1/invoices/{id}/docx-email` | Required | Send invoice PDF (DOCX-template pipeline) by email (FEAT-20260513-03) |
+| Expenses | GET | `/api/v1/expenses` | Required | List expenses (paginated, filterable by category/dateFrom/dateTo) — FEAT-20260516-01 |
+| Expenses | POST | `/api/v1/expenses` | Required | Create a new expense — FEAT-20260516-01 |
+| Expenses | GET | `/api/v1/expenses/{id}` | Required | Get an expense by ID — FEAT-20260516-01 |
+| Expenses | PUT | `/api/v1/expenses/{id}` | Required | Update an expense (full replacement) — FEAT-20260516-01 |
+| Expenses | DELETE | `/api/v1/expenses/{id}` | Required | Soft-delete an expense — FEAT-20260516-01 |
+| Expenses | GET | `/api/v1/expenses/summary` | Required | Monthly expense summary by category — FEAT-20260516-01 |
 | Settings | POST | `/api/v1/settings/invoice-template` | Required | Upload a new DOCX invoice template |
 | Settings | GET | `/api/v1/settings/invoice-template/preview` | Required | Get active template metadata |
 | Settings | GET | `/api/v1/settings/invoice-template/download` | Required | Download the active invoice template |
@@ -49,7 +73,7 @@ Auth endpoints (`/api/v1/auth/**`) are **public** and do not require credentials
 
 ### POST `/api/v1/auth/login`
 
-Authenticates the user with email and password (HTTP Basic semantics). The client must extract `email:password`, base64-encode the pair, and place it in the JSON body (not the `Authorization` header) per the frontend convention. The server verifies the password against the bcrypt hash stored in `app_users`.
+Authenticates the user with email and password (HTTP Basic semantics). **Rate-limited** by `AuthRateLimitFilter` (Bucket4j 8.10.1): 5 requests per IP per minute. Exhaustion returns `429 RATE_LIMIT_EXCEEDED` — wait 60 seconds before retrying. The client must extract `email:password`, base64-encode the pair, and place it in the JSON body (not the `Authorization` header) per the frontend convention. The server verifies the password against the bcrypt hash stored in `app_users`.
 
 **Request body** (`application/json`):
 
@@ -80,12 +104,13 @@ Authenticates the user with email and password (HTTP Basic semantics). The clien
 |--------|------|-----------|
 | `400 Bad Request` | `VALIDATION_FAILED` | Missing or malformed field |
 | `401 Unauthorized` | `UNAUTHENTICATED` | Unknown email or wrong password (uniform — anti-enumeration) |
+| `429 Too Many Requests` | `RATE_LIMIT_EXCEEDED` | More than 5 requests from this IP in the current 1-minute window |
 
 ---
 
 ### POST `/api/v1/auth/register`
 
-Creates a new user account. The password is stored as a bcrypt hash (cost 12). Returns `409` if the email (case-insensitive) is already registered and not soft-deleted.
+Creates a new user account. **Rate-limited**: same 5 requests per IP per minute rule as `/login`. The password is stored as a bcrypt hash (cost 12). Returns `409` if the email (case-insensitive) is already registered and not soft-deleted.
 
 **Request body** (`application/json`):
 
@@ -118,6 +143,7 @@ Creates a new user account. The password is stored as a bcrypt hash (cost 12). R
 |--------|------|-----------|
 | `400 Bad Request` | `VALIDATION_FAILED` | A required field is missing or the password is too weak |
 | `409 Conflict` | `USER_EMAIL_TAKEN` | An active account with that email already exists |
+| `429 Too Many Requests` | `RATE_LIMIT_EXCEEDED` | More than 5 requests from this IP in the current 1-minute window |
 
 ---
 
@@ -444,7 +470,7 @@ Streams the invoice as a PDF. Uses the `@Primary` renderer — if FEAT-20260513-
 
 ### POST `/api/v1/invoices/{id}/send-email`
 
-Renders the invoice as PDF and emails it to `client.email`. Updates `last_sent_at` only on SMTP success.
+Renders the invoice as PDF and emails it to `client.email`. Updates `last_sent_at` only on SMTP success. **Since FEAT-20260514-02**: when a persisted PDF artefact exists for this invoice, its bytes are reused instead of re-rendering; this avoids a LibreOffice process and ensures the emailed copy matches the saved artefact. The fallback to live rendering applies only when no saved PDF is present.
 
 **Success response** `200 OK`:
 
@@ -460,7 +486,164 @@ Renders the invoice as PDF and emails it to `client.email`. Updates `last_sent_a
 | `404` | `INVOICE_NOT_FOUND` | Unknown invoice UUID |
 | `422` | `INVOICE_HAS_NO_RECIPIENT` | Client has no email address |
 | `502` | `EMAIL_DELIVERY_FAILED` | SMTP relay rejected or timed out |
-| `502` | `PDF_CONVERSION_FAILED` | LibreOffice exited non-zero or timed out |
+| `502` | `PDF_CONVERSION_FAILED` | LibreOffice exited non-zero or timed out (only when falling back to live render) |
+
+---
+
+### DELETE `/api/v1/invoices/{id}` (FEAT-20260514-02)
+
+Soft-deletes the invoice and orphans all associated generated artefacts. The invoice `deleted_at` is set; `invoice_generated_artifacts` rows have their `deleted_at` set; on-disk files are deleted synchronously within `InvoiceService.deleteInvoice`.
+
+**Auth**: HTTP Basic required.
+
+**Path parameter**: `id` — UUID of the invoice.
+
+**Request**: no body.
+
+**Success response** `204 No Content` (empty body).
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404 Not Found` | `INVOICE_NOT_FOUND` | No active (non-deleted) invoice with that UUID |
+
+---
+
+## Invoice Artifact Management (FEAT-20260514-02)
+
+These endpoints manage the persistent generated artefacts (PDF and DOCX) for an invoice. Artefacts are stored on the filesystem under `app.invoice.generated.path` and tracked in the `invoice_generated_artifacts` table. All responses carry `Cache-Control: private, no-store`.
+
+### GET `/api/v1/invoices/{id}/preview-pdf`
+
+Live-renders the invoice as PDF (using the `@Primary` `InvoicePdfRenderer` pipeline — poi-tl DOCX template + LibreOffice) and streams the bytes inline. **Does not persist anything**; use `POST /generate` to save.
+
+**Auth**: HTTP Basic required.
+
+**Path parameter**: `id` — UUID of the invoice.
+
+**Response**: `200 application/pdf`
+
+**Response headers**: `Content-Disposition: inline; filename="invoice-<number>.pdf"`, `Cache-Control: private, no-store`.
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404 Not Found` | `INVOICE_NOT_FOUND` | Unknown invoice UUID |
+| `502 Bad Gateway` | `PDF_CONVERSION_FAILED` | LibreOffice exited non-zero or timed out |
+| `503 Service Unavailable` | `PDF_CONVERSION_BUSY` | LibreOffice semaphore (limit 2) saturated |
+
+---
+
+### POST `/api/v1/invoices/{id}/generate`
+
+Renders the invoice in the specified format and persists the bytes to the filesystem. Returns `201` with the artefact metadata. If `overwrite=false` (default) and a non-deleted row already exists for the same `(invoiceId, format)` pair, returns `409 ARTIFACT_ALREADY_EXISTS`. Pass `overwrite=true` to replace (Regenerate flow).
+
+**Auth**: HTTP Basic required.
+
+**Path parameter**: `id` — UUID of the invoice.
+
+**Query parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `format` | `PDF` or `DOCX` | required | Format to generate |
+| `overwrite` | boolean | `false` | Whether to overwrite an existing artefact |
+
+**Request body**: empty.
+
+**Success response** `201 Created` (`application/json`):
+
+```json
+{
+  "format":      "PDF",
+  "generatedAt": "2026-05-15T09:30:00Z",
+  "sizeBytes":   14872,
+  "sha256":      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `format` | string | `"PDF"` or `"DOCX"` |
+| `generatedAt` | ISO-8601 instant | When the artefact was written to disk |
+| `sizeBytes` | long | Byte count of the stored file |
+| `sha256` | string | Hex-encoded SHA-256 of the stored bytes |
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `400 Bad Request` | `VALIDATION_FAILED` | Missing or invalid `format` query parameter |
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404 Not Found` | `INVOICE_NOT_FOUND` | Unknown invoice UUID |
+| `409 Conflict` | `ARTIFACT_ALREADY_EXISTS` | `overwrite=false` and a saved artefact already exists |
+| `413 Content Too Large` | `ARTIFACT_TOO_LARGE` | Rendered bytes exceed `app.invoice.generated.max-bytes-per-artifact` (25 MiB) |
+| `502 Bad Gateway` | `PDF_CONVERSION_FAILED` | LibreOffice failure |
+| `503 Service Unavailable` | `PDF_CONVERSION_BUSY` | LibreOffice concurrency limit reached |
+
+---
+
+### GET `/api/v1/invoices/{id}/generated`
+
+Streams the previously persisted artefact bytes. Returns `404 GENERATED_ARTIFACT_NOT_FOUND` if no artefact has been generated for this invoice+format combination.
+
+**Auth**: HTTP Basic required.
+
+**Path parameter**: `id` — UUID of the invoice.
+
+**Query parameter**: `format` — `PDF` or `DOCX` (required).
+
+**Response**: `200 application/pdf` (or `application/vnd.openxmlformats-officedocument.wordprocessingml.document` for DOCX)
+
+**Response headers**: `Content-Disposition: attachment; filename="invoice-<number>.<ext>"`, `Cache-Control: private, no-store`.
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404 Not Found` | `INVOICE_NOT_FOUND` | Unknown invoice UUID |
+| `404 Not Found` | `GENERATED_ARTIFACT_NOT_FOUND` | No artefact generated for this invoice+format |
+
+---
+
+### GET `/api/v1/invoices/{id}/generated/metadata`
+
+Returns metadata about what artefacts have been generated for an invoice. Fields are `null` when the corresponding format has not been generated (or was deleted).
+
+**Auth**: HTTP Basic required.
+
+**Path parameter**: `id` — UUID of the invoice.
+
+**Success response** `200 OK` (`application/json`):
+
+```json
+{
+  "pdf": {
+    "format":      "PDF",
+    "generatedAt": "2026-05-15T09:30:00Z",
+    "sizeBytes":   14872,
+    "sha256":      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "docx": null
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `pdf` | `GeneratedArtifactResponse` or `null` | Metadata for saved PDF; `null` if not generated |
+| `docx` | `GeneratedArtifactResponse` or `null` | Metadata for saved DOCX; `null` if not generated |
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `404 Not Found` | `INVOICE_NOT_FOUND` | Unknown invoice UUID |
 
 ---
 
@@ -519,6 +702,151 @@ Renders via poi-tl DOCX template, converts to PDF via LibreOffice, and emails th
 | `502` | `PDF_CONVERSION_FAILED` | LibreOffice failure; no email sent; `last_sent_at` unchanged |
 | `502` | `EMAIL_DELIVERY_FAILED` | SMTP failure; `last_sent_at` unchanged |
 | `503` | `PDF_CONVERSION_BUSY` | Semaphore saturated |
+
+---
+
+## Expenses (FEAT-20260516-01)
+
+All endpoints require HTTP Basic authentication. Page size is clamped to [1, 100] server-side.
+
+### GET `/api/v1/expenses`
+
+Returns a paginated list of non-deleted expenses.
+
+**Query parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `category` | enum | — | Filter by category (e.g. `FOOD_DRINK`, `TRANSPORT`) |
+| `dateFrom` | `YYYY-MM-DD` | — | Inclusive start date filter on `expenseDate` |
+| `dateTo` | `YYYY-MM-DD` | — | Inclusive end date filter on `expenseDate` |
+| `page` | integer | `0` | Zero-based page number |
+| `size` | integer | `20` | Page size (1–100, clamped server-side) |
+| `sort` | string | `expenseDate,desc` | Sort field and direction |
+
+**Success response** `200 OK`: page envelope with `ExpenseResponse` items.
+
+**Error responses**: `400 VALIDATION_ERROR` (bad enum/date), `401 UNAUTHENTICATED`.
+
+---
+
+### POST `/api/v1/expenses`
+
+Creates a new expense.
+
+**Request body** (`application/json`):
+
+```json
+{
+  "amount":      "125.50",
+  "category":    "FOOD_DRINK",
+  "expenseDate": "2026-05-17",
+  "description": "Team lunch"
+}
+```
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `amount` | number / string | yes | `> 0`, `≤ 9,999,999.99`, max 2 decimal places |
+| `category` | string | yes | One of: `FOOD_DRINK`, `TRANSPORT`, `HOUSING`, `HEALTH`, `ENTERTAINMENT`, `SHOPPING`, `TRAVEL`, `EDUCATION`, `UTILITIES`, `OTHER` |
+| `expenseDate` | `YYYY-MM-DD` | yes | Not in the future (today + 1 day tolerance for timezone slop) |
+| `description` | string | no | Max 500 characters |
+
+**Success response** `201 Created` + `Location: /api/v1/expenses/{id}`:
+
+```json
+{
+  "id":          "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "amount":      "125.50",
+  "category":    "FOOD_DRINK",
+  "description": "Team lunch",
+  "expenseDate": "2026-05-17",
+  "createdAt":   "2026-05-17T08:00:00Z",
+  "updatedAt":   "2026-05-17T08:00:00Z"
+}
+```
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `400` | `VALIDATION_ERROR` | Amount ≤ 0, amount > 9,999,999.99, future date, description > 500 chars, or unknown category |
+| `401` | `UNAUTHENTICATED` | No / invalid credentials |
+
+---
+
+### GET `/api/v1/expenses/{id}`
+
+Returns a single non-deleted expense by UUID.
+
+**Path parameter**: `id` — UUID of the expense.
+
+**Success response** `200 OK`: `ExpenseResponse` (same shape as POST response).
+
+**Error responses**: `401 UNAUTHENTICATED`, `404 EXPENSE_NOT_FOUND`.
+
+---
+
+### PUT `/api/v1/expenses/{id}`
+
+Fully replaces all mutable fields of the expense (full replacement).
+
+**Path parameter**: `id` — UUID of the expense.
+
+**Request body**: same shape as `CreateExpenseRequest`.
+
+**Success response** `200 OK`: updated `ExpenseResponse`.
+
+**Error responses**: `400 VALIDATION_ERROR`, `401 UNAUTHENTICATED`, `404 EXPENSE_NOT_FOUND`.
+
+---
+
+### DELETE `/api/v1/expenses/{id}`
+
+Soft-deletes the expense (sets `deleted_at`). The record is retained for audit purposes.
+
+**Path parameter**: `id` — UUID of the expense.
+
+**Success response** `204 No Content`.
+
+**Error responses**: `401 UNAUTHENTICATED`, `404 EXPENSE_NOT_FOUND`.
+
+---
+
+### GET `/api/v1/expenses/summary`
+
+Returns aggregated expense totals for the specified calendar month.
+
+**Query parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `month` | `YYYY-MM` | Current UTC month | Month to summarize |
+
+**Success response** `200 OK`:
+
+```json
+{
+  "month":      "2026-05",
+  "grandTotal": "1234.56",
+  "totalCount": 17,
+  "byCategory": [
+    { "category": "FOOD_DRINK", "total": "320.00", "count": 8 },
+    { "category": "TRANSPORT",  "total": "914.56", "count": 9 }
+  ]
+}
+```
+
+`byCategory` is sorted by `total DESC`, then `category ASC`. Empty months return `byCategory: []`, `grandTotal: "0.00"`, `totalCount: 0`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `month` | string | `"YYYY-MM"` |
+| `grandTotal` | BigDecimal | Sum of all non-deleted expenses for the month |
+| `totalCount` | long | Count of non-deleted expenses for the month |
+| `byCategory` | array | Per-category aggregates, sorted by `total DESC` |
+
+**Error responses**: `400 VALIDATION_ERROR` (malformed month), `401 UNAUTHENTICATED`.
 
 ---
 
@@ -615,16 +943,21 @@ All error responses use `Content-Type: application/problem+json`:
 |------|--------|---------|
 | `VALIDATION_FAILED` | 400 | Bean-validation failure; `errors` array lists per-field messages |
 | `MISSING_REQUEST_PART` | 400 | Required multipart field absent (e.g. `file` not provided) |
+| `UNAUTHENTICATED` | 401 | Missing or invalid HTTP Basic credentials |
 | `CLIENT_NOT_FOUND` | 404 | No active client matching the given UUID |
 | `INVOICE_NOT_FOUND` | 404 | No invoice matching the given UUID |
 | `TEMPLATE_NOT_FOUND` | 404 | Template not on filesystem and classpath default is also absent |
+| `GENERATED_ARTIFACT_NOT_FOUND` | 404 | No saved artefact for the given invoice+format combination (FEAT-20260514-02) |
 | `CLIENT_EMAIL_TAKEN` | 409 | Duplicate email among active clients |
 | `USER_EMAIL_TAKEN` | 409 | An active user account with that email already exists |
+| `ARTIFACT_ALREADY_EXISTS` | 409 | `overwrite=false` and a saved artefact already exists for this invoice+format (FEAT-20260514-02) |
 | `TEMPLATE_TOO_LARGE` | 413 | Uploaded template exceeds 5 MB |
-| `INVALID_TEMPLATE_TYPE` | 415 | Not a valid .docx (extension, magic bytes, or external references) |
+| `ARTIFACT_TOO_LARGE` | 413 | Rendered artefact exceeds `app.invoice.generated.max-bytes-per-artifact` (25 MiB) (FEAT-20260514-02) |
+| `INVALID_TEMPLATE_TYPE` | 415 | Not a valid .docx (extension, magic bytes, external references, or contains VBA macros) |
 | `INVOICE_HAS_NO_RECIPIENT` | 422 | Client linked to the invoice has no email address |
-| `UNAUTHENTICATED` | 401 | Missing or invalid HTTP Basic credentials |
 | `PDF_CONVERSION_FAILED` | 502 | LibreOffice exited non-zero or timed out (20 s) |
 | `EMAIL_DELIVERY_FAILED` | 502 | SMTP relay rejected or timed out |
 | `PDF_CONVERSION_BUSY` | 503 | LibreOffice concurrency semaphore (limit 2) is saturated |
+| `EXPENSE_NOT_FOUND` | 404 | No non-deleted expense matching the given UUID (FEAT-20260516-01) |
+| `RATE_LIMIT_EXCEEDED` | 429 | More than 5 auth requests from this IP per minute (FEAT-20260516-01) |
 | `INTERNAL_ERROR` | 500 | Unexpected server error |

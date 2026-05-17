@@ -152,7 +152,7 @@ test.describe('AC-2 + AC-4: Mark-as-Paid round-trip on invoice detail', () => {
     await page.route(`**/api/v1/invoices/${SENT_INVOICE.id}`, (route) => {
       callCount++;
       const status = callCount === 1 ? 'SENT' : 'PAID';
-      route.fulfill({
+      void route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ ...SENT_INVOICE, status }),

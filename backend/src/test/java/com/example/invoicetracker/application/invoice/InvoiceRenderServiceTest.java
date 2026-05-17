@@ -47,6 +47,9 @@ class InvoiceRenderServiceTest {
     @Mock
     InvoiceMailer mailer;
 
+    @Mock
+    InvoiceArtifactService artifactService;
+
     InvoiceRenderService service;
 
     private UUID invoiceId;
@@ -57,7 +60,7 @@ class InvoiceRenderServiceTest {
     void setUp() {
         service = new InvoiceRenderService(
             invoiceRepository, clientRepository, docxRenderer, pdfRenderer,
-            mailer, InvoiceFixtures.company());
+            mailer, InvoiceFixtures.company(), artifactService);
         invoiceId = UUID.randomUUID();
         clientId = UUID.randomUUID();
         sampleClient = InvoiceFixtures.client(clientId, "Acme Corp", "acme@example.com");

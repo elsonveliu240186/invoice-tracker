@@ -2,7 +2,6 @@ package com.example.invoicetracker.config;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 
 /**
  * Auto-configuration guard that ensures {@link org.springframework.mail.javamail.JavaMailSender}

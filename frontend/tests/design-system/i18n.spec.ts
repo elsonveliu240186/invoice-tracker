@@ -37,6 +37,7 @@ function stubClients(page: import('@playwright/test').Page) {
 test.describe('i18n — English strings', () => {
   test.beforeEach(async ({ page }) => {
     await seedAuth(page);
+    await stubClients(page);
   });
 
   test('AC-8: app name renders as "Invoice Tracker" not raw key', async ({ page }) => {
@@ -50,22 +51,23 @@ test.describe('i18n — English strings', () => {
   });
 
   test('AC-8: nav labels render as English words not translation keys', async ({ page }) => {
+    await stubClients(page);
     await page.goto('/');
     await page.waitForSelector('[data-testid="home-page"]');
 
     const bodyText = await page.locator('body').textContent();
-    expect(bodyText).not.toMatch(/nav\.(home|clients|invoices|settings)/);
-    expect(bodyText).toContain('Home');
+    expect(bodyText).not.toMatch(/nav\.(dashboard|clients|invoices)/);
+    expect(bodyText).toContain('Dashboard');
     expect(bodyText).toContain('Clients');
     expect(bodyText).toContain('Invoices');
-    expect(bodyText).toContain('Settings');
   });
 
   test('AC-8: home page title renders from i18n key', async ({ page }) => {
+    await stubClients(page);
     await page.goto('/');
     await page.waitForSelector('[data-testid="home-page"]');
 
-    await expect(page.getByRole('heading', { name: /welcome to invoice tracker/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
   });
 
   test('AC-8: home page CTA link renders English label', async ({ page }) => {

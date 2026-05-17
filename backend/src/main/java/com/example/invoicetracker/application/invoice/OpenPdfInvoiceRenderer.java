@@ -84,13 +84,13 @@ public class OpenPdfInvoiceRenderer implements InvoicePdfRenderer {
             companyCell.setBorder(PdfPCell.NO_BORDER);
             companyCell.addElement(new Paragraph("FROM", headerFont));
             companyCell.addElement(new Paragraph(company.name(), normalFont));
-            if (company.address() != null && !company.address().isEmpty()) {
+            if (!company.address().isEmpty()) {
                 companyCell.addElement(new Paragraph(company.address(), normalFont));
             }
-            if (company.email() != null && !company.email().isEmpty()) {
+            if (!company.email().isEmpty()) {
                 companyCell.addElement(new Paragraph(company.email(), normalFont));
             }
-            if (company.taxId() != null && !company.taxId().isEmpty()) {
+            if (!company.taxId().isEmpty()) {
                 companyCell.addElement(new Paragraph("Tax ID: " + company.taxId(), smallFont));
             }
             headerTable.addCell(companyCell);
@@ -100,10 +100,10 @@ public class OpenPdfInvoiceRenderer implements InvoicePdfRenderer {
             clientCell.setBorder(PdfPCell.NO_BORDER);
             clientCell.addElement(new Paragraph("BILL TO", headerFont));
             clientCell.addElement(new Paragraph(client.name(), normalFont));
-            if (client.email() != null && !client.email().isEmpty()) {
+            if (client.email() != null && !client.email().isBlank()) {
                 clientCell.addElement(new Paragraph(client.email(), normalFont));
             }
-            if (client.address() != null && !client.address().isEmpty()) {
+            if (client.address() != null && !client.address().isBlank()) {
                 clientCell.addElement(new Paragraph(client.address(), normalFont));
             }
             headerTable.addCell(clientCell);

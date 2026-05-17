@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -102,12 +103,16 @@ class InvoiceControllerTest {
 
     @Test
     @WithMockUser
-    void create_returns_400_when_number_blank() throws Exception {
+    void create_with_null_number_auto_generates_on_server() throws Exception {
+        // number is now optional; blank/absent triggers server-side generation
+        when(invoiceService.create(
+            eq(null), any(UUID.class), any(), any(), anyList(), any(BigDecimal.class)))
+            .thenReturn(sampleInvoice);
+
         mvc.perform(post("/api/v1/invoices")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "number": "",
                       "clientId": "%s",
                       "issueDate": "2026-05-01",
                       "dueDate": "2026-06-01",
@@ -115,8 +120,7 @@ class InvoiceControllerTest {
                       "lines": [{"description": "Widget", "quantity": 1, "unitPrice": "10.00"}]
                     }
                     """.formatted(UUID.randomUUID())))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+            .andExpect(status().isCreated());
     }
 
     @Test
@@ -205,7 +209,8 @@ class InvoiceControllerTest {
             sampleInvoice.id(), sampleInvoice.number(), sampleInvoice.clientId(),
             sampleInvoice.issueDate(), sampleInvoice.dueDate(), sampleInvoice.lines(),
             sampleInvoice.taxRate(), InvoiceStatus.SENT, sentAt, sampleInvoice.createdAt(),
-            sampleInvoice.updatedAt(), null, null);
+            sampleInvoice.updatedAt(), null, null,
+            null, null, null, null, null, null, null, null);
         when(invoiceService.sendEmail(invoiceId)).thenReturn(sentInvoice);
 
         mvc.perform(post("/api/v1/invoices/{id}/send-email", invoiceId))
@@ -243,7 +248,8 @@ class InvoiceControllerTest {
             sampleInvoice.id(), sampleInvoice.number(), sampleInvoice.clientId(),
             sampleInvoice.issueDate(), sampleInvoice.dueDate(), sampleInvoice.lines(),
             sampleInvoice.taxRate(), InvoiceStatus.PAID, null, sampleInvoice.createdAt(),
-            sampleInvoice.updatedAt(), null, null);
+            sampleInvoice.updatedAt(), null, null,
+            null, null, null, null, null, null, null, null);
         when(invoiceService.markAsPaid(invoiceId)).thenReturn(paidInvoice);
 
         mvc.perform(patch("/api/v1/invoices/{id}/mark-paid", invoiceId))
@@ -261,6 +267,33 @@ class InvoiceControllerTest {
         mvc.perform(patch("/api/v1/invoices/{id}/mark-paid", id))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("INVOICE_NOT_FOUND"));
+    }
+
+    @Test
+    @WithMockUser
+    void delete_returns_204_on_success() throws Exception {
+        mvc.perform(delete("/api/v1/invoices/{id}", invoiceId))
+            .andExpect(status().isNoContent());
+
+        org.mockito.Mockito.verify(invoiceService).deleteInvoice(invoiceId);
+    }
+
+    @Test
+    @WithMockUser
+    void delete_returns_404_for_unknown_id() throws Exception {
+        UUID id = UUID.randomUUID();
+        org.mockito.Mockito.doThrow(new InvoiceNotFoundException(id))
+            .when(invoiceService).deleteInvoice(id);
+
+        mvc.perform(delete("/api/v1/invoices/{id}", id))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("INVOICE_NOT_FOUND"));
+    }
+
+    @Test
+    void delete_returns_401_without_auth() throws Exception {
+        mvc.perform(delete("/api/v1/invoices/{id}", invoiceId))
+            .andExpect(status().isUnauthorized());
     }
 
     @Test

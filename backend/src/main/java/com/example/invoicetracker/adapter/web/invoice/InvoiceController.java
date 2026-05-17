@@ -3,10 +3,16 @@ package com.example.invoicetracker.adapter.web.invoice;
 import com.example.invoicetracker.adapter.web.client.dto.PageResponse;
 import com.example.invoicetracker.adapter.web.invoice.dto.CreateInvoiceLineRequest;
 import com.example.invoicetracker.adapter.web.invoice.dto.CreateInvoiceRequest;
+import com.example.invoicetracker.adapter.web.invoice.dto.GeneratedArtifactResponse;
+import com.example.invoicetracker.adapter.web.invoice.dto.InvoiceArtifactsMetadataResponse;
 import com.example.invoicetracker.adapter.web.invoice.dto.InvoiceLineDto;
 import com.example.invoicetracker.adapter.web.invoice.dto.InvoiceResponse;
 import com.example.invoicetracker.adapter.web.invoice.dto.SendEmailResponse;
+import com.example.invoicetracker.adapter.web.invoice.dto.UpdateInvoiceRequest;
+import com.example.invoicetracker.application.invoice.InvoiceArtifactService;
 import com.example.invoicetracker.application.invoice.InvoiceService;
+import com.example.invoicetracker.domain.invoice.ArtifactFormat;
+import com.example.invoicetracker.domain.invoice.GeneratedArtifact;
 import com.example.invoicetracker.domain.invoice.Invoice;
 import com.example.invoicetracker.domain.invoice.InvoiceLine;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,10 +28,12 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -41,9 +49,20 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 public class InvoiceController {
 
     private final InvoiceService invoiceService;
+    private final InvoiceArtifactService artifactService;
 
-    public InvoiceController(InvoiceService invoiceService) {
+    /**
+     * Constructs the controller.
+     *
+     * @param invoiceService  the invoice use-case service
+     * @param artifactService the artefact use-case service
+     */
+    public InvoiceController(
+        InvoiceService invoiceService,
+        InvoiceArtifactService artifactService
+    ) {
         this.invoiceService = invoiceService;
+        this.artifactService = artifactService;
     }
 
     /**
@@ -157,6 +176,124 @@ public class InvoiceController {
         return ResponseEntity.ok(toResponse(updated));
     }
 
+
+    /**
+     * Updates an existing DRAFT invoice.
+     */
+    @PutMapping("/{id}")
+    @Operation(summary = "Update a DRAFT invoice")
+    public ResponseEntity<InvoiceResponse> update(
+        @PathVariable UUID id,
+        @Valid @RequestBody UpdateInvoiceRequest request
+    ) {
+        List<InvoiceLine> lines = toInvoiceLines(request.lines());
+        Invoice invoice = invoiceService.update(
+            id,
+            request.number(),
+            request.clientId(),
+            request.issueDate(),
+            request.dueDate(),
+            lines,
+            request.taxRate()
+        );
+        return ResponseEntity.ok(toResponse(invoice));
+    }
+
+    /**
+     * Soft-deletes an invoice and its generated artefacts.
+     */
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete an invoice (soft-delete)")
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        invoiceService.deleteInvoice(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Streams a live PDF preview — never persists to disk.
+     *
+     * @param id the invoice UUID
+     * @return 200 with application/pdf bytes
+     */
+    @GetMapping(value = "/{id}/preview-pdf", produces = "application/pdf")
+    @Operation(summary = "Preview invoice as PDF (on-the-fly, not persisted)")
+    public ResponseEntity<byte[]> previewPdf(@PathVariable UUID id) {
+        byte[] bytes = artifactService.previewPdf(id);
+        Invoice invoice = invoiceService.get(id);
+        String filename = "invoice-" + invoice.number() + ".pdf";
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+            .header(HttpHeaders.CACHE_CONTROL, "private, no-store")
+            .contentType(MediaType.APPLICATION_PDF)
+            .contentLength(bytes.length)
+            .body(bytes);
+    }
+
+    /**
+     * Generates and persists a PDF or DOCX artefact for the given invoice.
+     *
+     * @param id       the invoice UUID
+     * @param format   the format: PDF or DOCX (default PDF)
+     * @param overwrite if true, replaces any existing artefact; default false
+     * @return 201 with the artefact metadata
+     */
+    @PostMapping("/{id}/generate")
+    @Operation(summary = "Generate and persist a PDF or DOCX artefact")
+    public ResponseEntity<GeneratedArtifactResponse> generate(
+        @PathVariable UUID id,
+        @RequestParam(defaultValue = "PDF") ArtifactFormat format,
+        @RequestParam(defaultValue = "false") boolean overwrite
+    ) {
+        GeneratedArtifact artifact = artifactService.generate(id, format, overwrite);
+        GeneratedArtifactResponse response = new GeneratedArtifactResponse(
+            artifact.format().name(), artifact.generatedAt(),
+            artifact.sizeBytes(), artifact.sha256());
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Streams the persisted artefact bytes for the given invoice and format.
+     *
+     * @param id     the invoice UUID
+     * @param format the format: PDF or DOCX
+     * @return 200 with the artefact bytes
+     */
+    @GetMapping("/{id}/generated")
+    @Operation(summary = "Download the persisted artefact for an invoice")
+    public ResponseEntity<byte[]> streamGenerated(
+        @PathVariable UUID id,
+        @RequestParam(defaultValue = "PDF") ArtifactFormat format
+    ) {
+        byte[] bytes = artifactService.streamGenerated(id, format);
+        Invoice invoice = invoiceService.get(id);
+        String ext = format == ArtifactFormat.PDF ? ".pdf" : ".docx";
+        String filename = "invoice-" + invoice.number() + ext;
+        MediaType mediaType = format == ArtifactFormat.PDF
+            ? MediaType.APPLICATION_PDF
+            : MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+            .header(HttpHeaders.CACHE_CONTROL, "private, no-store")
+            .contentType(mediaType)
+            .contentLength(bytes.length)
+            .body(bytes);
+    }
+
+    /**
+     * Returns metadata about generated artefacts for the given invoice.
+     *
+     * @param id the invoice UUID
+     * @return 200 with artefact metadata (pdf and docx fields, null if not generated)
+     */
+    @GetMapping("/{id}/generated/metadata")
+    @Operation(summary = "Get metadata of generated artefacts for an invoice")
+    public ResponseEntity<InvoiceArtifactsMetadataResponse> generatedMetadata(
+        @PathVariable UUID id
+    ) {
+        return ResponseEntity.ok(artifactService.metadata(id));
+    }
+
     private InvoiceResponse toResponse(Invoice invoice) {
         List<InvoiceLineDto> lineDtos = invoice.lines().stream()
             .map(l -> new InvoiceLineDto(l.id(), l.description(), l.quantity(),
@@ -177,7 +314,15 @@ public class InvoiceController {
             statusName,
             invoice.lastSentAt(),
             invoice.createdAt(),
-            invoice.updatedAt()
+            invoice.updatedAt(),
+            invoice.clientNameSnapshot(),
+            invoice.clientAddressSnapshot(),
+            invoice.companyNameSnapshot(),
+            invoice.companyAddressSnapshot(),
+            invoice.companyVatSnapshot(),
+            invoice.companyIbanSnapshot(),
+            invoice.companySwiftSnapshot(),
+            invoice.companyBankNameSnapshot()
         );
     }
 

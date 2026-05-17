@@ -68,6 +68,33 @@ public class InvoiceEntity {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @Column(name = "client_email", length = 254)
+    private String clientEmail;
+
+    @Column(name = "client_name_snapshot", length = 200, nullable = false)
+    private String clientNameSnapshot = "";
+
+    @Column(name = "client_address_snapshot", length = 500, nullable = false)
+    private String clientAddressSnapshot = "";
+
+    @Column(name = "company_name_snapshot", length = 200, nullable = false)
+    private String companyNameSnapshot = "";
+
+    @Column(name = "company_address_snapshot", length = 500, nullable = false)
+    private String companyAddressSnapshot = "";
+
+    @Column(name = "company_vat_snapshot", length = 50, nullable = false)
+    private String companyVatSnapshot = "";
+
+    @Column(name = "company_iban_snapshot", length = 100, nullable = false)
+    private String companyIbanSnapshot = "";
+
+    @Column(name = "company_swift_snapshot", length = 20, nullable = false)
+    private String companySwiftSnapshot = "";
+
+    @Column(name = "company_bank_name_snapshot", length = 200, nullable = false)
+    private String companyBankNameSnapshot = "";
+
     @Version
     @Column(nullable = false)
     private Long version;

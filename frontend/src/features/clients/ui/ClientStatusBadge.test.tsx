@@ -14,4 +14,14 @@ describe('ClientStatusBadge', () => {
     expect(screen.getByTestId('status-badge-inactive')).toBeInTheDocument();
     expect(screen.getByText('Inactive')).toBeInTheDocument();
   });
+
+  it('ACTIVE badge has data-variant="success"', () => {
+    render(<ClientStatusBadge status="ACTIVE" />);
+    expect(screen.getByTestId('status-badge-active')).toHaveAttribute('data-variant', 'success');
+  });
+
+  it('INACTIVE badge has data-variant="muted"', () => {
+    render(<ClientStatusBadge status="INACTIVE" />);
+    expect(screen.getByTestId('status-badge-inactive')).toHaveAttribute('data-variant', 'muted');
+  });
 });

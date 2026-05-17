@@ -39,6 +39,24 @@ public class ClientEntity {
     @Column(length = 500)
     private String address;
 
+    @Column(name = "company_name", length = 200, nullable = false)
+    private String companyName = "";
+
+    @Column(name = "company_address", length = 500, nullable = false)
+    private String companyAddress = "";
+
+    @Column(name = "company_vat_number", length = 50, nullable = false)
+    private String companyVatNumber = "";
+
+    @Column(name = "company_iban", length = 100, nullable = false)
+    private String companyIban = "";
+
+    @Column(name = "company_swift_bic", length = 20, nullable = false)
+    private String companySwiftBic = "";
+
+    @Column(name = "company_bank_name", length = 200, nullable = false)
+    private String companyBankName = "";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

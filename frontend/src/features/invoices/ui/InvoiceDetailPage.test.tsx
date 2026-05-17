@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { I18nextProvider } from 'react-i18next';
@@ -79,13 +80,14 @@ describe('InvoiceDetailPage', () => {
     expect(screen.getByTestId('invoice-total')).toBeInTheDocument();
   });
 
-  it('renders action row with View PDF, Download and Send buttons', async () => {
+  it('renders action row with Preview, Generate, Download and Send buttons', async () => {
     renderPage();
     await waitFor(
       () => expect(screen.getByTestId('invoice-action-row')).toBeInTheDocument(),
       WAIT_OPTS,
     );
-    expect(screen.getByTestId('btn-view-pdf')).toBeInTheDocument();
+    expect(screen.getByTestId('btn-preview-invoice')).toBeInTheDocument();
+    expect(screen.getByTestId('btn-generate-menu')).toBeInTheDocument();
     expect(screen.getByTestId('btn-download-menu')).toBeInTheDocument();
     expect(screen.getByTestId('btn-send-invoice')).toBeInTheDocument();
   });
@@ -289,5 +291,34 @@ describe('InvoiceDetailPage', () => {
       WAIT_OPTS,
     );
     expect(screen.queryByTestId('mark-as-paid-btn')).not.toBeInTheDocument();
+  });
+
+  it('onPaid callback: clicking MarkAsPaid triggers invoice refetch', async () => {
+    const { toast } = await import('sonner');
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(
+      () => expect(screen.getByTestId('mark-as-paid-btn')).toBeInTheDocument(),
+      WAIT_OPTS,
+    );
+    await user.click(screen.getByTestId('mark-as-paid-btn'));
+    await waitFor(() => expect(toast.success).toHaveBeenCalled(), WAIT_OPTS);
+  });
+
+  it('onGenerated callback: clicking Generate PDF triggers metadata refetch', async () => {
+    const { toast } = await import('sonner');
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(
+      () => expect(screen.getByTestId('btn-generate-menu')).toBeInTheDocument(),
+      WAIT_OPTS,
+    );
+    await user.click(screen.getByTestId('btn-generate-menu'));
+    await waitFor(
+      () => expect(screen.getByTestId('btn-generate-pdf')).toBeInTheDocument(),
+      WAIT_OPTS,
+    );
+    await user.click(screen.getByTestId('btn-generate-pdf'));
+    await waitFor(() => expect(toast.success).toHaveBeenCalled(), WAIT_OPTS);
   });
 });

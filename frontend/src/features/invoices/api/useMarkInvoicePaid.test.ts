@@ -1,9 +1,10 @@
 import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { server } from '@/mocks/server';
 import { http, HttpResponse } from 'msw';
 import { useMarkInvoicePaid } from './useMarkInvoicePaid';
 import { resetMockInvoices } from '@/mocks/handlers';
+import * as markInvoicePaidModule from './markInvoicePaid';
 
 beforeEach(() => {
   resetMockInvoices();
@@ -80,5 +81,20 @@ describe('useMarkInvoicePaid', () => {
       }
     });
     expect(caughtError).not.toBeNull();
+  });
+
+  it('wraps non-Error thrown values in a new Error', async () => {
+    vi.spyOn(markInvoicePaidModule, 'markInvoicePaid').mockRejectedValueOnce('string error');
+    const { result } = renderHook(() => useMarkInvoicePaid());
+    await act(async () => {
+      try {
+        await result.current.markPaid('inv-uuid-1');
+      } catch {
+        // expected
+      }
+    });
+    expect(result.current.error).toBeInstanceOf(Error);
+    expect(result.current.error?.message).toBe('string error');
+    vi.restoreAllMocks();
   });
 });
