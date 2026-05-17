@@ -4,11 +4,8 @@ Maintained by the **documentation** subagent. One row per feature.
 
 | ID | Title | State | Owner | Plan | Review | Security | QA | PR |
 |----|-------|-------|-------|------|--------|----------|----|----|
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
+| FEAT-20260516-01 | Expense tracking with category dashboard + auth rate-limiting (Bucket4j) | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260516-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260516-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260516-01/SECURITY.md) | [QA.md](.features/FEAT-20260516-01/QA.md) | — |
 | FEAT-20260514-02 | Invoice template editor and full lifecycle (preview, generate, persist, download, email) | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260514-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260514-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260514-02/SECURITY.md) | [QA.md](.features/FEAT-20260514-02/QA.md) | — |
->>>>>>> feat/FEAT-20260514-02-invoice-lifecycle
 | FEAT-20260514-01 | Dashboard upgrade — stats, charts, centralized Coolors palette, invoice status, palette switcher | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260514-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260514-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260514-01/SECURITY.md) | — | — |
 | FEAT-20260513-03 | Invoice Sharing — DOCX template rendering, PDF via LibreOffice, email delivery | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260513-03/PLAN.md) | [REVIEW.md](.features/FEAT-20260513-03/REVIEW.md) | [SECURITY.md](.features/FEAT-20260513-03/SECURITY.md) | [QA.md](.features/FEAT-20260513-03/QA.md) | — |
 | FEAT-20260513-02 | Invoice PDF generation and email delivery to clients | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260513-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260513-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260513-02/SECURITY.md) | [QA.md](.features/FEAT-20260513-02/QA.md) | — |
@@ -20,9 +17,78 @@ Maintained by the **documentation** subagent. One row per feature.
 | FEAT-20260512-01 | Frontend design system foundation | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-01/SECURITY.md) | [QA.md](.features/FEAT-20260512-01/QA.md) | — |
 | FEAT-20260511-01 | Client management (CRUD) | Done | elsonveliu | [PLAN.md](.features/FEAT-20260511-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260511-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260511-01/SECURITY.md) | [QA.md](.features/FEAT-20260511-01/QA.md) | — |
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
+## FEAT-20260516-01 — Expense tracking with category dashboard
+
+### Overview
+
+Adds a dedicated `/expenses` page for tracking outgoing expenses. The primary surface is a category-breakdown dashboard (icon + name + total + count) for the selected month, with a full CRUD list of individual expenses underneath. Auth rate-limiting (Bucket4j 8.10.1) was added to `/api/v1/auth/login` and `/api/v1/auth/register` as part of this feature (5 req/IP/min, HTTP 429 on exhaustion). Invoice `PUT /{id}` update endpoint was also added.
+
+Security required 4 iterations (conflict markers, missing rate-limiting). QA: 24 Playwright specs, all passed.
+
+### New endpoints
+
+| Method | Path | Summary |
+|--------|------|---------|
+| GET | `/api/v1/expenses` | Paginated list with optional `category`, `dateFrom`, `dateTo` filters |
+| POST | `/api/v1/expenses` | Create expense — 201 + Location |
+| GET | `/api/v1/expenses/{id}` | Get by ID |
+| PUT | `/api/v1/expenses/{id}` | Full replacement update |
+| DELETE | `/api/v1/expenses/{id}` | Soft-delete — 204 |
+| GET | `/api/v1/expenses/summary` | Monthly summary: `grandTotal`, `totalCount`, `byCategory` |
+
+### Backend changes
+
+- `V12__create_expenses.sql` — `expenses` table with CHECK constraints + 2 partial indexes
+- Domain: `Expense`, `ExpenseCategory` enum (10 values), `ExpenseRepository` port, `ExpenseNotFoundException`, `CategorySummary`
+- Application: `ExpenseService`, `ExpenseFilter`, `MonthlySummary`
+- Adapter web: `ExpenseController`, `CreateExpenseRequest`/`UpdateExpenseRequest`/`ExpenseResponse`/`ExpenseSummaryResponse` DTOs
+- Adapter persistence: `ExpenseEntity`, `ExpenseJpaRepository`, `ExpenseEntityMapper`, `ExpenseRepositoryAdapter`
+- Security: `AuthRateLimitFilter` — Bucket4j `ConcurrentHashMap<String, Bucket>`, per-IP 5 req/min on `/auth/login` and `/auth/register`, registered before `UsernamePasswordAuthenticationFilter`; 429 JSON `{ status, title, detail, code:"RATE_LIMIT_EXCEEDED" }`
+- `GlobalExceptionHandler` updated with `ExpenseNotFoundException` → 404
+- `InvoiceController` extended with `PUT /{id}` (update invoice)
+
+### Frontend changes
+
+- `src/features/expenses/` — full feature slice: types, Zod schema, categories map, API layer, 5 hooks, 5 UI components
+- `src/pages/ExpensesPage.tsx` — thin wrapper (follows `InvoicesPage.tsx` convention)
+- `App.tsx` — `/expenses` route inside protected shell
+- `Sidebar.tsx` — `Expenses` nav item (Wallet icon) between Invoices and Settings
+- `en.json` — `nav.expenses` + `expenses.*` keys (10 category names, form labels, table headers, toasts)
+- `index.css` — 10 `--color-cat-<name>-bg/-fg` token pairs for `CategoryBadge` tinting
+
+### Quality gate results
+
+| Gate | Result |
+|------|--------|
+| JaCoCo line + branch | ≥ 90% pass |
+| Vitest (911 tests) | pass |
+| pnpm lint | 0 errors |
+| gitleaks | 0 secrets |
+| Semgrep | 0 findings (394 rules, 531 files) |
+| pnpm audit | 0 High/Critical |
+| Grype | pass (0 High/Critical) |
+| Playwright E2E | 24/24 passed |
+
+### Security findings resolved
+
+| OWASP | Finding | Resolution |
+|-------|---------|------------|
+| A04 Insecure Design | No brute-force protection on auth endpoints | `AuthRateLimitFilter` + Bucket4j 8.10.1 (5 req/IP/min) |
+| A03 Injection | New expense JPQL queries | Named `@Param` bindings, `ExpenseCategory.valueOf()` coercion, no string concatenation |
+| A04 Insecure Design | Amount overflow / future-date abuse | Server-side cap `amount ≤ 9,999,999.99`; `@NotFutureExpenseDate` custom validator |
+
+### Known open items
+
+| Item | Description |
+|------|-------------|
+| Non-blocking | Rate-limit bucket store is in-memory — resets on restart and does not span pod replicas; migrate to `bucket4j-redis` for multi-instance deployments |
+| Non-blocking | `categoryLabel()` hardcodes English instead of routing through `t('expenses.categories.*')` — adding a second locale requires code changes |
+| Non-blocking | `Expense.amount` TypeScript type is `string` but Jackson serializes as numeric; `parseFloat()` wrappers mask this |
+| Follow-up | `Retry-After: 60` response header on 429 for RFC 7231 compliance |
+| Follow-up | No `user_id` column on `expenses` — multi-tenant scoping tracked as follow-up migration `V13__add_user_id_to_expenses.sql` |
+
+---
+
 ## FEAT-20260514-02 — Invoice template editor and full lifecycle
 
 ### Overview
@@ -104,7 +170,6 @@ Review required 2 iterations (1 failure — ESLint errors). Security scan: 1 req
 
 ---
 
->>>>>>> feat/FEAT-20260514-02-invoice-lifecycle
 ## FEAT-20260514-01 — Dashboard upgrade (stats, charts, palette, invoice status)
 
 ### Overview

@@ -32,7 +32,7 @@ C4Container
 
 ## Components — Backend (C4 — level 3)
 
-Updated by FEAT-20260514-02 (invoice template editor and full lifecycle). FEAT-20260514-01 added DashboardController/Service and MarkAsPaid. FEAT-20260513-03 added InvoiceRenderController, InvoiceRenderService, PoiTlInvoiceDocxRenderer, LibreOfficePdfConverter, DocxThenPdfInvoicePdfRenderer, and InvoiceTemplateController. FEAT-20260513-02 added InvoiceController, InvoiceService, OpenPdfInvoiceRenderer, JavaMailInvoiceMailer, and InvoiceRepositoryAdapter. Previous update: FEAT-20260512-02 (authentication modernization).
+Updated by FEAT-20260516-01 (expense tracking + auth rate-limiting). FEAT-20260514-02 added InvoiceArtifactService and lifecycle endpoints. FEAT-20260514-01 added DashboardController/Service and MarkAsPaid. FEAT-20260513-03 added InvoiceRenderController, InvoiceRenderService, PoiTlInvoiceDocxRenderer, LibreOfficePdfConverter, DocxThenPdfInvoicePdfRenderer, and InvoiceTemplateController. FEAT-20260513-02 added InvoiceController, InvoiceService, OpenPdfInvoiceRenderer, JavaMailInvoiceMailer, and InvoiceRepositoryAdapter. Previous update: FEAT-20260512-02 (authentication modernization).
 
 ```mermaid
 flowchart TB
@@ -40,11 +40,13 @@ flowchart TB
         ctl[ClientController]
         auth_ctl[AuthController<br/>/api/v1/auth/*]
         inv_ctl[InvoiceController<br/>/api/v1/invoices — CRUD + /pdf + /send-email<br/>+ PATCH /{id}/mark-paid + DELETE /{id}<br/>+ GET /{id}/preview-pdf<br/>+ POST /{id}/generate<br/>+ GET /{id}/generated<br/>+ GET /{id}/generated/metadata]
+        exp_ctl[ExpenseController<br/>/api/v1/expenses — CRUD + /summary]
         dash_ctl[DashboardController<br/>GET /api/v1/dashboard/stats]
         render_ctl[InvoiceRenderController<br/>/api/v1/invoices/{id}/docx<br/>/docx-pdf  /docx-email]
         tpl_ctl[InvoiceTemplateController<br/>/api/v1/settings/invoice-template]
     end
     subgraph application["application"]
+        exp_svc[ExpenseService<br/>create / list / get / update / delete / summary]
         svc[ClientService]
         auth_svc[AuthService]
         inv_svc[InvoiceService<br/>markAsPaid / sendEmail / delete ...]
@@ -58,13 +60,13 @@ flowchart TB
         art_props[GeneratedArtifactProperties<br/>app.invoice.generated.*]
     end
     subgraph domain["domain"]
-        entities[Client, AppUser, Invoice, InvoiceLine<br/>GeneratedArtifact record<br/>ArtifactFormat enum PDF/DOCX]
+        entities[Client, AppUser, Invoice, InvoiceLine<br/>GeneratedArtifact record<br/>ArtifactFormat enum PDF/DOCX<br/>Expense, ExpenseCategory enum (10 values)<br/>CategorySummary]
         status[InvoiceStatus enum<br/>DRAFT / SENT / PAID]
         repos[ClientRepository, AppUserRepository, InvoiceRepository<br/>GeneratedArtifactRepository<br/>countByStatus / revenueByStatus / revenueByMonth]
         exceptions[InvoiceHasNoRecipientException<br/>PdfConversionFailedException<br/>GeneratedArtifactNotFoundException<br/>ArtifactAlreadyExistsException<br/>ArtifactTooLargeException]
     end
     subgraph adapter_persistence["adapter.persistence"]
-        jpa[ClientRepositoryAdapter<br/>AppUserRepositoryAdapter<br/>InvoiceRepositoryAdapter<br/>GeneratedArtifactRepositoryAdapter<br/>markPaid / softDelete / revenueByMonth JPQL]
+        jpa[ClientRepositoryAdapter<br/>AppUserRepositoryAdapter<br/>InvoiceRepositoryAdapter<br/>GeneratedArtifactRepositoryAdapter<br/>ExpenseRepositoryAdapter<br/>markPaid / softDelete / revenueByMonth / summary JPQL]
     end
     subgraph adapter_template["adapter.template"]
         fs_store[FilesystemInvoiceTemplateStore<br/>atomic replace / ZIP validation / SSRF scan<br/>VBA macro rejection]
@@ -80,17 +82,19 @@ flowchart TB
     end
     subgraph config["config"]
         sec[SecurityConfig]
+        rl[AuthRateLimitFilter<br/>Bucket4j 8.10.1<br/>5 req/IP/min on /auth/login, /auth/register]
         mail_cfg[InvoiceMailerAutoConfig<br/>conditional JavaMailSender]
         app_cfg[AppConfig<br/>Clock.systemUTC bean<br/>@EnableConfigurationProperties(GeneratedArtifactProperties)]
     end
     subgraph infra_ext["External"]
-        db[(Postgres<br/>invoices / invoice_lines<br/>invoice_generated_artifacts NEW<br/>app_users / clients)]
+        db[(Postgres<br/>invoices / invoice_lines<br/>invoice_generated_artifacts<br/>app_users / clients<br/>expenses NEW — V12)]
         fs[(FS ./templates/invoice-template.docx)]
         gen_fs[(FS ./generated/invoices/&lt;id&gt;.pdf|.docx<br/>named Docker volume generated_invoices)]
         lo_bin([soffice headless binary])
         smtp[MailHog / SMTP]
         cp[(Classpath default template)]
     end
+    exp_ctl --> exp_svc
     ctl --> svc
     auth_ctl --> auth_svc
     inv_ctl --> inv_svc
@@ -250,12 +254,7 @@ flowchart LR
 
 ## Components — Frontend
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-Updated by FEAT-20260514-01 (Dashboard upgrade, palette migration, invoice status). Previous update: FEAT-20260513-02 (Invoice PDF + email) and FEAT-20260513-01 (Design system, dark-mode fixes, responsive layout, form alignment).
-=======
-Updated by FEAT-20260514-02 (invoice template editor and full lifecycle). Previous update: FEAT-20260514-01 (Dashboard upgrade, palette migration, invoice status).
->>>>>>> feat/FEAT-20260514-02-invoice-lifecycle
+Updated by FEAT-20260516-01 (Expense tracking with category dashboard). Previous update: FEAT-20260514-02 (invoice template editor and full lifecycle).
 
 **Design system** — see [`docs/DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) for the full token reference, primitive component API, dark-mode guide, breakpoint contract, and ESLint enforcement rule.
 
@@ -288,6 +287,7 @@ flowchart LR
       guard_p --> dash[DashboardPage /]
       guard_p --> clients[ClientsPage /clients]
       guard_p --> detail[ClientDetailPage /clients/:id]
+      guard_p --> expenses[ExpensesPage /expenses]
       guard_pub --> login[LoginPage]
       guard_pub --> register[RegisterPage]
       guard_pub --> forgot[ForgotPasswordPage]
@@ -328,6 +328,20 @@ flowchart LR
       statusBadge[ClientStatusBadge]
       derive[derive.ts<br/>deriveStatus + formatDate]
 <<<<<<< HEAD
+    end
+    subgraph ExpensesFeature[src/features/expenses]
+      expPage[ExpensesPage]
+      expDash[ExpenseDashboard<br/>month picker + grand-total + category cards]
+      expTable[ExpenseTable<br/>Date/Desc/Category/Amount/Actions]
+      expSheet[ExpenseFormSheet<br/>create/edit modal]
+      catBadge[CategoryBadge + CategoryIcon<br/>10 lucide icons]
+      expHooks[useExpenses / useExpenseSummary<br/>useCreateExpense / useUpdateExpense / useDeleteExpense]
+      expPage --> expDash
+      expPage --> expTable
+      expPage --> expSheet
+      expTable --> catBadge
+      expDash --> catBadge
+      expPage --> expHooks
     end
     subgraph InvoicesFeature[src/features/invoices]
       invDetailPage[InvoiceDetailPage<br/>StatusBadge in header<br/>MarkAsPaidButton in actions]
@@ -370,12 +384,7 @@ flowchart LR
       invDetailPage --> invApi
       invDetailPage --> useInv
       invApi --> invSchema
-<<<<<<< HEAD
-=======
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
-=======
       tplMgrPage --> placeholderCard
->>>>>>> feat/FEAT-20260514-02-invoice-lifecycle
     end
     subgraph AuthFeature[src/features/auth]
       forms[LoginForm / RegisterForm / ForgotPasswordForm]
@@ -412,13 +421,8 @@ flowchart LR
     guard_p --> invoiceDetail[InvoiceDetailPage /invoices/:id]
     guard_p --> invoiceTplMgr[InvoiceTemplateManagerPage /invoices/template]
     invoiceDetail --> InvoicesFeature
-<<<<<<< HEAD
-=======
-    end
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
-=======
     invoiceTplMgr --> InvoicesFeature
->>>>>>> feat/FEAT-20260514-02-invoice-lifecycle
+    expenses --> ExpensesFeature
     dash --> DashboardFeature
     clients --> ClientsFeature
     detail --> ClientsFeature
@@ -589,10 +593,6 @@ flowchart LR
 - **Why**: Zero-filling in SQL via a `generate_series` / calendar join is Postgres-specific and adds complexity to the native query. Doing it in Java keeps the SQL simple, is trivially testable with a mocked repository, and allows the fixed `Clock` injection to drive both the window computation and the test assertions deterministically.
 - **Trade-offs**: A month boundary that falls exactly at midnight UTC could theoretically shift the 6-month window between two sequential calls if the system clock is consulted more than once. The injected `Clock` instance (fixed in tests, `Clock.systemUTC()` in production) is read once per `getStats()` call and shared across the window computation and the merge — there is no inconsistency within a single request.
 
-<<<<<<< HEAD
-=======
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
-=======
 ### ADR-023 — FEAT-20260514-02: Filesystem-based generated artifact store for v1; port design allows S3 swap
 
 - **Date**: 2026-05-15
@@ -614,7 +614,20 @@ flowchart LR
 - **Why**: VBA macros in a server-rendered DOCX are a code-execution vector. LibreOffice headless will execute macro events on document open unless macros are explicitly disabled at the profile level. Rejecting at upload is simpler and more secure than disabling macros at the LibreOffice CLI level (which requires profile configuration that may be overridden).
 - **Trade-offs**: Legitimate templates with embedded macros are unusable. This is intentional — macros are not part of the poi-tl token-substitution feature set; any DOCX that requires macros for rendering is unsupported.
 
->>>>>>> feat/FEAT-20260514-02-invoice-lifecycle
+### ADR-026 — FEAT-20260516-01: Bucket4j in-memory bucket store for auth rate-limiting
+
+- **Date**: 2026-05-17
+- **Decision**: `AuthRateLimitFilter` uses a `ConcurrentHashMap<String, Bucket>` as the bucket store with `Bandwidth.classic(5, Refill.intervally(5, Duration.ofMinutes(1)))`.
+- **Why**: The in-memory store has zero external dependencies, works in all environments (including CI), and is sufficient for single-instance v1 deployments. Bucket4j supports a drop-in Redis backend (`bucket4j-redis`) with no API changes to the filter code.
+- **Trade-offs**: Bucket counts reset on JVM restart; state is not shared across pod replicas in horizontal scaling. For multi-instance deployments a Redis-backed store is required. Tracked as a follow-up before horizontal scaling is introduced.
+
+### ADR-027 — FEAT-20260516-01: Expense `category` stored as VARCHAR(50) with CHECK constraint
+
+- **Date**: 2026-05-17
+- **Decision**: The `expenses.category` column is `VARCHAR(50)` with a Postgres `CHECK` constraint listing the 10 valid enum values, rather than a native `ENUM` type.
+- **Why**: Adding new categories to a native Postgres `ENUM` requires a DDL `ALTER TYPE` which may lock the table briefly. `VARCHAR(50)` with a `CHECK` constraint allows category additions via a simple `ALTER TABLE ... CONSTRAINT` which can be applied without downtime. Enforcement at the application layer via `ExpenseCategory.valueOf()` catches invalid values before they reach JPQL. H2 compatibility (test profile) is maintained because H2 supports `CHECK` constraints but not Postgres-specific enum types.
+- **Trade-offs**: JPA does not get type-safe `@Enumerated(EnumType.STRING)` semantics for validation; all validation is in the service layer. This mirrors the ADR-002 pattern.
+
 ### ADR-008 — FEAT-20260512-01: Dual toast system during transition (sonner + legacy)
 
 - **Date**: 2026-05-12

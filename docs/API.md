@@ -34,8 +34,8 @@ The backend API is unchanged by FEAT-20260512-03. The following frontend-only ro
 
 | Tag | Method | Path | Auth | Summary |
 |-----|--------|------|------|---------|
-| Auth | POST | `/api/v1/auth/login` | None (public) | Authenticate with email and password |
-| Auth | POST | `/api/v1/auth/register` | None (public) | Register a new user account |
+| Auth | POST | `/api/v1/auth/login` | None (public, rate-limited 5/min/IP) | Authenticate with email and password |
+| Auth | POST | `/api/v1/auth/register` | None (public, rate-limited 5/min/IP) | Register a new user account |
 | Auth | POST | `/api/v1/auth/forgot-password` | None (public) | Request a password reset (anti-enumeration) |
 | Clients | POST | `/api/v1/clients` | Required | Create a new client |
 | Clients | GET | `/api/v1/clients` | Required | List clients (paginated, searchable) |
@@ -57,6 +57,12 @@ The backend API is unchanged by FEAT-20260512-03. The following frontend-only ro
 | Invoice Rendering | GET | `/api/v1/invoices/{id}/docx` | Required | Download invoice as merged DOCX (FEAT-20260513-03) |
 | Invoice Rendering | GET | `/api/v1/invoices/{id}/docx-pdf` | Required | Download invoice PDF via DOCX-template + LibreOffice pipeline (FEAT-20260513-03) |
 | Invoice Rendering | POST | `/api/v1/invoices/{id}/docx-email` | Required | Send invoice PDF (DOCX-template pipeline) by email (FEAT-20260513-03) |
+| Expenses | GET | `/api/v1/expenses` | Required | List expenses (paginated, filterable by category/dateFrom/dateTo) — FEAT-20260516-01 |
+| Expenses | POST | `/api/v1/expenses` | Required | Create a new expense — FEAT-20260516-01 |
+| Expenses | GET | `/api/v1/expenses/{id}` | Required | Get an expense by ID — FEAT-20260516-01 |
+| Expenses | PUT | `/api/v1/expenses/{id}` | Required | Update an expense (full replacement) — FEAT-20260516-01 |
+| Expenses | DELETE | `/api/v1/expenses/{id}` | Required | Soft-delete an expense — FEAT-20260516-01 |
+| Expenses | GET | `/api/v1/expenses/summary` | Required | Monthly expense summary by category — FEAT-20260516-01 |
 | Settings | POST | `/api/v1/settings/invoice-template` | Required | Upload a new DOCX invoice template |
 | Settings | GET | `/api/v1/settings/invoice-template/preview` | Required | Get active template metadata |
 | Settings | GET | `/api/v1/settings/invoice-template/download` | Required | Download the active invoice template |
@@ -67,7 +73,7 @@ The backend API is unchanged by FEAT-20260512-03. The following frontend-only ro
 
 ### POST `/api/v1/auth/login`
 
-Authenticates the user with email and password (HTTP Basic semantics). The client must extract `email:password`, base64-encode the pair, and place it in the JSON body (not the `Authorization` header) per the frontend convention. The server verifies the password against the bcrypt hash stored in `app_users`.
+Authenticates the user with email and password (HTTP Basic semantics). **Rate-limited** by `AuthRateLimitFilter` (Bucket4j 8.10.1): 5 requests per IP per minute. Exhaustion returns `429 RATE_LIMIT_EXCEEDED` — wait 60 seconds before retrying. The client must extract `email:password`, base64-encode the pair, and place it in the JSON body (not the `Authorization` header) per the frontend convention. The server verifies the password against the bcrypt hash stored in `app_users`.
 
 **Request body** (`application/json`):
 
@@ -98,12 +104,13 @@ Authenticates the user with email and password (HTTP Basic semantics). The clien
 |--------|------|-----------|
 | `400 Bad Request` | `VALIDATION_FAILED` | Missing or malformed field |
 | `401 Unauthorized` | `UNAUTHENTICATED` | Unknown email or wrong password (uniform — anti-enumeration) |
+| `429 Too Many Requests` | `RATE_LIMIT_EXCEEDED` | More than 5 requests from this IP in the current 1-minute window |
 
 ---
 
 ### POST `/api/v1/auth/register`
 
-Creates a new user account. The password is stored as a bcrypt hash (cost 12). Returns `409` if the email (case-insensitive) is already registered and not soft-deleted.
+Creates a new user account. **Rate-limited**: same 5 requests per IP per minute rule as `/login`. The password is stored as a bcrypt hash (cost 12). Returns `409` if the email (case-insensitive) is already registered and not soft-deleted.
 
 **Request body** (`application/json`):
 
@@ -136,6 +143,7 @@ Creates a new user account. The password is stored as a bcrypt hash (cost 12). R
 |--------|------|-----------|
 | `400 Bad Request` | `VALIDATION_FAILED` | A required field is missing or the password is too weak |
 | `409 Conflict` | `USER_EMAIL_TAKEN` | An active account with that email already exists |
+| `429 Too Many Requests` | `RATE_LIMIT_EXCEEDED` | More than 5 requests from this IP in the current 1-minute window |
 
 ---
 
@@ -697,6 +705,151 @@ Renders via poi-tl DOCX template, converts to PDF via LibreOffice, and emails th
 
 ---
 
+## Expenses (FEAT-20260516-01)
+
+All endpoints require HTTP Basic authentication. Page size is clamped to [1, 100] server-side.
+
+### GET `/api/v1/expenses`
+
+Returns a paginated list of non-deleted expenses.
+
+**Query parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `category` | enum | — | Filter by category (e.g. `FOOD_DRINK`, `TRANSPORT`) |
+| `dateFrom` | `YYYY-MM-DD` | — | Inclusive start date filter on `expenseDate` |
+| `dateTo` | `YYYY-MM-DD` | — | Inclusive end date filter on `expenseDate` |
+| `page` | integer | `0` | Zero-based page number |
+| `size` | integer | `20` | Page size (1–100, clamped server-side) |
+| `sort` | string | `expenseDate,desc` | Sort field and direction |
+
+**Success response** `200 OK`: page envelope with `ExpenseResponse` items.
+
+**Error responses**: `400 VALIDATION_ERROR` (bad enum/date), `401 UNAUTHENTICATED`.
+
+---
+
+### POST `/api/v1/expenses`
+
+Creates a new expense.
+
+**Request body** (`application/json`):
+
+```json
+{
+  "amount":      "125.50",
+  "category":    "FOOD_DRINK",
+  "expenseDate": "2026-05-17",
+  "description": "Team lunch"
+}
+```
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `amount` | number / string | yes | `> 0`, `≤ 9,999,999.99`, max 2 decimal places |
+| `category` | string | yes | One of: `FOOD_DRINK`, `TRANSPORT`, `HOUSING`, `HEALTH`, `ENTERTAINMENT`, `SHOPPING`, `TRAVEL`, `EDUCATION`, `UTILITIES`, `OTHER` |
+| `expenseDate` | `YYYY-MM-DD` | yes | Not in the future (today + 1 day tolerance for timezone slop) |
+| `description` | string | no | Max 500 characters |
+
+**Success response** `201 Created` + `Location: /api/v1/expenses/{id}`:
+
+```json
+{
+  "id":          "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "amount":      "125.50",
+  "category":    "FOOD_DRINK",
+  "description": "Team lunch",
+  "expenseDate": "2026-05-17",
+  "createdAt":   "2026-05-17T08:00:00Z",
+  "updatedAt":   "2026-05-17T08:00:00Z"
+}
+```
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `400` | `VALIDATION_ERROR` | Amount ≤ 0, amount > 9,999,999.99, future date, description > 500 chars, or unknown category |
+| `401` | `UNAUTHENTICATED` | No / invalid credentials |
+
+---
+
+### GET `/api/v1/expenses/{id}`
+
+Returns a single non-deleted expense by UUID.
+
+**Path parameter**: `id` — UUID of the expense.
+
+**Success response** `200 OK`: `ExpenseResponse` (same shape as POST response).
+
+**Error responses**: `401 UNAUTHENTICATED`, `404 EXPENSE_NOT_FOUND`.
+
+---
+
+### PUT `/api/v1/expenses/{id}`
+
+Fully replaces all mutable fields of the expense (full replacement).
+
+**Path parameter**: `id` — UUID of the expense.
+
+**Request body**: same shape as `CreateExpenseRequest`.
+
+**Success response** `200 OK`: updated `ExpenseResponse`.
+
+**Error responses**: `400 VALIDATION_ERROR`, `401 UNAUTHENTICATED`, `404 EXPENSE_NOT_FOUND`.
+
+---
+
+### DELETE `/api/v1/expenses/{id}`
+
+Soft-deletes the expense (sets `deleted_at`). The record is retained for audit purposes.
+
+**Path parameter**: `id` — UUID of the expense.
+
+**Success response** `204 No Content`.
+
+**Error responses**: `401 UNAUTHENTICATED`, `404 EXPENSE_NOT_FOUND`.
+
+---
+
+### GET `/api/v1/expenses/summary`
+
+Returns aggregated expense totals for the specified calendar month.
+
+**Query parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `month` | `YYYY-MM` | Current UTC month | Month to summarize |
+
+**Success response** `200 OK`:
+
+```json
+{
+  "month":      "2026-05",
+  "grandTotal": "1234.56",
+  "totalCount": 17,
+  "byCategory": [
+    { "category": "FOOD_DRINK", "total": "320.00", "count": 8 },
+    { "category": "TRANSPORT",  "total": "914.56", "count": 9 }
+  ]
+}
+```
+
+`byCategory` is sorted by `total DESC`, then `category ASC`. Empty months return `byCategory: []`, `grandTotal: "0.00"`, `totalCount: 0`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `month` | string | `"YYYY-MM"` |
+| `grandTotal` | BigDecimal | Sum of all non-deleted expenses for the month |
+| `totalCount` | long | Count of non-deleted expenses for the month |
+| `byCategory` | array | Per-category aggregates, sorted by `total DESC` |
+
+**Error responses**: `400 VALIDATION_ERROR` (malformed month), `401 UNAUTHENTICATED`.
+
+---
+
 ## Settings (FEAT-20260513-03)
 
 ### POST `/api/v1/settings/invoice-template`
@@ -805,4 +958,6 @@ All error responses use `Content-Type: application/problem+json`:
 | `PDF_CONVERSION_FAILED` | 502 | LibreOffice exited non-zero or timed out (20 s) |
 | `EMAIL_DELIVERY_FAILED` | 502 | SMTP relay rejected or timed out |
 | `PDF_CONVERSION_BUSY` | 503 | LibreOffice concurrency semaphore (limit 2) is saturated |
+| `EXPENSE_NOT_FOUND` | 404 | No non-deleted expense matching the given UUID (FEAT-20260516-01) |
+| `RATE_LIMIT_EXCEEDED` | 429 | More than 5 auth requests from this IP per minute (FEAT-20260516-01) |
 | `INTERNAL_ERROR` | 500 | Unexpected server error |

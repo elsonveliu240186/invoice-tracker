@@ -408,10 +408,6 @@ sequenceDiagram
     Hook-->>FE: refetch invoice
     FE-->>U: badge flips to PAID, button hides, toast "Invoice marked as paid"
 ```
-<<<<<<< HEAD
-=======
->>>>>>> feat/FEAT-20260512-03-dashboard-core-ui
-=======
 
 ---
 
@@ -509,4 +505,79 @@ sequenceDiagram
     API-->>FE: 200 { format:PDF, generatedAt: now, sha256 changed }
     FE-->>U: badge updated, toast "Regenerated"
 ```
->>>>>>> feat/FEAT-20260514-02-invoice-lifecycle
+
+---
+
+### FEAT-20260516-01 — Expense tracking with category dashboard
+
+#### 4a. Create expense — dashboard refresh (happy path)
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant FE as ExpensesPage
+    participant Sheet as ExpenseFormSheet
+    participant API as React hooks
+    participant BE as ExpenseController
+    participant SVC as ExpenseService
+    participant DB as Postgres
+    U->>FE: click "+ New Expense"
+    FE->>Sheet: open(editing=null)
+    U->>Sheet: fill amount/category/date, submit
+    Sheet->>Sheet: Zod parse — form values
+    Sheet->>API: useCreateExpense.mutate(payload)
+    API->>BE: POST /api/v1/expenses (Basic auth)
+    BE->>BE: @Valid CreateExpenseRequest
+    BE->>SVC: ExpenseService.create(cmd)
+    SVC->>DB: INSERT into expenses
+    DB-->>SVC: 1 row
+    SVC-->>BE: Expense domain record
+    BE-->>API: 201 + ExpenseResponse + Location
+    API-->>Sheet: resolved
+    Sheet->>FE: onClose + onSubmitted
+    FE->>API: useExpenses.refetch() + useExpenseSummary.refetch()
+    API->>BE: GET /api/v1/expenses?... and /summary?month=...
+    BE-->>API: updated list + summary
+    API-->>FE: new state
+    FE-->>U: toast "Expense created", updated cards + table
+```
+
+#### 4b. Edge case — change month (no expenses present)
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant FE as ExpensesPage
+    participant Dash as ExpenseDashboard
+    participant API as useExpenseSummary
+    participant BE as ExpenseController
+    U->>Dash: select month=2025-12
+    Dash->>FE: onMonthChange("2025-12")
+    FE->>API: refetch with month=2025-12
+    API->>BE: GET /api/v1/expenses/summary?month=2025-12
+    BE-->>API: {grandTotal:"0.00", totalCount:0, byCategory:[]}
+    API-->>FE: empty summary
+    FE-->>U: render EmptyState "No expenses for December 2025" inside dashboard area; expense table also filtered to that month shows empty row
+```
+
+#### 4c. Auth rate-limit — brute-force protection
+
+```mermaid
+sequenceDiagram
+    actor A as Attacker
+    participant Filter as AuthRateLimitFilter
+    participant BE as AuthController
+    participant Bucket as Bucket4j (in-memory)
+    loop First 5 requests in 1-minute window
+        A->>Filter: POST /api/v1/auth/login
+        Filter->>Bucket: tryConsume(1) for IP
+        Bucket-->>Filter: true (tokens remain)
+        Filter->>BE: pass through
+        BE-->>A: 401 Unauthorized
+    end
+    A->>Filter: POST /api/v1/auth/login (6th attempt)
+    Filter->>Bucket: tryConsume(1) for IP
+    Bucket-->>Filter: false (bucket empty)
+    Filter-->>A: 429 Too Many Requests {code:"RATE_LIMIT_EXCEEDED"}
+    Note over Filter: BE is never reached
+```

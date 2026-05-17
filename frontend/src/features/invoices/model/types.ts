@@ -11,6 +11,7 @@ export interface Invoice {
   number: string;
   clientId: string;
   clientEmail: string | null;
+  clientNameSnapshot?: string | null;
   issueDate: string;
   dueDate: string;
   taxRate: string;

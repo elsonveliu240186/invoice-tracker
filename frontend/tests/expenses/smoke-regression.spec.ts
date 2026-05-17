@@ -84,18 +84,21 @@ async function stubInvoices(page: Page) {
 }
 
 async function stubExpenses(page: Page) {
-  await page.route('**/api/v1/expenses/summary**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ month: '2026-05', grandTotal: 0, totalCount: 0, byCategory: [] }),
-    }),
-  );
+  // Broad handler registered FIRST; summary-specific handler registered LAST.
+  // Playwright matches routes in LIFO order (last-registered wins), so the
+  // summary-specific stub takes precedence over the broad one for /summary URLs.
   await page.route('**/api/v1/expenses**', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 }),
+    }),
+  );
+  await page.route('**/api/v1/expenses/summary**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ month: '2026-05', grandTotal: 0, totalCount: 0, byCategory: [] }),
     }),
   );
 }

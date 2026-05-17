@@ -111,6 +111,7 @@ const BASE_INVOICE: Invoice = {
   number: 'INV-2026-0001',
   clientId: '00000000-0000-0000-0000-000000000003',
   clientEmail: 'client@example.com',
+  clientNameSnapshot: 'Acme Corp',
   issueDate: '2026-05-13',
   dueDate: '2026-06-12',
   taxRate: '0.21',
