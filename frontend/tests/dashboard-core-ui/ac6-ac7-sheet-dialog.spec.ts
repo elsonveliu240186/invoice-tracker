@@ -2,21 +2,183 @@
  * AC-6: Row "Edit" opens a slide-in Sheet with ClientForm; "Delete" opens AlertDialog.
  *       ClientFormModal is gone — only Sheet/AlertDialog exist.
  * AC-7: /clients/:id renders ClientDetailPage with Edit Sheet and Delete AlertDialog.
+ *
+ * All backend calls are stubbed via page.route() — no live backend needed.
  */
-import { test, expect } from '@playwright/test';
-import { loginAs, seedClients } from './auth-helpers';
+import { test, expect, type Page } from '@playwright/test';
+import { loginAs } from './auth-helpers';
+
+// ---------------------------------------------------------------------------
+// Shared types & fixture factory
+// ---------------------------------------------------------------------------
+
+interface StubClient {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  address: string | null;
+  companyName: string;
+  companyAddress: string;
+  companyVatNumber: string;
+  companyIban: string;
+  companySwiftBic: string;
+  companyBankName: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
+function makeClient(
+  overrides: Partial<StubClient> & { id: string; name: string; email: string },
+): StubClient {
+  return {
+    phone: null,
+    address: null,
+    companyName: '',
+    companyAddress: '',
+    companyVatNumber: '',
+    companyIban: '',
+    companySwiftBic: '',
+    companyBankName: '',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+    deletedAt: null,
+    ...overrides,
+  };
+}
+
+function makePageResponse(clients: StubClient[]) {
+  return {
+    content: clients,
+    page: 0,
+    size: 20,
+    totalElements: clients.length,
+    totalPages: 1,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Stub helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Stub GET list, individual GET by ID, PUT (update), and DELETE for a mutable
+ * client list. The list is held in a local array so mutations are reflected.
+ */
+async function stubClientsApi(page: Page, initialClients: StubClient[]) {
+  // Mutable copy so update/delete can mutate state for subsequent requests
+  const clients = [...initialClients];
+
+  await page.route('**/api/v1/clients**', (route) => {
+    const url = new URL(route.request().url());
+    const method = route.request().method();
+
+    // Extract path segments to detect /clients/:id vs /clients
+    const pathParts = url.pathname.split('/').filter(Boolean);
+    // pathParts: ['api', 'v1', 'clients'] or ['api', 'v1', 'clients', ':id']
+    const clientId = pathParts.length === 4 ? pathParts[3] : null;
+
+    if (clientId) {
+      if (method === 'GET') {
+        const client = clients.find((c) => c.id === clientId);
+        if (client) {
+          void route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(client),
+          });
+        } else {
+          void route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ status: 404, detail: 'Not found' }) });
+        }
+        return;
+      }
+
+      if (method === 'PUT') {
+        const body = route.request().postDataJSON() as Partial<StubClient>;
+        const idx = clients.findIndex((c) => c.id === clientId);
+        if (idx !== -1) {
+          clients[idx] = { ...clients[idx]!, ...body };
+          void route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(clients[idx]),
+          });
+        } else {
+          void route.fulfill({ status: 404, contentType: 'application/json', body: '{}' });
+        }
+        return;
+      }
+
+      if (method === 'DELETE') {
+        const idx = clients.findIndex((c) => c.id === clientId);
+        if (idx !== -1) {
+          clients.splice(idx, 1);
+        }
+        void route.fulfill({ status: 204 });
+        return;
+      }
+    } else {
+      // List or POST
+      if (method === 'GET') {
+        const searchQuery = url.searchParams.get('query') ?? '';
+        let filtered = clients;
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          filtered = clients.filter(
+            (c) => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q),
+          );
+        }
+        void route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(makePageResponse(filtered)),
+        });
+        return;
+      }
+
+      if (method === 'POST') {
+        const body = route.request().postDataJSON() as Partial<StubClient>;
+        const newClient: StubClient = makeClient({
+          id: `client-new-${Date.now()}`,
+          name: body.name ?? 'New Client',
+          email: body.email ?? 'new@example.com',
+          ...body,
+        });
+        clients.push(newClient);
+        void route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify(newClient),
+        });
+        return;
+      }
+    }
+
+    void route.continue();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Test data
+// ---------------------------------------------------------------------------
+
+const ACME = makeClient({ id: 'client-acme', name: 'Acme Corp', email: 'acme@example.com' });
+const GLOBEX = makeClient({ id: 'client-globex', name: 'Globex', email: 'globex@example.com' });
+const DETAIL_CLIENT = makeClient({
+  id: 'client-detail-001',
+  name: 'Detail Client',
+  email: 'detail@example.com',
+  phone: '555-1234',
+});
 
 // ---------------------------------------------------------------------------
 // AC-6 — Edit Sheet and Delete AlertDialog from the list page
 // ---------------------------------------------------------------------------
 
-// Run serially so seed state is deterministic between tests that mutate the backend
 test.describe.serial('AC-6 — Edit Sheet from clients list', () => {
-  test.beforeEach(async ({ page, request }) => {
-    await seedClients(request, [
-      { name: 'Acme Corp', email: 'acme@example.com' },
-      { name: 'Globex', email: 'globex@example.com' },
-    ]);
+  test.beforeEach(async ({ page }) => {
+    await stubClientsApi(page, [ACME, GLOBEX]);
     await loginAs(page, { navigateTo: '/clients' });
     await expect(page.locator('[data-testid="clients-table"]')).toBeVisible();
   });
@@ -114,33 +276,11 @@ test.describe.serial('AC-6 — Edit Sheet from clients list', () => {
 // AC-7 — ClientDetailPage at /clients/:id
 // ---------------------------------------------------------------------------
 
-// Run serially so the shared backend state is deterministic across the group
 test.describe.serial('AC-7 — ClientDetailPage', () => {
-  let clientId: string;
+  const clientId = DETAIL_CLIENT.id;
 
-  test.beforeEach(async ({ page, request }) => {
-    // Seed one client and capture its ID from the API response
-    const basicAuth = 'Basic ' + Buffer.from('admin:secret').toString('base64');
-
-    // Clear existing
-    const listResp = await request.get('http://localhost:8080/api/v1/clients?size=100', {
-      headers: { Authorization: basicAuth },
-    });
-    const existing = (await listResp.json()) as { content: { id: string }[] };
-    for (const c of existing.content) {
-      await request.delete(`http://localhost:8080/api/v1/clients/${c.id}`, {
-        headers: { Authorization: basicAuth },
-      });
-    }
-
-    // Create fresh
-    const createResp = await request.post('http://localhost:8080/api/v1/clients', {
-      headers: { Authorization: basicAuth, 'Content-Type': 'application/json' },
-      data: { name: 'Detail Client', email: 'detail@example.com', phone: '555-1234' },
-    });
-    const created = (await createResp.json()) as { id: string };
-    clientId = created.id;
-
+  test.beforeEach(async ({ page }) => {
+    await stubClientsApi(page, [DETAIL_CLIENT]);
     await loginAs(page, { navigateTo: `/clients/${clientId}` });
     // Wait for the loading skeleton to resolve to the full detail page
     await expect(page.locator('[data-testid="client-detail-page"]')).toBeVisible({
