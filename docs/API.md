@@ -42,7 +42,8 @@ The backend API is unchanged by FEAT-20260512-03. The following frontend-only ro
 | Clients | GET | `/api/v1/clients/{id}` | Required | Get a client by ID |
 | Clients | PUT | `/api/v1/clients/{id}` | Required | Update a client (full replacement) |
 | Clients | DELETE | `/api/v1/clients/{id}` | Required | Soft-delete a client |
-| Dashboard | GET | `/api/v1/dashboard/stats` | Required | Get dashboard aggregates — counts, revenues, and last-6-months chart data (FEAT-20260514-01) |
+| Dashboard | GET | `/api/v1/dashboard/stats` | Required | Get dashboard aggregates — counts, revenues, and last-6-months chart data; accepts optional `from`/`to` query params (FEAT-20260514-01, updated FEAT-20260517-01) |
+| Dashboard | GET | `/api/v1/dashboard/expense-stats` | Required | Get expense totals by month and by category for a date window (default last 6 months) — FEAT-20260517-01 |
 | Invoices | POST | `/api/v1/invoices` | Required | Create a new invoice |
 | Invoices | GET | `/api/v1/invoices` | Required | List invoices (paginated, filterable by clientId) — each item includes `status` |
 | Invoices | GET | `/api/v1/invoices/{id}` | Required | Get an invoice by ID — includes `status` field |
@@ -319,15 +320,22 @@ Soft-deletes the client (sets `deleted_at`). The record is retained in the datab
 
 ---
 
-## Dashboard (FEAT-20260514-01)
+## Dashboard (FEAT-20260514-01, updated FEAT-20260517-01)
 
 ### GET `/api/v1/dashboard/stats`
 
-Returns aggregated statistics for all non-deleted invoices belonging to the authenticated user. The `revenueByMonth` array always contains exactly 6 entries (current month plus the 5 preceding months), zero-filled for months with no invoices.
+Returns aggregated statistics for non-deleted invoices. The `revenueByMonth` array always contains exactly 6 entries (current month plus the 5 preceding months), zero-filled for months with no invoices. Since FEAT-20260517-01 this endpoint accepts optional `from`/`to` query parameters; when supplied all aggregates (counts, revenues, `revenueByMonth`) are scoped to the given window.
 
 **Auth**: HTTP Basic required. Returns `401` when unauthenticated.
 
-**Request**: no body, no query parameters.
+**Query parameters** (all optional — added in FEAT-20260517-01):
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `from` | `YYYY-MM-DD` | none (all-time) | Inclusive start of the invoice window |
+| `to` | `YYYY-MM-DD` | none (all-time) | Inclusive end of the invoice window |
+
+Validation: if both are supplied, `from` must be ≤ `to`; otherwise `400`.
 
 **Success response** `200 OK`:
 
@@ -368,6 +376,60 @@ Returns aggregated statistics for all non-deleted invoices belonging to the auth
 |--------|------|-----------|
 | `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
 | `500 Internal Server Error` | `INTERNAL_ERROR` | Unexpected server error |
+
+---
+
+### GET `/api/v1/dashboard/expense-stats` (FEAT-20260517-01)
+
+Returns expense totals grouped by month and by category for the requested date window. When neither `from` nor `to` is supplied the window defaults to the first day of (today − 5 months) through today, producing exactly 6 monthly entries. With a custom range the monthly entries span `[from..to]` clamped to month boundaries.
+
+**Auth**: HTTP Basic required. Returns `401` when unauthenticated.
+
+**Query parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `from` | `YYYY-MM-DD` | first day of (today − 5 months) | Inclusive start of the expense window |
+| `to` | `YYYY-MM-DD` | today | Inclusive end of the expense window |
+
+Validation: if both `from` and `to` are supplied, `from` must be ≤ `to` and the range must not exceed 24 months; otherwise `400`.
+
+**Success response** `200 OK`:
+
+```json
+{
+  "from": "2025-12-01",
+  "to": "2026-05-17",
+  "grandTotal": "1234.56",
+  "expenseByMonth": [
+    { "month": "2025-12", "total": "0.00" },
+    { "month": "2026-01", "total": "210.00" },
+    { "month": "2026-02", "total": "0.00" },
+    { "month": "2026-03", "total": "88.50" },
+    { "month": "2026-04", "total": "516.06" },
+    { "month": "2026-05", "total": "420.00" }
+  ],
+  "expenseByCategory": [
+    { "category": "FOOD_DRINK", "total": "420.00", "count": 12 },
+    { "category": "TRANSPORT",  "total": "514.56", "count": 9 }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `from` | string | Resolved start date (`YYYY-MM-DD`) |
+| `to` | string | Resolved end date (`YYYY-MM-DD`) |
+| `grandTotal` | BigDecimal (string) | Sum of all non-deleted expenses in the window |
+| `expenseByMonth` | array | Chronological `{ month: "YYYY-MM", total: BigDecimal }` entries, zero-filled; exactly 6 entries when using defaults |
+| `expenseByCategory` | array | `{ category, total, count }` entries sorted by `total DESC` then `category ASC`; empty array when no data |
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `400 Bad Request` | `VALIDATION_FAILED` | `from > to`, range exceeds 24 months, or malformed date |
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
 
 ---
 

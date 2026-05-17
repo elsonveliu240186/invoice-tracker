@@ -4,6 +4,7 @@ Maintained by the **documentation** subagent. One row per feature.
 
 | ID | Title | State | Owner | Plan | Review | Security | QA | PR |
 |----|-------|-------|-------|------|--------|----------|----|----|
+| FEAT-20260517-01 | Expense dashboard charts — by month, by category, and dashboard date filter | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260517-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260517-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260517-01/SECURITY.md) | [QA.md](.features/FEAT-20260517-01/QA.md) | — |
 | FEAT-20260516-01 | Expense tracking with category dashboard + auth rate-limiting (Bucket4j) | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260516-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260516-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260516-01/SECURITY.md) | [QA.md](.features/FEAT-20260516-01/QA.md) | — |
 | FEAT-20260514-02 | Invoice template editor and full lifecycle (preview, generate, persist, download, email) | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260514-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260514-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260514-02/SECURITY.md) | [QA.md](.features/FEAT-20260514-02/QA.md) | — |
 | FEAT-20260514-01 | Dashboard upgrade — stats, charts, centralized Coolors palette, invoice status, palette switcher | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260514-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260514-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260514-01/SECURITY.md) | — | — |
@@ -16,6 +17,63 @@ Maintained by the **documentation** subagent. One row per feature.
 | FEAT-20260512-02 | Authentication modernization | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-02/SECURITY.md) | [QA.md](.features/FEAT-20260512-02/QA.md) | — |
 | FEAT-20260512-01 | Frontend design system foundation | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-01/SECURITY.md) | [QA.md](.features/FEAT-20260512-01/QA.md) | — |
 | FEAT-20260511-01 | Client management (CRUD) | Done | elsonveliu | [PLAN.md](.features/FEAT-20260511-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260511-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260511-01/SECURITY.md) | [QA.md](.features/FEAT-20260511-01/QA.md) | — |
+
+## FEAT-20260517-01 — Expense dashboard charts (by month, by category, date filter)
+
+### Overview
+
+Adds two read-only chart widgets to the home dashboard so the user can see expense totals per month and per category at a glance: `ExpenseByMonthChart` (bar, last 6 calendar months, zero-filled) and `ExpenseByCategoryChart` (donut, totals by category for the same window). Both charts load from a single new endpoint `GET /api/v1/dashboard/expense-stats`. A date-range filter popover at the top-right of the dashboard lets the user narrow all four charts (revenue, invoice status, expense-by-month, expense-by-category) simultaneously. The popover only closes on Apply or Clear — not on outside-click.
+
+Review passed on iteration 2 (iteration 1 failed: `getStats` date-branching, missing Postman update, missing Playwright spec). Security passed on iteration 1. QA passed on iteration 1 (11 Playwright tests).
+
+### New endpoint
+
+| Method | Path | Auth | Summary |
+|--------|------|------|---------|
+| GET | `/api/v1/dashboard/expense-stats` | HTTP Basic (required) | Returns `{ from, to, grandTotal, expenseByMonth[6], expenseByCategory[] }` for the requested date window (defaults to last 6 calendar months) |
+
+### Updated endpoint
+
+| Method | Path | Change |
+|--------|------|--------|
+| GET | `/api/v1/dashboard/stats` | Now accepts optional `from`/`to` query params; when supplied, routes to ranged repo methods so all invoice aggregates are scoped to the window |
+
+### Backend changes
+
+- **New domain record**: `MonthlyExpense` (`domain/expense`) — `(String month, BigDecimal total)`
+- **`ExpenseRepository` port extended**: `expenseByMonth(from, to)` and `expenseByCategoryInRange(from, to)`
+- **`ExpenseJpaRepository` extended**: two `@Query(nativeQuery=true)` methods — `TO_CHAR(expense_date,'YYYY-MM')` grouping for monthly, `GROUP BY category` for category breakdown
+- **`ExpenseRepositoryAdapter` extended**: maps `Object[]` rows to domain records; null-safe for `SUM()` → null
+- **`DashboardService` extended**: `getExpenseStats(from, to)` (default 6-month window, 24-month cap, zero-fill months, category sort by total desc then name asc); `getStats(from, to)` updated to call ranged methods
+- **New DTOs**: `ExpenseStatsResponse` record, `CategoryExpense` record (both in `adapter/web/dashboard/dto`)
+- **`DashboardController` extended**: `GET /api/v1/dashboard/expense-stats` — validates `from ≤ to` and range ≤ 24 months (400 otherwise); existing `getStats` updated with `from`/`to` params
+- **New Flyway migration**: `V13__add_expense_dashboard_indexes.sql` — `ix_expenses_month_active` partial functional index
+
+### Frontend changes
+
+- **New components**: `ExpenseByMonthChart`, `ExpenseByCategoryChart`, `DashboardDateFilter`
+- **New API / hooks**: `dashboardExpenseApi.ts` (`getDashboardExpenseStats`), `useDashboardExpenseStats`
+- **Edited**: `useDashboardStats` accepts `from`/`to` deps; `DashboardPage` adds filter state, `DashboardDateFilter` in header, second chart row; `en.json` keys under `dashboard.charts.*`, `dashboard.errors.expenses`, `dashboard.filter.*`
+- **New E2E specs**: `tests/dashboard/expense-charts.spec.ts` (6 tests), `tests/dashboard/dashboard-smoke.spec.ts` (5 smoke tests)
+- **New dep**: `@radix-ui/react-popover` (used by `DashboardDateFilter`)
+
+### Quality gate results
+
+| Gate | Result |
+|------|--------|
+| JaCoCo line + branch (new classes) | expected ≥ 95% (confirmed by developer agent; full `mvnw verify` run required post-merge) |
+| Vitest (982 tests) | pass — global 95/95/95/90 thresholds met |
+| pnpm lint | 0 errors |
+| gitleaks | 0 secrets |
+| Semgrep | 0 findings |
+| pnpm audit | 0 High/Critical |
+| Playwright E2E | 11/11 passed (6 feature + 5 smoke) |
+
+### Security findings
+
+No required fixes. All OWASP Top 10 items mitigated or n/a. See `.features/FEAT-20260517-01/SECURITY.md` for full assessment.
+
+---
 
 ## FEAT-20260516-01 — Expense tracking with category dashboard
 
