@@ -3,6 +3,9 @@ package com.example.invoicetracker.application.dashboard;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.invoicetracker.adapter.web.dashboard.dto.DashboardStatsResponse;
@@ -174,6 +177,132 @@ class DashboardServiceTest {
         assertThat(stats.revenueByMonth()).hasSize(6);
         stats.revenueByMonth().forEach(m ->
             assertThat(m.revenue()).isEqualByComparingTo(BigDecimal.ZERO));
+    }
+
+    // ─── getStats with date range ────────────────────────────────────────────
+
+    @Test
+    void getStats_withDateRange_calls_inRange_methods_not_all_time() {
+        LocalDate from = LocalDate.of(2026, 1, 1);
+        LocalDate to = LocalDate.of(2026, 3, 31);
+
+        when(invoiceRepository.countByStatusInRange(from, to)).thenReturn(rows(
+            new Object[]{"DRAFT", 2L},
+            new Object[]{"PAID", 1L}
+        ));
+        when(invoiceRepository.revenueByStatusInRange(from, to)).thenReturn(rows(
+            new Object[]{"DRAFT", new BigDecimal("200.00")},
+            new Object[]{"PAID", new BigDecimal("100.00")}
+        ));
+        when(invoiceRepository.revenueByMonthInRange(from, to)).thenReturn(rows(
+            new Object[]{"2026-01", new BigDecimal("80.00")},
+            new Object[]{"2026-03", new BigDecimal("120.00")}
+        ));
+
+        DashboardStatsResponse stats = service.getStats(from, to);
+
+        // Counts come from range methods
+        assertThat(stats.totalInvoices()).isEqualTo(3L);
+        assertThat(stats.draftCount()).isEqualTo(2L);
+        assertThat(stats.sentCount()).isZero();
+        assertThat(stats.paidCount()).isEqualTo(1L);
+        assertThat(stats.paidRevenue()).isEqualByComparingTo("100.00");
+        assertThat(stats.totalRevenue()).isEqualByComparingTo("300.00");
+        assertThat(stats.pendingRevenue()).isEqualByComparingTo("200.00");
+
+        // Monthly chart covers exactly the requested range: 3 months (2026-01..2026-03)
+        List<MonthlyRevenue> months = stats.revenueByMonth();
+        assertThat(months).hasSize(3);
+        assertThat(months.get(0).month()).isEqualTo("2026-01");
+        assertThat(months.get(0).revenue()).isEqualByComparingTo("80.00");
+        assertThat(months.get(1).month()).isEqualTo("2026-02");
+        assertThat(months.get(1).revenue()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(months.get(2).month()).isEqualTo("2026-03");
+        assertThat(months.get(2).revenue()).isEqualByComparingTo("120.00");
+
+        // Verify that all-time repo methods were NOT called
+        verify(invoiceRepository, never()).countByStatus();
+        verify(invoiceRepository, never()).revenueByStatus();
+        verify(invoiceRepository, never()).revenueByMonth(any(Integer.class));
+    }
+
+    @Test
+    void getStats_withDateRange_zero_fills_months_with_no_invoices() {
+        LocalDate from = LocalDate.of(2026, 2, 1);
+        LocalDate to = LocalDate.of(2026, 4, 30);
+
+        when(invoiceRepository.countByStatusInRange(from, to)).thenReturn(List.of());
+        when(invoiceRepository.revenueByStatusInRange(from, to)).thenReturn(List.of());
+        when(invoiceRepository.revenueByMonthInRange(from, to)).thenReturn(List.of());
+
+        DashboardStatsResponse stats = service.getStats(from, to);
+
+        assertThat(stats.totalInvoices()).isZero();
+        assertThat(stats.totalRevenue()).isEqualByComparingTo(BigDecimal.ZERO);
+
+        // 3 months zero-filled: 2026-02, 2026-03, 2026-04
+        List<MonthlyRevenue> months = stats.revenueByMonth();
+        assertThat(months).hasSize(3);
+        assertThat(months.get(0).month()).isEqualTo("2026-02");
+        assertThat(months.get(1).month()).isEqualTo("2026-03");
+        assertThat(months.get(2).month()).isEqualTo("2026-04");
+        months.forEach(m -> assertThat(m.revenue()).isEqualByComparingTo(BigDecimal.ZERO));
+    }
+
+    @Test
+    void getStats_withOnlyFrom_defaults_to_to_today() {
+        LocalDate from = LocalDate.of(2026, 4, 1);
+        // to is null → should default to LocalDate.now(clock) = 2026-05-14
+        LocalDate expectedTo = LocalDate.of(2026, 5, 14);
+
+        when(invoiceRepository.countByStatusInRange(from, expectedTo)).thenReturn(List.of());
+        when(invoiceRepository.revenueByStatusInRange(from, expectedTo)).thenReturn(List.of());
+        when(invoiceRepository.revenueByMonthInRange(from, expectedTo)).thenReturn(List.of());
+
+        DashboardStatsResponse stats = service.getStats(from, null);
+
+        assertThat(stats.totalInvoices()).isZero();
+        // 2 months in range: 2026-04, 2026-05
+        assertThat(stats.revenueByMonth()).hasSize(2);
+        assertThat(stats.revenueByMonth().get(0).month()).isEqualTo("2026-04");
+        assertThat(stats.revenueByMonth().get(1).month()).isEqualTo("2026-05");
+
+        verify(invoiceRepository).countByStatusInRange(eq(from), eq(expectedTo));
+    }
+
+    @Test
+    void getStats_withOnlyTo_defaults_from_to_start_of_default_window() {
+        LocalDate to = LocalDate.of(2026, 5, 14);
+        // from is null → should default to YearMonth.now(clock).minusMonths(5).atDay(1) = 2025-12-01
+        LocalDate expectedFrom = LocalDate.of(2025, 12, 1);
+
+        when(invoiceRepository.countByStatusInRange(expectedFrom, to)).thenReturn(List.of());
+        when(invoiceRepository.revenueByStatusInRange(expectedFrom, to)).thenReturn(List.of());
+        when(invoiceRepository.revenueByMonthInRange(expectedFrom, to)).thenReturn(List.of());
+
+        DashboardStatsResponse stats = service.getStats(null, to);
+
+        assertThat(stats.totalInvoices()).isZero();
+        // 6 months: 2025-12 through 2026-05
+        assertThat(stats.revenueByMonth()).hasSize(6);
+
+        verify(invoiceRepository).countByStatusInRange(eq(expectedFrom), eq(to));
+    }
+
+    @Test
+    void getStats_noDateFilter_calls_all_time_methods_not_range() {
+        when(invoiceRepository.countByStatus()).thenReturn(List.of());
+        when(invoiceRepository.revenueByStatus()).thenReturn(List.of());
+        when(invoiceRepository.revenueByMonth(6)).thenReturn(List.of());
+
+        service.getStats(null, null);
+
+        verify(invoiceRepository).countByStatus();
+        verify(invoiceRepository).revenueByStatus();
+        verify(invoiceRepository).revenueByMonth(6);
+        verify(invoiceRepository, never()).countByStatusInRange(any(), any());
+        verify(invoiceRepository, never()).revenueByStatusInRange(any(), any());
+        verify(invoiceRepository, never()).revenueByMonthInRange(any(), any());
     }
 
     // ─── getExpenseStats tests ───────────────────────────────────────────────

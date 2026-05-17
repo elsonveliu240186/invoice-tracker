@@ -57,42 +57,70 @@ public class DashboardService {
 
     /**
      * Computes dashboard statistics with optional date filter.
-     * When {@code from}/{@code to} are null, defaults to the last 6 months.
+     * When {@code from}/{@code to} are both null, returns all-time stats with a 6-month chart.
+     * When either is provided, restricts all counts and revenues to invoices whose issue_date
+     * falls in [effectiveFrom, effectiveTo].
      *
-     * @param from optional start date; null defaults to first day of month 5 months ago
-     * @param to   optional end date; null defaults to today
+     * @param from optional start date; null with null to defaults to all-time stats
+     * @param to   optional end date; null with null to defaults to all-time stats
      * @return dashboard stats response
      */
     public DashboardStatsResponse getStats(LocalDate from, LocalDate to) {
-        // Counts by status
-        Map<String, Long> countMap = invoiceRepository.countByStatus().stream()
-            .collect(Collectors.toMap(
-                row -> String.valueOf(row[0]),
-                row -> ((Number) row[1]).longValue()
-            ));
+        final Map<String, Long> countMap;
+        final Map<String, BigDecimal> revenueMap;
+        final List<MonthlyRevenue> revenueByMonth;
+
+        if (from == null && to == null) {
+            // All-time stats; chart covers last DEFAULT_MONTHS months
+            countMap = invoiceRepository.countByStatus().stream()
+                .collect(Collectors.toMap(
+                    row -> String.valueOf(row[0]),
+                    row -> ((Number) row[1]).longValue()
+                ));
+            revenueMap = invoiceRepository.revenueByStatus().stream()
+                .collect(Collectors.toMap(
+                    row -> String.valueOf(row[0]),
+                    row -> row[1] != null ? new BigDecimal(row[1].toString()) : BigDecimal.ZERO
+                ));
+            revenueByMonth = buildMonthlyRevenue(invoiceRepository.revenueByMonth(DEFAULT_MONTHS));
+        } else {
+            // Date-filtered stats
+            LocalDate effectiveFrom = from != null ? from
+                : YearMonth.now(clock).minusMonths(DEFAULT_MONTHS - 1L).atDay(1);
+            LocalDate effectiveTo = to != null ? to : LocalDate.now(clock);
+
+            countMap = invoiceRepository.countByStatusInRange(effectiveFrom, effectiveTo).stream()
+                .collect(Collectors.toMap(
+                    row -> String.valueOf(row[0]),
+                    row -> ((Number) row[1]).longValue()
+                ));
+            revenueMap = invoiceRepository
+                .revenueByStatusInRange(effectiveFrom, effectiveTo).stream()
+                .collect(Collectors.toMap(
+                    row -> String.valueOf(row[0]),
+                    row -> row[1] != null ? new BigDecimal(row[1].toString()) : BigDecimal.ZERO
+                ));
+            YearMonth fromMonth = YearMonth.from(effectiveFrom);
+            YearMonth toMonth = YearMonth.from(effectiveTo);
+            revenueByMonth = buildMonthlyRevenueInRange(
+                invoiceRepository.revenueByMonthInRange(effectiveFrom, effectiveTo),
+                fromMonth,
+                toMonth
+            );
+        }
 
         long draftCount = countMap.getOrDefault("DRAFT", 0L);
         long sentCount = countMap.getOrDefault("SENT", 0L);
         long paidCount = countMap.getOrDefault("PAID", 0L);
         long totalInvoices = draftCount + sentCount + paidCount;
 
-        // Revenue by status
-        Map<String, BigDecimal> revenueMap = invoiceRepository.revenueByStatus().stream()
-            .collect(Collectors.toMap(
-                row -> String.valueOf(row[0]),
-                row -> row[1] != null ? new BigDecimal(row[1].toString()) : BigDecimal.ZERO
-            ));
-
         BigDecimal paidRevenue = revenueMap.getOrDefault("PAID", BigDecimal.ZERO);
         BigDecimal totalRevenue = revenueMap.values().stream()
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal pendingRevenue = totalRevenue.subtract(paidRevenue);
 
-        // Monthly revenue for the last 6 months, zero-filled
-        List<MonthlyRevenue> revenueByMonth = buildMonthlyRevenue(
-            invoiceRepository.revenueByMonth(DEFAULT_MONTHS));
-
-        log.info("dashboard.stats requested: totalInvoices={}", totalInvoices);
+        log.info("dashboard.stats requested: from={} to={} totalInvoices={}", from, to,
+            totalInvoices);
 
         return new DashboardStatsResponse(
             totalInvoices,
@@ -211,6 +239,28 @@ public class DashboardService {
             String label = current.minusMonths(i).toString();
             BigDecimal revenue = repoMap.getOrDefault(label, BigDecimal.ZERO);
             result.add(new MonthlyRevenue(label, revenue));
+        }
+        return result;
+    }
+
+    private List<MonthlyRevenue> buildMonthlyRevenueInRange(
+        List<Object[]> rows,
+        YearMonth fromMonth,
+        YearMonth toMonth
+    ) {
+        Map<String, BigDecimal> repoMap = new LinkedHashMap<>();
+        for (Object[] row : rows) {
+            String month = (String) row[0];
+            BigDecimal revenue = row[1] != null
+                ? new BigDecimal(row[1].toString()) : BigDecimal.ZERO;
+            repoMap.put(month, revenue);
+        }
+        List<MonthlyRevenue> result = new ArrayList<>();
+        YearMonth current = fromMonth;
+        while (!current.isAfter(toMonth)) {
+            String label = current.toString();
+            result.add(new MonthlyRevenue(label, repoMap.getOrDefault(label, BigDecimal.ZERO)));
+            current = current.plusMonths(1);
         }
         return result;
     }

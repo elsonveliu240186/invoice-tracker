@@ -1,6 +1,7 @@
 package com.example.invoicetracker.adapter.persistence.invoice;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -95,6 +96,50 @@ public interface InvoiceJpaRepository extends JpaRepository<InvoiceEntity, UUID>
         nativeQuery = true
     )
     List<Object[]> revenueByMonth(@Param("months") int months);
+
+    /**
+     * Returns [status (String), count (Long)] pairs for active invoices with issue_date in
+     * [from, to].
+     */
+    @Query(
+        value = "SELECT status, COUNT(*) FROM invoices WHERE deleted_at IS NULL "
+            + "AND issue_date >= :from AND issue_date <= :to GROUP BY status",
+        nativeQuery = true
+    )
+    List<Object[]> countByStatusInRange(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /**
+     * Returns [status (String), revenue (BigDecimal)] pairs for active invoices with issue_date in
+     * [from, to].
+     */
+    @Query(
+        value = "SELECT i.status, "
+            + "SUM((SELECT SUM(il.quantity * il.unit_price) FROM invoice_lines il "
+            + "     WHERE il.invoice_id = i.id) "
+            + "    * (1 + i.tax_rate)) AS revenue "
+            + "FROM invoices i WHERE i.deleted_at IS NULL "
+            + "AND i.issue_date >= :from AND i.issue_date <= :to GROUP BY i.status",
+        nativeQuery = true
+    )
+    List<Object[]> revenueByStatusInRange(@Param("from") LocalDate from,
+        @Param("to") LocalDate to);
+
+    /**
+     * Returns [month (String YYYY-MM), revenue (BigDecimal)] pairs for active invoices with
+     * issue_date in [from, to], ordered by month ascending.
+     */
+    @Query(
+        value = "SELECT TO_CHAR(i.issue_date, 'YYYY-MM') AS month, "
+            + "SUM((SELECT SUM(il.quantity * il.unit_price) FROM invoice_lines il "
+            + "     WHERE il.invoice_id = i.id) "
+            + "    * (1 + i.tax_rate)) AS revenue "
+            + "FROM invoices i WHERE i.deleted_at IS NULL "
+            + "AND i.issue_date >= :from AND i.issue_date <= :to "
+            + "GROUP BY TO_CHAR(i.issue_date, 'YYYY-MM') ORDER BY month ASC",
+        nativeQuery = true
+    )
+    List<Object[]> revenueByMonthInRange(@Param("from") LocalDate from,
+        @Param("to") LocalDate to);
 
     /**
      * Returns the maximum invoice number for the given year prefix.
