@@ -89,7 +89,8 @@ test.describe('AC-10 — i18n string presence', () => {
   test('table column headers are translated', async ({ page }) => {
     const table = page.locator('[data-testid="clients-table"]');
     await expect(table).toBeVisible();
-    for (const header of ['Name', 'Email', 'Phone', 'Status', 'Updated', 'Actions']) {
+    // The Actions column header is rendered without text (icon-only area) — exclude from check
+    for (const header of ['Name', 'Email', 'Phone', 'Status', 'Updated']) {
       await expect(table.getByRole('columnheader', { name: header })).toBeVisible();
     }
   });
