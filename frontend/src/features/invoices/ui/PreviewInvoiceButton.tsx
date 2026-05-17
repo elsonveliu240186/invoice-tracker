@@ -49,7 +49,7 @@ export function PreviewInvoiceButton({ invoiceId, invoiceNumber }: PreviewInvoic
               <a
                 href={blobUrl}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-sm text-[var(--color-primary)] hover:underline"
                 data-testid="link-preview-open-new-tab"
               >
