@@ -562,6 +562,28 @@ export const handlers = [
     }),
   ),
 
+  http.get('/api/v1/dashboard/expense-stats', () =>
+    HttpResponse.json({
+      from: '2025-12-01',
+      to: '2026-05-17',
+      grandTotal: '462.50',
+      expenseByMonth: [
+        { month: '2025-12', total: '0.00' },
+        { month: '2026-01', total: '85.00' },
+        { month: '2026-02', total: '120.00' },
+        { month: '2026-03', total: '95.50' },
+        { month: '2026-04', total: '120.00' },
+        { month: '2026-05', total: '42.00' },
+      ],
+      expenseByCategory: [
+        { category: 'FOOD_DRINK', total: '162.50', count: 4 },
+        { category: 'TRANSPORT', total: '120.00', count: 3 },
+        { category: 'HOUSING', total: '95.00', count: 1 },
+        { category: 'OTHER', total: '85.00', count: 2 },
+      ],
+    }),
+  ),
+
   // ── Settings — Company profile endpoints ─────────────────────────────────
 
   http.get('/api/v1/settings/company', () => {

@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react';
-import type { DashboardStats } from '../model/types';
-import { getDashboardStats } from './dashboardApi';
+import type { DashboardExpenseStats } from '../model/types';
+import { getDashboardExpenseStats } from './dashboardExpenseApi';
 import type { ApiError } from '@/shared/lib/http';
 
-interface UseDashboardStatsResult {
-  data: DashboardStats | null;
+interface UseDashboardExpenseStatsResult {
+  data: DashboardExpenseStats | null;
   loading: boolean;
   error: ApiError | null;
 }
 
-export function useDashboardStats(
+export function useDashboardExpenseStats(
   from?: string | null,
   to?: string | null,
-): UseDashboardStatsResult {
-  const [data, setData] = useState<DashboardStats | null>(null);
+): UseDashboardExpenseStatsResult {
+  const [data, setData] = useState<DashboardExpenseStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
 
@@ -21,7 +21,7 @@ export function useDashboardStats(
     let cancelled = false;
     setLoading(true);
     setError(null);
-    getDashboardStats(from, to)
+    getDashboardExpenseStats(from, to)
       .then((d) => {
         if (!cancelled) setData(d);
       })

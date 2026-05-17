@@ -75,7 +75,20 @@
     },
     "charts": {
       "revenueByMonth": "Revenue by Month",
-      "invoiceStatus": "Invoice Status"
+      "invoiceStatus": "Invoice Status",
+      "expenseByMonth": "Expense by Month",
+      "expenseByCategory": "Expense by Category",
+      "expensesTooltip": "Expenses"
+    },
+    "errors": {
+      "expenses": "Failed to load expense data."
+    },
+    "filter": {
+      "label": "Filter by date",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "clear": "Clear"
     },
     "error": "Failed to load dashboard data."
   },
