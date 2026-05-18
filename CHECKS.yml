@@ -21,7 +21,9 @@ frontend:
   coverage:       true    # Vitest coverage gate
   lint:           true    # ESLint
   audit:          true    # pnpm audit --audit-level=high
-  e2e:            true    # Playwright
+  e2e:            true    # Playwright (mocked suite)
+  e2e_smoke:      true    # Playwright smoke suite (real stack, every PR)
+  e2e_regression: true    # Playwright regression suite (real stack, nightly)
   semgrep:        true    # Semgrep SAST via Docker
 
 security:

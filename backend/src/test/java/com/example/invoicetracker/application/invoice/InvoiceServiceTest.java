@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.invoicetracker.application.company.CompanyProfileResolver;
 import com.example.invoicetracker.domain.client.Client;
 import com.example.invoicetracker.domain.client.ClientNotFoundException;
 import com.example.invoicetracker.domain.client.ClientRepository;
@@ -48,14 +49,18 @@ class InvoiceServiceTest {
     @Mock
     private InvoiceArtifactService artifactService;
 
-    private CompanyProperties company;
+    @Mock
+    private CompanyProfileResolver companyProfileResolver;
+
     private InvoiceService service;
 
     @BeforeEach
     void setUp() {
-        company = InvoiceFixtures.company();
+        org.mockito.Mockito.lenient().when(companyProfileResolver.resolve())
+            .thenReturn(InvoiceFixtures.company());
         service = new InvoiceService(
-            invoiceRepository, clientRepository, pdfRenderer, mailer, company, artifactService);
+            invoiceRepository, clientRepository, pdfRenderer, mailer,
+            companyProfileResolver, artifactService);
     }
 
     @Test
@@ -185,12 +190,12 @@ class InvoiceServiceTest {
 
         when(invoiceRepository.findByIdWithLines(id)).thenReturn(Optional.of(invoice));
         when(clientRepository.findByIdAndDeletedAtIsNull(clientId)).thenReturn(Optional.of(client));
-        when(pdfRenderer.render(invoice, client, company)).thenReturn(expectedBytes);
+        when(pdfRenderer.render(eq(invoice), eq(client), any())).thenReturn(expectedBytes);
 
         byte[] result = service.renderPdf(id);
 
         assertThat(result).hasSizeGreaterThanOrEqualTo(1024);
-        verify(pdfRenderer).render(invoice, client, company);
+        verify(pdfRenderer).render(eq(invoice), eq(client), any());
     }
 
     @Test

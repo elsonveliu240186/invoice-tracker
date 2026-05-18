@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.invoicetracker.application.company.CompanyProfileResolver;
 import com.example.invoicetracker.domain.client.Client;
 import com.example.invoicetracker.domain.client.ClientNotFoundException;
 import com.example.invoicetracker.domain.client.ClientRepository;
@@ -50,6 +51,9 @@ class InvoiceRenderServiceTest {
     @Mock
     InvoiceArtifactService artifactService;
 
+    @Mock
+    CompanyProfileResolver companyProfileResolver;
+
     InvoiceRenderService service;
 
     private UUID invoiceId;
@@ -58,9 +62,11 @@ class InvoiceRenderServiceTest {
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(companyProfileResolver.resolve())
+            .thenReturn(InvoiceFixtures.company());
         service = new InvoiceRenderService(
             invoiceRepository, clientRepository, docxRenderer, pdfRenderer,
-            mailer, InvoiceFixtures.company(), artifactService);
+            mailer, companyProfileResolver, artifactService);
         invoiceId = UUID.randomUUID();
         clientId = UUID.randomUUID();
         sampleClient = InvoiceFixtures.client(clientId, "Acme Corp", "acme@example.com");
@@ -221,6 +227,26 @@ class InvoiceRenderServiceTest {
             .isInstanceOf(InvoiceHasNoRecipientException.class);
 
         verify(mailer, never()).send(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void docx_uses_resolved_company() {
+        var invoice = InvoiceFixtures.invoice(invoiceId, clientId);
+        when(invoiceRepository.findByIdWithLines(invoiceId)).thenReturn(Optional.of(invoice));
+        when(clientRepository.findByIdAndDeletedAtIsNull(clientId)).thenReturn(
+            Optional.of(sampleClient));
+        when(docxRenderer.render(any(), any(), any())).thenReturn("docx".getBytes());
+
+        // The resolver returns a non-YAML company name
+        var resolvedCompany = new com.example.invoicetracker.application.invoice.CompanyProperties(
+            "Resolved Corp", "1 Resolved St", "resolved@example.com",
+            "", "", "", "", "");
+        when(companyProfileResolver.resolve()).thenReturn(resolvedCompany);
+
+        service.renderDocx(invoiceId);
+
+        // Verify the renderer received the resolved company (not YAML defaults)
+        verify(docxRenderer).render(eq(invoice), eq(sampleClient), eq(resolvedCompany));
     }
 
     @Test

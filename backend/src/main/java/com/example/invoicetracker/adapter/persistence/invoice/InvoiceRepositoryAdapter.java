@@ -5,6 +5,7 @@ import com.example.invoicetracker.domain.invoice.InvoiceNotFoundException;
 import com.example.invoicetracker.domain.invoice.InvoiceRepository;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -116,6 +117,21 @@ public class InvoiceRepositoryAdapter implements InvoiceRepository {
     @Override
     public List<Object[]> revenueByMonth(int months) {
         return jpaRepository.revenueByMonth(months);
+    }
+
+    @Override
+    public List<Object[]> countByStatusInRange(LocalDate from, LocalDate to) {
+        return jpaRepository.countByStatusInRange(from, to);
+    }
+
+    @Override
+    public List<Object[]> revenueByStatusInRange(LocalDate from, LocalDate to) {
+        return jpaRepository.revenueByStatusInRange(from, to);
+    }
+
+    @Override
+    public List<Object[]> revenueByMonthInRange(LocalDate from, LocalDate to) {
+        return jpaRepository.revenueByMonthInRange(from, to);
     }
 
     @Override

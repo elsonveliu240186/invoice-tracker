@@ -34,12 +34,22 @@ function stubClients(page: import('@playwright/test').Page) {
 }
 
 function stubDashboard(page: import('@playwright/test').Page) {
-  return page.route('**/api/v1/dashboard**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ totalClients: 0, totalRevenue: 0, pendingInvoices: 0 }),
-    }),
+  const statsBody = JSON.stringify({
+    totalInvoices: 0,
+    draftCount: 0,
+    totalRevenue: 0,
+    paidCount: 0,
+    paidRevenue: 0,
+    sentCount: 0,
+    pendingRevenue: 0,
+    revenueByMonth: [],
+  });
+  const expenseBody = JSON.stringify({ expenseByMonth: [], expenseByCategory: [] });
+  void page.route('**/api/v1/dashboard/stats**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: statsBody }),
+  );
+  return page.route('**/api/v1/dashboard/expense-stats**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: expenseBody }),
   );
 }
 

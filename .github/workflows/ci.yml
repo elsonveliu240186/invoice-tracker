@@ -3,6 +3,8 @@ name: CI
 on:
   push:
   pull_request:
+  schedule:
+    - cron: '0 2 * * *'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -13,20 +15,22 @@ jobs:
   load-checks:
     runs-on: ubuntu-latest
     outputs:
-      be_coverage:   ${{ steps.read.outputs.be_coverage }}
-      be_checkstyle: ${{ steps.read.outputs.be_checkstyle }}
-      be_spotbugs:   ${{ steps.read.outputs.be_spotbugs }}
-      be_pmd:        ${{ steps.read.outputs.be_pmd }}
-      be_owasp_dc:   ${{ steps.read.outputs.be_owasp_dc }}
-      be_semgrep:    ${{ steps.read.outputs.be_semgrep }}
-      fe_coverage:   ${{ steps.read.outputs.fe_coverage }}
-      fe_lint:       ${{ steps.read.outputs.fe_lint }}
-      fe_audit:      ${{ steps.read.outputs.fe_audit }}
-      fe_e2e:        ${{ steps.read.outputs.fe_e2e }}
-      fe_semgrep:    ${{ steps.read.outputs.fe_semgrep }}
-      sec_gitleaks:  ${{ steps.read.outputs.sec_gitleaks }}
-      sec_trivy:     ${{ steps.read.outputs.sec_trivy }}
-      sec_grype:     ${{ steps.read.outputs.sec_grype }}
+      be_coverage:      ${{ steps.read.outputs.be_coverage }}
+      be_checkstyle:    ${{ steps.read.outputs.be_checkstyle }}
+      be_spotbugs:      ${{ steps.read.outputs.be_spotbugs }}
+      be_pmd:           ${{ steps.read.outputs.be_pmd }}
+      be_owasp_dc:      ${{ steps.read.outputs.be_owasp_dc }}
+      be_semgrep:       ${{ steps.read.outputs.be_semgrep }}
+      fe_coverage:      ${{ steps.read.outputs.fe_coverage }}
+      fe_lint:          ${{ steps.read.outputs.fe_lint }}
+      fe_audit:         ${{ steps.read.outputs.fe_audit }}
+      fe_e2e:           ${{ steps.read.outputs.fe_e2e }}
+      fe_e2e_smoke:     ${{ steps.read.outputs.fe_e2e_smoke }}
+      fe_e2e_regression: ${{ steps.read.outputs.fe_e2e_regression }}
+      fe_semgrep:       ${{ steps.read.outputs.fe_semgrep }}
+      sec_gitleaks:     ${{ steps.read.outputs.sec_gitleaks }}
+      sec_trivy:        ${{ steps.read.outputs.sec_trivy }}
+      sec_grype:        ${{ steps.read.outputs.sec_grype }}
     steps:
       - uses: actions/checkout@v4
       - name: Parse CHECKS.yml
@@ -44,7 +48,9 @@ jobs:
           echo "fe_lint=$(val lint)"                       >> $GITHUB_OUTPUT
           echo "fe_audit=$(val audit)"                     >> $GITHUB_OUTPUT
           echo "fe_e2e=$(val e2e)"                         >> $GITHUB_OUTPUT
-          echo "fe_semgrep=$(grep -A8 'frontend:' $yml | grep semgrep | awk '{print $2}')" >> $GITHUB_OUTPUT
+          echo "fe_e2e_smoke=$(grep -A12 'frontend:' $yml | grep e2e_smoke | awk '{print $2}')" >> $GITHUB_OUTPUT
+          echo "fe_e2e_regression=$(grep -A12 'frontend:' $yml | grep e2e_regression | awk '{print $2}')" >> $GITHUB_OUTPUT
+          echo "fe_semgrep=$(grep -A14 'frontend:' $yml | grep semgrep | awk '{print $2}')" >> $GITHUB_OUTPUT
           echo "sec_gitleaks=$(grep -A4 'security:' $yml | grep gitleaks | awk '{print $2}')" >> $GITHUB_OUTPUT
           echo "sec_trivy=$(grep -A4 'security:' $yml | grep trivy | awk '{print $2}')"    >> $GITHUB_OUTPUT
           echo "sec_grype=$(grep -A4 'security:' $yml | grep grype | awk '{print $2}')"    >> $GITHUB_OUTPUT
@@ -273,3 +279,132 @@ jobs:
           name: owasp-dc-report
           path: backend/target/dependency-check-report.*
           if-no-files-found: ignore
+
+  # ── E2E Smoke (every PR + push) ─────────────────────────────────────────────
+  e2e-smoke:
+    needs: [load-checks, backend, frontend]
+    if: needs.load-checks.outputs.fe_e2e_smoke == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Start E2E stack
+        run: |
+          docker compose -f docker-compose.e2e.yml --env-file .env.e2e up -d --build --wait
+        timeout-minutes: 8
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run smoke suite
+        working-directory: frontend
+        env:
+          CI: 'true'
+          E2E_BASE_URL: 'http://localhost:8081'
+          E2E_API_URL: 'http://localhost:8082'
+          E2E_MAILHOG_URL: 'http://localhost:8026'
+          E2E_USERNAME: 'admin'
+          E2E_PASSWORD: 'Secret1!'
+        run: pnpm e2e:smoke
+
+      - name: Capture backend logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.e2e.yml --env-file .env.e2e logs backend > /tmp/backend-smoke.log 2>&1 || true
+
+      - name: Upload Playwright report + backend logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-report
+          path: |
+            frontend/playwright-report/
+            /tmp/backend-smoke.log
+          if-no-files-found: ignore
+
+      - name: Tear down E2E stack
+        if: always()
+        run: docker compose -f docker-compose.e2e.yml --env-file .env.e2e down -v
+
+  # ── E2E Regression (nightly + push to main) ──────────────────────────────────
+  e2e-regression:
+    needs: [load-checks, backend, frontend]
+    if: |
+      needs.load-checks.outputs.fe_e2e_regression == 'true' &&
+      (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Start E2E stack
+        run: |
+          docker compose -f docker-compose.e2e.yml --env-file .env.e2e up -d --build --wait
+        timeout-minutes: 8
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: pnpm exec playwright install --with-deps chromium firefox
+
+      - name: Run regression suite
+        working-directory: frontend
+        env:
+          CI: 'true'
+          E2E_BASE_URL: 'http://localhost:8081'
+          E2E_API_URL: 'http://localhost:8082'
+          E2E_MAILHOG_URL: 'http://localhost:8026'
+          E2E_USERNAME: 'admin'
+          E2E_PASSWORD: 'Secret1!'
+        run: pnpm e2e:regression
+
+      - name: Capture backend logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.e2e.yml --env-file .env.e2e logs backend > /tmp/backend-regression.log 2>&1 || true
+
+      - name: Upload Playwright report + traces + backend logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-regression-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+            /tmp/backend-regression.log
+          if-no-files-found: ignore
+
+      - name: Tear down E2E stack
+        if: always()
+        run: docker compose -f docker-compose.e2e.yml --env-file .env.e2e down -v

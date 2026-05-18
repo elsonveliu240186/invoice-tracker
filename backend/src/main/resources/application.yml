@@ -154,3 +154,30 @@ app:
     tax-id: ${COMPANY_TAX_ID:}
   mail:
     from: ${MAIL_FROM:no-reply@invoicetracker.local}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: e2e
+  datasource:
+    url: jdbc:postgresql://postgres:5432/invoicetracker_e2e
+    username: e2e
+    password: e2e
+  flyway:
+    clean-disabled: false
+  mail:
+    host: mailhog
+    port: 1025
+    username: ""
+    password: ""
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+app:
+  mail:
+    from: qa@invoice-tracker.local

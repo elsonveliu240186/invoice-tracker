@@ -4,7 +4,9 @@ import com.example.invoicetracker.domain.expense.CategorySummary;
 import com.example.invoicetracker.domain.expense.Expense;
 import com.example.invoicetracker.domain.expense.ExpenseCategory;
 import com.example.invoicetracker.domain.expense.ExpenseRepository;
+import com.example.invoicetracker.domain.expense.MonthlyExpense;
 import jakarta.persistence.EntityManager;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
@@ -93,5 +95,26 @@ public class ExpenseRepositoryAdapter implements ExpenseRepository {
     @Override
     public boolean existsByIdAndDeletedAtIsNull(UUID id) {
         return jpaRepository.existsByIdAndDeletedAtIsNull(id);
+    }
+
+    @Override
+    public List<MonthlyExpense> expenseByMonth(LocalDate from, LocalDate to) {
+        return jpaRepository.findExpenseByMonth(from, to).stream()
+            .map(row -> new MonthlyExpense(
+                (String) row[0],
+                row[1] != null ? new BigDecimal(row[1].toString()) : BigDecimal.ZERO
+            ))
+            .toList();
+    }
+
+    @Override
+    public List<CategorySummary> expenseByCategoryInRange(LocalDate from, LocalDate to) {
+        return jpaRepository.findExpenseByCategoryInRange(from, to).stream()
+            .map(row -> new CategorySummary(
+                ExpenseCategory.valueOf((String) row[0]),
+                row[1] != null ? new BigDecimal(row[1].toString()) : BigDecimal.ZERO,
+                ((Number) row[2]).longValue()
+            ))
+            .toList();
     }
 }

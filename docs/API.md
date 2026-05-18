@@ -42,7 +42,8 @@ The backend API is unchanged by FEAT-20260512-03. The following frontend-only ro
 | Clients | GET | `/api/v1/clients/{id}` | Required | Get a client by ID |
 | Clients | PUT | `/api/v1/clients/{id}` | Required | Update a client (full replacement) |
 | Clients | DELETE | `/api/v1/clients/{id}` | Required | Soft-delete a client |
-| Dashboard | GET | `/api/v1/dashboard/stats` | Required | Get dashboard aggregates — counts, revenues, and last-6-months chart data (FEAT-20260514-01) |
+| Dashboard | GET | `/api/v1/dashboard/stats` | Required | Get dashboard aggregates — counts, revenues, and last-6-months chart data; accepts optional `from`/`to` query params (FEAT-20260514-01, updated FEAT-20260517-01) |
+| Dashboard | GET | `/api/v1/dashboard/expense-stats` | Required | Get expense totals by month and by category for a date window (default last 6 months) — FEAT-20260517-01 |
 | Invoices | POST | `/api/v1/invoices` | Required | Create a new invoice |
 | Invoices | GET | `/api/v1/invoices` | Required | List invoices (paginated, filterable by clientId) — each item includes `status` |
 | Invoices | GET | `/api/v1/invoices/{id}` | Required | Get an invoice by ID — includes `status` field |
@@ -66,6 +67,8 @@ The backend API is unchanged by FEAT-20260512-03. The following frontend-only ro
 | Settings | POST | `/api/v1/settings/invoice-template` | Required | Upload a new DOCX invoice template |
 | Settings | GET | `/api/v1/settings/invoice-template/preview` | Required | Get active template metadata |
 | Settings | GET | `/api/v1/settings/invoice-template/download` | Required | Download the active invoice template |
+| Settings | GET | `/api/v1/settings/company` | Required | Get the persisted company profile (FEAT-20260518-02) |
+| Settings | PUT | `/api/v1/settings/company` | Required | Upsert the company profile; affects all subsequent renders (FEAT-20260518-02) |
 
 ---
 
@@ -319,15 +322,22 @@ Soft-deletes the client (sets `deleted_at`). The record is retained in the datab
 
 ---
 
-## Dashboard (FEAT-20260514-01)
+## Dashboard (FEAT-20260514-01, updated FEAT-20260517-01)
 
 ### GET `/api/v1/dashboard/stats`
 
-Returns aggregated statistics for all non-deleted invoices belonging to the authenticated user. The `revenueByMonth` array always contains exactly 6 entries (current month plus the 5 preceding months), zero-filled for months with no invoices.
+Returns aggregated statistics for non-deleted invoices. The `revenueByMonth` array always contains exactly 6 entries (current month plus the 5 preceding months), zero-filled for months with no invoices. Since FEAT-20260517-01 this endpoint accepts optional `from`/`to` query parameters; when supplied all aggregates (counts, revenues, `revenueByMonth`) are scoped to the given window.
 
 **Auth**: HTTP Basic required. Returns `401` when unauthenticated.
 
-**Request**: no body, no query parameters.
+**Query parameters** (all optional — added in FEAT-20260517-01):
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `from` | `YYYY-MM-DD` | none (all-time) | Inclusive start of the invoice window |
+| `to` | `YYYY-MM-DD` | none (all-time) | Inclusive end of the invoice window |
+
+Validation: if both are supplied, `from` must be ≤ `to`; otherwise `400`.
 
 **Success response** `200 OK`:
 
@@ -368,6 +378,60 @@ Returns aggregated statistics for all non-deleted invoices belonging to the auth
 |--------|------|-----------|
 | `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
 | `500 Internal Server Error` | `INTERNAL_ERROR` | Unexpected server error |
+
+---
+
+### GET `/api/v1/dashboard/expense-stats` (FEAT-20260517-01)
+
+Returns expense totals grouped by month and by category for the requested date window. When neither `from` nor `to` is supplied the window defaults to the first day of (today − 5 months) through today, producing exactly 6 monthly entries. With a custom range the monthly entries span `[from..to]` clamped to month boundaries.
+
+**Auth**: HTTP Basic required. Returns `401` when unauthenticated.
+
+**Query parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `from` | `YYYY-MM-DD` | first day of (today − 5 months) | Inclusive start of the expense window |
+| `to` | `YYYY-MM-DD` | today | Inclusive end of the expense window |
+
+Validation: if both `from` and `to` are supplied, `from` must be ≤ `to` and the range must not exceed 24 months; otherwise `400`.
+
+**Success response** `200 OK`:
+
+```json
+{
+  "from": "2025-12-01",
+  "to": "2026-05-17",
+  "grandTotal": "1234.56",
+  "expenseByMonth": [
+    { "month": "2025-12", "total": "0.00" },
+    { "month": "2026-01", "total": "210.00" },
+    { "month": "2026-02", "total": "0.00" },
+    { "month": "2026-03", "total": "88.50" },
+    { "month": "2026-04", "total": "516.06" },
+    { "month": "2026-05", "total": "420.00" }
+  ],
+  "expenseByCategory": [
+    { "category": "FOOD_DRINK", "total": "420.00", "count": 12 },
+    { "category": "TRANSPORT",  "total": "514.56", "count": 9 }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `from` | string | Resolved start date (`YYYY-MM-DD`) |
+| `to` | string | Resolved end date (`YYYY-MM-DD`) |
+| `grandTotal` | BigDecimal (string) | Sum of all non-deleted expenses in the window |
+| `expenseByMonth` | array | Chronological `{ month: "YYYY-MM", total: BigDecimal }` entries, zero-filled; exactly 6 entries when using defaults |
+| `expenseByCategory` | array | `{ category, total, count }` entries sorted by `total DESC` then `category ASC`; empty array when no data |
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `400 Bad Request` | `VALIDATION_FAILED` | `from > to`, range exceeds 24 months, or malformed date |
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
 
 ---
 
@@ -919,6 +983,115 @@ Streams the active template (filesystem or classpath default) as a DOCX download
 **Response headers**: `Content-Disposition: attachment; filename="invoice-template.docx"`, `Cache-Control: private, no-store`.
 
 **Error responses**: `401`, `404 TEMPLATE_NOT_FOUND` (only if the classpath default is also missing — should not occur in normal operation).
+
+---
+
+## Company Profile (FEAT-20260518-02)
+
+### GET `/api/v1/settings/company`
+
+Returns the persisted company profile. When no `PUT` has ever been called the response contains blank strings for all fields and a `null` `updatedAt`. The row always exists (seeded by Flyway V14 `INSERT ... ON CONFLICT DO NOTHING`).
+
+**Auth**: HTTP Basic required. Returns `401` when unauthenticated.
+
+**Request**: no body.
+
+**Success response** `200 OK`:
+
+```json
+{
+  "name": "Invoice Tracker Co",
+  "address": "123 Business Ave, New York, NY 10001",
+  "phone": "+1 555 000 0000",
+  "email": "billing@invoicetracker.local",
+  "vatNumber": "US123456789",
+  "iban": "US12 3456 7890 1234 5678 90",
+  "swiftBic": "BOFAUS3N",
+  "bankName": "Bank of Example",
+  "updatedAt": "2026-05-18T10:14:00Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Company trading name — becomes `{{companyName}}` in DOCX templates |
+| `address` | string | Full address — `{{companyAddress}}` / `{{company.address}}` |
+| `phone` | string | Contact phone — `{{companyPhone}}` / `{{company.phone}}` |
+| `email` | string | Billing email — `{{companyEmail}}` / `{{company.email}}` |
+| `vatNumber` | string | VAT / tax registration number — `{{companyVatNumber}}` |
+| `iban` | string | IBAN — `{{companyIban}}` |
+| `swiftBic` | string | SWIFT/BIC code — `{{companySwiftBic}}` |
+| `bankName` | string | Bank name — `{{companyBankName}}` |
+| `updatedAt` | ISO-8601 instant or `null` | Timestamp of last `PUT`; `null` when the profile has never been written |
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+
+---
+
+### PUT `/api/v1/settings/company`
+
+Validates and upserts the company profile (singleton row — `INSERT ... ON CONFLICT (id) DO UPDATE`). The change takes effect immediately: all subsequent DOCX / PDF renders and email subject lines will use the new values without an app restart.
+
+**Auth**: HTTP Basic required.
+
+**Content-Type**: `application/json`.
+
+**Request body** (`CompanyProfileRequest`):
+
+```json
+{
+  "name": "Invoice Tracker Co",
+  "address": "123 Business Ave, New York, NY 10001",
+  "phone": "+1 555 000 0000",
+  "email": "billing@invoicetracker.local",
+  "vatNumber": "US123456789",
+  "iban": "US12 3456 7890 1234 5678 90",
+  "swiftBic": "BOFAUS3N",
+  "bankName": "Bank of Example"
+}
+```
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `name` | string | yes | `@NotBlank`, max 200 characters |
+| `address` | string | no | max 500 characters; `null` stored as `""` |
+| `phone` | string | no | max 32 characters |
+| `email` | string | no | `@OptionalEmail` — valid email format or empty string; max 254 characters |
+| `vatNumber` | string | no | max 50 characters |
+| `iban` | string | no | max 100 characters; charset restricted to `[A-Z0-9 ]` |
+| `swiftBic` | string | no | max 20 characters; charset restricted to `[A-Z0-9 ]` |
+| `bankName` | string | no | max 200 characters |
+
+Validation uses Jakarta Bean Validation (`@NotBlank`, `@Size`, `@OptionalEmail` custom constraint). Errors use the existing `GlobalExceptionHandler` `ProblemDetail` convention with `code: VALIDATION_FAILED` and an `errors: [{ field, message }]` array.
+
+**Success response** `200 OK` — `CompanyProfileResponse` (same shape as GET, with updated `updatedAt`):
+
+```json
+{
+  "name": "Invoice Tracker Co",
+  "address": "123 Business Ave, New York, NY 10001",
+  "phone": "+1 555 000 0000",
+  "email": "billing@invoicetracker.local",
+  "vatNumber": "US123456789",
+  "iban": "US12 3456 7890 1234 5678 90",
+  "swiftBic": "BOFAUS3N",
+  "bankName": "Bank of Example",
+  "updatedAt": "2026-05-18T10:14:00Z"
+}
+```
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `400 Bad Request` | `VALIDATION_FAILED` | `name` blank or a field exceeds its max length; `errors[]` lists per-field details |
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `409 Conflict` | `OPTIMISTIC_LOCK_CONFLICT` | Concurrent `PUT` detected via `@Version`; client should retry |
+| `415 Unsupported Media Type` | — | `Content-Type` is not `application/json` |
 
 ---
 

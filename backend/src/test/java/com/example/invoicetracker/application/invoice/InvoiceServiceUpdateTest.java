@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.example.invoicetracker.application.company.CompanyProfileResolver;
 import com.example.invoicetracker.domain.client.ClientNotFoundException;
 import com.example.invoicetracker.domain.client.ClientRepository;
 import com.example.invoicetracker.domain.invoice.Invoice;
@@ -40,13 +41,17 @@ class InvoiceServiceUpdateTest {
     private InvoiceMailer mailer;
     @Mock
     private InvoiceArtifactService artifactService;
+    @Mock
+    private CompanyProfileResolver companyProfileResolver;
     private InvoiceService service;
 
     @BeforeEach
     void setUp() {
-        CompanyProperties company = InvoiceFixtures.company();
+        org.mockito.Mockito.lenient().when(companyProfileResolver.resolve())
+            .thenReturn(InvoiceFixtures.company());
         service = new InvoiceService(
-            invoiceRepository, clientRepository, pdfRenderer, mailer, company, artifactService);
+            invoiceRepository, clientRepository, pdfRenderer, mailer,
+            companyProfileResolver, artifactService);
     }
 
     @Test

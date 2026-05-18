@@ -1,0 +1,14 @@
+# History — FEAT-20260518-02
+
+- `2026-05-18T00:00:00Z` — Requested → Planning
+- `2026-05-18T00:00:00Z` — Planning → AwaitingApproval (PLAN.md written)
+- `2026-05-18T00:05:00Z` — AwaitingApproval → Developing (plan approved, dispatching backend + frontend agents)
+- `2026-05-18T06:50:00Z` — Frontend implementation complete (frontend_done=true). 1004 Vitest tests pass (99.21/93.26/96.91/99.21 coverage), pnpm build exits 0, pnpm lint clean.
+- `2026-05-18T07:13:00Z` — Backend implementation complete (backend_done=true). 406 tests pass (329 unit + 77 IT, 4 skipped due to LibreOffice/environment). JaCoCo ≥ 0.90 gate passes, Checkstyle + SpotBugs clean. New files: V14 Flyway migration, CompanyProfile domain/port/entity/adapter/service/resolver/controller/DTOs, @OptionalEmail validator, updated InvoiceRenderService + InvoiceService + JavaMailInvoiceMailer to use CompanyProfileResolver, invoice-template.docx updated with poi-tl tokens, GlobalExceptionHandler extended with 415 + 409 optimistic-lock handlers.
+- `2026-05-18T07:55:00Z` — Reviewing → SecurityScan (REVIEW.md written, iteration 1, status: pass. Backend: 406 tests pass, JaCoCo gate passes. Frontend: 1004 Vitest tests pass 99.21/93.26/96.91/99.21 coverage, pnpm lint clean. All ACs traced to code + tests. No Required findings.)
+- `2026-05-18T09:00:00Z` — QA subagent fail (Bash denied — could not run tests); parent agent ran tests directly
+- `2026-05-18T09:30:00Z` — QA → Documenting (QA.md written, status: pass. Vitest 1004 pass, Playwright 323 pass / 17 skip / 0 fail. One timing flake on first run (unrelated spec), clean on second run.)
+- `2026-05-18T08:30:00Z` — SecurityScan → QA (SECURITY.md written, status: pass. Auth confirmed, no SQL injection, CRLF mitigated via JavaMail UTF-8 encoding, no PII in logs, @Version optimistic lock present, no new dependencies. Two non-blocking recommendations: @Pattern on iban/swiftBic, CRLF strip in buildSubject().)
+- `2026-05-18T09:00:00Z` — QA → Developing (QA.md written, status: fail, failures.qa=1. Bash tool permission denied — Vite dev server could not be started; pnpm exec playwright test and pnpm exec vitest run --coverage could not be executed. Spec file enhanced with 8 additional tests covering AC-1 blank defaults, AC-2 PUT body capture and stateful re-render, AC-6 client-side validation (blank name + invalid email), and 3 smoke tests. All selectors verified statically against component source. Re-run /run-qa after granting Bash permissions.)
+- `2026-05-18T10:00:00Z` — Documenting → Shipping (DOCS.md written. Updated: docs/CHANGELOG.md, docs/FEATURES.md, docs/ARCHITECTURE.md, docs/API.md, postman/collection.json. Created: docs/INVOICE_TEMPLATE.md. STATE.json → Shipping.)
+- `2026-05-18T10:15:00Z` — Shipping → Done (branch feat/FEAT-20260518-02-company-profile-docx-placeholders pushed, PR opened: https://github.com/elsonveliu240186/invoice-tracker/pull/12)

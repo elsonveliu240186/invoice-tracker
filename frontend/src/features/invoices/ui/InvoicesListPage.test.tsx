@@ -209,12 +209,6 @@ describe('InvoicesListPage', () => {
     await waitFor(() => expect(screen.getByText('INV-002')).toBeInTheDocument());
   });
 
-  it('renders manage template link', async () => {
-    renderPage();
-    await waitFor(() => expect(screen.queryByTestId('invoices-loading')).not.toBeInTheDocument());
-    expect(screen.getByTestId('link-manage-template')).toBeInTheDocument();
-  });
-
   it('renders New Invoice button', async () => {
     renderPage();
     await waitFor(() => expect(screen.queryByTestId('invoices-loading')).not.toBeInTheDocument());

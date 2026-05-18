@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { httpRaw } from '@/shared/lib/http';
 
-const BASE = '/api/v1/invoices';
-
 /**
- * Fetches the invoice preview PDF with auth headers and returns a blob URL
- * suitable for use in an <iframe src>. The blob URL is revoked on cleanup.
+ * Fetches a PDF with auth headers and returns a blob URL suitable for use in
+ * an <iframe src>. The blob URL is revoked on cleanup.
+ *
+ * @param url     Full API path to fetch (e.g. `/api/v1/invoices/{id}/pdf`)
+ * @param enabled Whether to trigger the fetch (e.g. dialog open state)
  */
-export function usePdfBlobUrl(invoiceId: string, enabled: boolean) {
+export function usePdfBlobUrl(url: string, enabled: boolean) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -23,7 +24,7 @@ export function usePdfBlobUrl(invoiceId: string, enabled: boolean) {
     setLoading(true);
     setError(false);
 
-    httpRaw(`${BASE}/${invoiceId}/preview-pdf`)
+    httpRaw(url)
       .then((res) => res.blob())
       .then((blob) => {
         if (cancelled) return;
@@ -42,7 +43,7 @@ export function usePdfBlobUrl(invoiceId: string, enabled: boolean) {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       setBlobUrl(null);
     };
-  }, [invoiceId, enabled]);
+  }, [url, enabled]);
 
   return { blobUrl, loading, error };
 }

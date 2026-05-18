@@ -29,13 +29,14 @@ test.describe('AC-1 — Desktop sidebar nav items', () => {
     await expect(clientsLink).toBeVisible();
   });
 
-  test('Invoices nav item is disabled (aria-disabled)', async ({ page }) => {
+  test('Invoices nav item is present in the sidebar', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/');
 
-    const disabledItem = page.locator('[data-testid="nav-item-disabled"]');
-    await expect(disabledItem).toBeVisible();
-    await expect(disabledItem).toHaveAttribute('aria-disabled', 'true');
+    // Invoices is now a standard nav link (not disabled) — just verify it is present
+    const sidebar = page.locator('[aria-label="Sidebar navigation"]');
+    const invoicesLink = sidebar.locator('a[href="/invoices"]');
+    await expect(invoicesLink).toBeVisible();
   });
 
   test('Clients nav item has aria-current="page" when on /clients', async ({ page }) => {

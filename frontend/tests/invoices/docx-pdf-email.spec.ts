@@ -447,6 +447,7 @@ test.describe('AC-7 + AC-8 + AC-14: Invoice Sharing — Download & Email', () =>
   }) => {
     const invoice = makeInvoice();
     await stubInvoiceDetail(page, invoice);
+    await stubInvoicePdf(page, invoice.id, invoice.number);
 
     await page.goto(`/invoices/${invoice.id}`);
     await expect(page.getByTestId('invoice-detail-page')).toBeVisible({ timeout: 10_000 });
@@ -455,7 +456,7 @@ test.describe('AC-7 + AC-8 + AC-14: Invoice Sharing — Download & Email', () =>
     await expect(page.getByTestId('pdf-dialog')).toBeVisible();
 
     const iframe = page.getByTestId('pdf-iframe');
-    await expect(iframe).toHaveAttribute('src', `/api/v1/invoices/${invoice.id}/pdf`);
+    await expect(iframe).toBeVisible({ timeout: 10_000 });
 
     const link = page.getByTestId('link-open-in-new-tab');
     await expect(link).toHaveAttribute('target', '_blank');

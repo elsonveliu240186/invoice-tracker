@@ -56,9 +56,21 @@ describe('Sidebar', () => {
     expect(screen.getByText('Invoice Template')).toBeInTheDocument();
   });
 
-  it('does not render Company Profile link in settings section', () => {
+  it('renders Company Profile link in settings section', () => {
     renderSidebar();
-    expect(screen.queryByText('Company Profile')).not.toBeInTheDocument();
+    expect(screen.getByText('Company Profile')).toBeInTheDocument();
+  });
+
+  it('Company Profile link navigates to /settings/company', () => {
+    renderSidebar();
+    const link = screen.getByText('Company Profile').closest('a');
+    expect(link).toHaveAttribute('href', '/settings/company');
+  });
+
+  it('marks Company Profile as active at /settings/company', () => {
+    renderSidebar({}, '/settings/company');
+    const span = screen.getByText('Company Profile').closest('span[aria-current]');
+    expect(span).toHaveAttribute('aria-current', 'page');
   });
 
   it('Invoices nav item has no child sub-items', () => {
