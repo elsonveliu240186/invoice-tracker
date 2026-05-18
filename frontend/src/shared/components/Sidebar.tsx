@@ -1,5 +1,5 @@
 import { NavLink, Link } from 'react-router';
-import { LayoutDashboard, Users, FileText, X, Settings, FileOutput, Wallet } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, X, Settings, FileOutput, Wallet, LayoutTemplate } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 
@@ -15,6 +15,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, end: true },
   { to: '/clients', labelKey: 'nav.clients', icon: Users },
   { to: '/invoices', labelKey: 'nav.invoices', icon: FileText },
+  { to: '/invoices/template', labelKey: 'nav.invoiceTemplate', icon: LayoutTemplate },
   { to: '/expenses', labelKey: 'nav.expenses', icon: Wallet },
 ];
 

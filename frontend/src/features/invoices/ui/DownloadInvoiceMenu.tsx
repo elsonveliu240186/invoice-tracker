@@ -113,7 +113,7 @@ export function DownloadInvoiceMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" data-testid="download-menu-content">
         <DropdownMenuItem
-          onSelect={() => void handleDownloadDocx()}
+          onClick={() => void handleDownloadDocx()}
           disabled={isPending}
           data-testid="btn-download-docx"
         >
@@ -124,7 +124,7 @@ export function DownloadInvoiceMenu({
           {pendingDocx && <Loader2 className="ml-2 h-3 w-3 animate-spin" aria-hidden="true" />}
         </DropdownMenuItem>
         <DropdownMenuItem
-          onSelect={() => void handleDownloadPdf()}
+          onClick={() => void handleDownloadPdf()}
           disabled={isPending}
           data-testid="btn-download-pdf"
         >
@@ -138,7 +138,7 @@ export function DownloadInvoiceMenu({
             <DropdownMenuSeparator />
             {hasSavedPdf && (
               <DropdownMenuItem
-                onSelect={() => void handleRegeneratePdf()}
+                onClick={() => void handleRegeneratePdf()}
                 disabled={isPending}
                 data-testid="btn-regenerate-pdf"
               >
@@ -151,7 +151,7 @@ export function DownloadInvoiceMenu({
             )}
             {hasSavedDocx && (
               <DropdownMenuItem
-                onSelect={() => void handleRegenerateDocx()}
+                onClick={() => void handleRegenerateDocx()}
                 disabled={isPending}
                 data-testid="btn-regenerate-docx"
               >

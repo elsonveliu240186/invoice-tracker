@@ -316,15 +316,6 @@
         "subtitle": "Will use saved PDF if generated, otherwise renders live from the template."
       }
     },
-    "toast": {
-      "sendSuccess": "Invoice sent successfully",
-      "sendFailed": "Failed to send invoice",
-      "noRecipient": "Invoice has no recipient email address",
-      "pdfConversionFailed": "PDF conversion failed. Please try again.",
-      "downloadFailed": "Download failed. Please try again.",
-      "markPaidSuccess": "Invoice marked as paid.",
-      "markPaidFailed": "Could not mark invoice as paid."
-    },
     "errors": {
       "notFound": "Invoice not found",
       "deliveryFailed": "Email delivery failed. Please try again."

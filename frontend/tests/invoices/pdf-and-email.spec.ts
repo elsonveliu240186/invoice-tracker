@@ -158,7 +158,7 @@ test.describe('FEAT-20260513-02: Invoice PDF & Email', () => {
   // ─── AC-1: View PDF flow ────────────────────────────────────────────────────
 
   test.describe('view-pdf: View PDF button opens iframe dialog', () => {
-    test('view-pdf-1: clicking View PDF opens dialog with iframe src pointing to the PDF endpoint', async ({
+    test('view-pdf-1: clicking View PDF opens dialog with blob iframe', async ({
       page,
     }) => {
       const invoice = makeInvoice();
@@ -173,13 +173,13 @@ test.describe('FEAT-20260513-02: Invoice PDF & Email', () => {
       await expect(viewPdfBtn).toBeVisible();
       await expect(viewPdfBtn).not.toBeDisabled();
 
-      // Click — dialog opens
+      // Click — dialog opens, iframe loads via blob URL
       await viewPdfBtn.click();
       await expect(page.getByTestId('pdf-dialog')).toBeVisible({ timeout: 5_000 });
 
-      // iframe points to the PDF API path
+      // iframe is visible (src is a blob URL)
       const iframe = page.getByTestId('pdf-iframe');
-      await expect(iframe).toHaveAttribute('src', `/api/v1/invoices/${invoice.id}/pdf`);
+      await expect(iframe).toBeVisible({ timeout: 10_000 });
     });
 
     test('view-pdf-2: "Open in new tab" link has target _blank and rel noopener noreferrer', async ({

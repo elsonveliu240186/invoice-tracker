@@ -15,7 +15,7 @@ interface PreviewInvoiceButtonProps {
 export function PreviewInvoiceButton({ invoiceId, invoiceNumber }: PreviewInvoiceButtonProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const { blobUrl, loading, error } = usePdfBlobUrl(invoiceId, open);
+  const { blobUrl, loading, error } = usePdfBlobUrl(`/api/v1/invoices/${invoiceId}/preview-pdf`, open);
 
   useEffect(() => {
     if (error) {
