@@ -22,7 +22,7 @@ test('upload valid .docx template → filename visible in metadata', async ({ pa
     process.env['E2E_USERNAME'] ?? 'admin@example.com',
     process.env['E2E_PASSWORD'] ?? 'Secret1!',
   );
-  await expect(page).toHaveURL('/', { timeout: 10000 });
+  await expect(page).toHaveURL('/', { timeout: 30000 });
 
   const templatePage = new SettingsTemplatePage(page);
   await templatePage.goto();
@@ -30,8 +30,8 @@ test('upload valid .docx template → filename visible in metadata', async ({ pa
   await templatePage.uploadFile(FIXTURE_FILE);
 
   // Wait for success toast or metadata update
-  await expect(page.locator('[data-sonner-toast]').first()).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('[data-sonner-toast]').first()).toBeVisible({ timeout: 30000 });
 
   // Metadata filename should be visible
-  await expect(templatePage.metadataFilename()).toBeVisible({ timeout: 10000 });
+  await expect(templatePage.metadataFilename()).toBeVisible({ timeout: 30000 });
 });

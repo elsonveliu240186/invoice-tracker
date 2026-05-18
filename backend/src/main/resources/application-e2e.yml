@@ -1,0 +1,5 @@
+app:
+  auth:
+    rate-limit:
+      # High capacity so E2E test fixtures (reset + re-register per test) never hit the limiter
+      capacity: 1000

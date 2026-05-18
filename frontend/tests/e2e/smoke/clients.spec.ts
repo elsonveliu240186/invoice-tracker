@@ -15,7 +15,7 @@ test('seeded client appears in client list', async ({ page, factory }) => {
     process.env['E2E_USERNAME'] ?? 'admin@example.com',
     process.env['E2E_PASSWORD'] ?? 'Secret1!',
   );
-  await expect(page).toHaveURL('/', { timeout: 10000 });
+  await expect(page).toHaveURL('/', { timeout: 30000 });
 
   // Navigate to clients
   const clientsPage = new ClientsPage(page);

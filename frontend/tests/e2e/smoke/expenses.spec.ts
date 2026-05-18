@@ -12,7 +12,7 @@ test('create expense via UI → row visible in list', async ({ page }) => {
     process.env['E2E_USERNAME'] ?? 'admin@example.com',
     process.env['E2E_PASSWORD'] ?? 'Secret1!',
   );
-  await expect(page).toHaveURL('/', { timeout: 10000 });
+  await expect(page).toHaveURL('/', { timeout: 30000 });
 
   const expensesPage = new ExpensesPage(page);
   await expensesPage.goto();

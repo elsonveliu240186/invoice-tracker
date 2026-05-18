@@ -8,6 +8,7 @@ import path from 'path';
 import { request } from '@playwright/test';
 
 const API_URL = process.env['E2E_API_URL'] ?? 'http://localhost:8082';
+const BASE_URL = process.env['E2E_BASE_URL'] ?? 'http://localhost:8081';
 const MAILHOG_URL = process.env['E2E_MAILHOG_URL'] ?? 'http://localhost:8026';
 const USERNAME = process.env['E2E_USERNAME'] ?? 'admin@example.com';
 const PASSWORD = process.env['E2E_PASSWORD'] ?? 'Secret1!';
@@ -38,10 +39,13 @@ export default async function globalSetup(): Promise<void> {
   // 1. Verify backend health
   await waitForUrl(`${API_URL}/actuator/health`, 'backend');
 
-  // 2. Verify MailHog
+  // 2. Verify frontend (nginx) is serving
+  await waitForUrl(`${BASE_URL}`, 'frontend');
+
+  // 3. Verify MailHog
   await waitForUrl(`${MAILHOG_URL}/api/v2/messages`, 'mailhog');
 
-  // 3. Register admin user — ignore 409 Conflict (user already exists)
+  // 4. Register admin user — ignore 409 Conflict (user already exists)
   const ctx = await request.newContext();
   try {
     const res = await ctx.post(`${API_URL}/api/v1/auth/register`, {
@@ -57,7 +61,7 @@ export default async function globalSetup(): Promise<void> {
     await ctx.dispose();
   }
 
-  // 4. Purge MailHog inbox
+  // 5. Purge MailHog inbox
   try {
     await fetch(`${MAILHOG_URL}/api/v1/messages`, { method: 'DELETE' });
     console.log('[global-setup] MailHog inbox purged');
@@ -65,7 +69,7 @@ export default async function globalSetup(): Promise<void> {
     console.warn('[global-setup] MailHog purge failed (non-fatal)');
   }
 
-  // 5. Pre-generate large fixture files in a temp dir so specs can locate them
+  // 6. Pre-generate large fixture files in a temp dir so specs can locate them
   //    without writing into the source tree (which is read-only in CI).
   const fixturesDir = path.join(os.tmpdir(), 'e2e-fixtures');
   fs.mkdirSync(fixturesDir, { recursive: true });

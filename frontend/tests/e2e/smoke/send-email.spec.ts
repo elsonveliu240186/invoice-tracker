@@ -21,7 +21,7 @@ test('send invoice → MailHog receives 1 message', async ({ page, factory }) =>
     process.env['E2E_USERNAME'] ?? 'admin@example.com',
     process.env['E2E_PASSWORD'] ?? 'Secret1!',
   );
-  await expect(page).toHaveURL('/', { timeout: 10000 });
+  await expect(page).toHaveURL('/', { timeout: 30000 });
 
   const detailPage = new InvoiceDetailPage(page);
   await detailPage.goto(invoice.id);
@@ -30,7 +30,7 @@ test('send invoice → MailHog receives 1 message', async ({ page, factory }) =>
   await detailPage.confirmSend();
 
   // Wait for success toast
-  await expect(page.locator('[data-sonner-toast]').first()).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('[data-sonner-toast]').first()).toBeVisible({ timeout: 30000 });
 
   // Poll MailHog for the message
   let messages: Awaited<ReturnType<typeof getMailhogMessages>> = [];

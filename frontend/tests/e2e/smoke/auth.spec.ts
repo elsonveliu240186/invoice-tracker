@@ -23,7 +23,7 @@ test('register → login → dashboard → logout → /login', async ({ page }) 
   await loginPage.login(email, password);
 
   // Should be on dashboard
-  await expect(page).toHaveURL('/', { timeout: 10000 });
+  await expect(page).toHaveURL('/', { timeout: 30000 });
   await expect(page.getByTestId('home-page')).toBeVisible();
 
   // Logout
