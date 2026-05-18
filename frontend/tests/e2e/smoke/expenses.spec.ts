@@ -23,7 +23,7 @@ test('create expense via UI → row visible in list', async ({ page }) => {
   await expensesPage.openCreateDialog();
   await expensesPage.fillForm({
     amount: '75.00',
-    category: 'OFFICE',
+    category: 'OTHER',
     expenseDate: today,
     description,
   });

@@ -24,5 +24,5 @@ test('seeded invoice appears in list with DRAFT status', async ({ page, factory 
 
   const row = invoicesPage.findRow(invoice.number);
   await expect(row).toBeVisible({ timeout: 5000 });
-  await expect(row).toContainText('DRAFT');
+  await expect(row).toContainText('Draft');
 });

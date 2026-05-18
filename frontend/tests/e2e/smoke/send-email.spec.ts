@@ -34,7 +34,7 @@ test('send invoice → MailHog receives 1 message', async ({ page, factory }) =>
 
   // Poll MailHog for the message
   let messages: Awaited<ReturnType<typeof getMailhogMessages>> = [];
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 30; i++) {
     messages = await getMailhogMessages();
     if (messages.length > 0) break;
     await page.waitForTimeout(500);

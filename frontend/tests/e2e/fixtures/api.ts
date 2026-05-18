@@ -164,7 +164,7 @@ export async function createExpense(
   const today = new Date().toISOString().slice(0, 10);
   const payload = {
     amount: data.amount ?? 50,
-    category: data.category ?? 'OFFICE',
+    category: data.category ?? 'OTHER',
     expenseDate: data.expenseDate ?? today,
     description: data.description ?? 'Test expense',
   };
