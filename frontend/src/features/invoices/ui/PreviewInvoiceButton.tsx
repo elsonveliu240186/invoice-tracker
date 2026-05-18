@@ -15,12 +15,14 @@ interface PreviewInvoiceButtonProps {
 export function PreviewInvoiceButton({ invoiceId, invoiceNumber }: PreviewInvoiceButtonProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const { blobUrl, loading, error } = usePdfBlobUrl(invoiceId, open);
+  const { blobUrl, loading, error } = usePdfBlobUrl(`/api/v1/invoices/${invoiceId}/preview-pdf`, open);
 
   useEffect(() => {
     if (error) {
+      // Show toast first, then close dialog on next tick so Sonner has a render cycle.
       toast.error(t('invoices.toast.previewFailed'));
-      setOpen(false);
+      const tid = window.setTimeout(() => setOpen(false), 0);
+      return () => window.clearTimeout(tid);
     }
   }, [error, t]);
 
@@ -49,7 +51,7 @@ export function PreviewInvoiceButton({ invoiceId, invoiceNumber }: PreviewInvoic
               <a
                 href={blobUrl}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-sm text-[var(--color-primary)] hover:underline"
                 data-testid="link-preview-open-new-tab"
               >

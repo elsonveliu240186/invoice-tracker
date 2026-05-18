@@ -1,6 +1,7 @@
 package com.example.invoicetracker.domain.invoice;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -88,6 +89,38 @@ public interface InvoiceRepository {
      * @return list of [month, revenue] pairs ordered by month ascending
      */
     List<Object[]> revenueByMonth(int months);
+
+    /**
+     * Returns counts grouped by status for active invoices with issue_date in [from, to].
+     *
+     * @param from start date (inclusive)
+     * @param to   end date (inclusive)
+     * @return list of [status, count] pairs
+     */
+    List<Object[]> countByStatusInRange(LocalDate from, LocalDate to);
+
+    /**
+     * Returns the sum of totals for active invoices by status with issue_date in [from, to].
+     *
+     * <p>Each element is an Object[] with [status (String), revenue (BigDecimal)].
+     *
+     * @param from start date (inclusive)
+     * @param to   end date (inclusive)
+     * @return list of [status, revenue] pairs
+     */
+    List<Object[]> revenueByStatusInRange(LocalDate from, LocalDate to);
+
+    /**
+     * Returns the sum of totals for active invoices grouped by month (YYYY-MM) for issue_date in
+     * [from, to].
+     *
+     * <p>Each element is an Object[] with [month (String), revenue (BigDecimal)].
+     *
+     * @param from start date (inclusive)
+     * @param to   end date (inclusive)
+     * @return list of [month, revenue] pairs ordered by month ascending
+     */
+    List<Object[]> revenueByMonthInRange(LocalDate from, LocalDate to);
 
     /**
      * Checks whether a number is already taken by an active invoice.

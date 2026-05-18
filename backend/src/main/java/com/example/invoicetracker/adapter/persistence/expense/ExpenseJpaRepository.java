@@ -75,6 +75,45 @@ public interface ExpenseJpaRepository extends JpaRepository<ExpenseEntity, UUID>
     );
 
     /**
+     * Returns [month (String YYYY-MM), total (BigDecimal)] pairs for active expenses
+     * within the given date range, ordered by month ascending.
+     */
+    @Query(
+        value = "SELECT TO_CHAR(expense_date, 'YYYY-MM') AS month, "
+            + "SUM(amount) AS total "
+            + "FROM expenses "
+            + "WHERE deleted_at IS NULL "
+            + "  AND expense_date >= :fromDate "
+            + "  AND expense_date <= :toDate "
+            + "GROUP BY TO_CHAR(expense_date, 'YYYY-MM') "
+            + "ORDER BY month ASC",
+        nativeQuery = true
+    )
+    List<Object[]> findExpenseByMonth(
+        @Param("fromDate") LocalDate fromDate,
+        @Param("toDate") LocalDate toDate
+    );
+
+    /**
+     * Returns [category (String), total (BigDecimal), count (Long)] triples for active
+     * expenses within the given date range, ordered by total desc then category asc.
+     */
+    @Query(
+        value = "SELECT category, SUM(amount) AS total, COUNT(*) AS cnt "
+            + "FROM expenses "
+            + "WHERE deleted_at IS NULL "
+            + "  AND expense_date >= :fromDate "
+            + "  AND expense_date <= :toDate "
+            + "GROUP BY category "
+            + "ORDER BY total DESC, category ASC",
+        nativeQuery = true
+    )
+    List<Object[]> findExpenseByCategoryInRange(
+        @Param("fromDate") LocalDate fromDate,
+        @Param("toDate") LocalDate toDate
+    );
+
+    /**
      * Projection interface for JPQL aggregate query results.
      */
     interface CategorySummaryRow {

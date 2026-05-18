@@ -14,13 +14,16 @@ const PLACEHOLDER_GROUPS: PlaceholderGroup[] = [
     placeholders: [
       '{{company.name}}',
       '{{company.email}}',
-      '{{company.phone}}',
       '{{company.address}}',
+      '{{company.vatNumber}}',
+      '{{company.iban}}',
+      '{{company.swift}}',
+      '{{company.bankName}}',
     ],
   },
   {
     groupKey: 'invoices.template.placeholders.client',
-    placeholders: ['{{client.name}}', '{{client.email}}', '{{client.phone}}', '{{client.address}}'],
+    placeholders: ['{{client.name}}', '{{client.email}}', '{{client.address}}'],
   },
   {
     groupKey: 'invoices.template.placeholders.invoice',
@@ -29,7 +32,8 @@ const PLACEHOLDER_GROUPS: PlaceholderGroup[] = [
       '{{invoice.issueDate}}',
       '{{invoice.dueDate}}',
       '{{invoice.subtotal}}',
-      '{{invoice.tax}}',
+      '{{invoice.taxRate}}',
+      '{{invoice.taxAmount}}',
       '{{invoice.total}}',
     ],
   },

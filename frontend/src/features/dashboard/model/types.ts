@@ -13,3 +13,22 @@ export interface DashboardStats {
   pendingRevenue: number;
   revenueByMonth: MonthlyRevenue[];
 }
+
+export interface MonthlyExpense {
+  month: string;
+  total: string;
+}
+
+export interface CategoryExpense {
+  category: string;
+  total: string;
+  count: number;
+}
+
+export interface DashboardExpenseStats {
+  from: string;
+  to: string;
+  grandTotal: string;
+  expenseByMonth: MonthlyExpense[];
+  expenseByCategory: CategoryExpense[];
+}

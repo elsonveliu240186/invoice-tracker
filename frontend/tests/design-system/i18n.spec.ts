@@ -34,10 +34,32 @@ function stubClients(page: import('@playwright/test').Page) {
   );
 }
 
+// Stub the dashboard APIs so DashboardPage renders without a live backend.
+function stubDashboard(page: import('@playwright/test').Page) {
+  const statsBody = JSON.stringify({
+    totalInvoices: 0,
+    draftCount: 0,
+    totalRevenue: 0,
+    paidCount: 0,
+    paidRevenue: 0,
+    sentCount: 0,
+    pendingRevenue: 0,
+    revenueByMonth: [],
+  });
+  const expenseBody = JSON.stringify({ expenseByMonth: [], expenseByCategory: [] });
+  void page.route('**/api/v1/dashboard/stats**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: statsBody }),
+  );
+  return page.route('**/api/v1/dashboard/expense-stats**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: expenseBody }),
+  );
+}
+
 test.describe('i18n — English strings', () => {
   test.beforeEach(async ({ page }) => {
     await seedAuth(page);
     await stubClients(page);
+    await stubDashboard(page);
   });
 
   test('AC-8: app name renders as "Invoice Tracker" not raw key', async ({ page }) => {
@@ -63,19 +85,22 @@ test.describe('i18n — English strings', () => {
   });
 
   test('AC-8: home page title renders from i18n key', async ({ page }) => {
-    await stubClients(page);
     await page.goto('/');
     await page.waitForSelector('[data-testid="home-page"]');
 
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
+    // DashboardPage shows a welcome banner h1: "Welcome back, {name}"
+    await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
   });
 
-  test('AC-8: home page CTA link renders English label', async ({ page }) => {
+  test('AC-8: home page welcome banner subtitle renders English text', async ({ page }) => {
     await page.goto('/');
-    await page.waitForSelector('[data-testid="home-page"]');
+    await page.waitForSelector('[data-testid="welcome-banner"]');
 
-    await expect(page.getByTestId('link-clients')).toBeVisible();
-    await expect(page.getByTestId('link-clients')).toHaveText('Manage Clients');
+    // Verify the subtitle is translated (not a raw i18n key)
+    const banner = page.getByTestId('welcome-banner');
+    const bannerText = await banner.textContent();
+    expect(bannerText).not.toContain('dashboard.welcome');
+    expect(bannerText).toContain('Welcome back');
   });
 
   test('AC-8: clients page header renders English title', async ({ page }) => {

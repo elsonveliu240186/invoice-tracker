@@ -34,11 +34,27 @@ function stubClients(page: import('@playwright/test').Page) {
   );
 }
 
+// Stub dashboard APIs so DashboardPage renders without a live backend.
+function stubDashboard(page: import('@playwright/test').Page) {
+  const statsBody = JSON.stringify({
+    totalInvoices: 0, draftCount: 0, totalRevenue: 0, paidCount: 0,
+    paidRevenue: 0, sentCount: 0, pendingRevenue: 0, revenueByMonth: [],
+  });
+  const expenseBody = JSON.stringify({ expenseByMonth: [], expenseByCategory: [] });
+  void page.route('**/api/v1/dashboard/stats**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: statsBody }),
+  );
+  return page.route('**/api/v1/dashboard/expense-stats**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: expenseBody }),
+  );
+}
+
 test.describe('AppShell layout — desktop', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
   test.beforeEach(async ({ page }) => {
     await seedAuth(page);
     await stubClients(page);
+    await stubDashboard(page);
   });
 
   test('AC-9: sidebar is visible on desktop viewport', async ({ page }) => {
@@ -54,11 +70,10 @@ test.describe('AppShell layout — desktop', () => {
     await page.goto('/');
     await page.waitForSelector('[data-testid="home-page"]');
 
-    // New sidebar: Dashboard, Clients, Invoices (disabled span, not a link)
+    // Sidebar has Dashboard, Clients, Invoices, Expenses — all active NavLinks
     await expect(page.getByRole('link', { name: /dashboard/i }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: /clients/i }).first()).toBeVisible();
-    // Invoices is a disabled nav item (span with aria-disabled), not a link
-    await expect(page.locator('[aria-disabled="true"]').first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /invoices/i }).first()).toBeVisible();
   });
 
   test('AC-9: clicking Clients nav link navigates to /clients', async ({ page }) => {

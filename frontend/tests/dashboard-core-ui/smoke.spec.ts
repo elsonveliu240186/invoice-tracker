@@ -5,10 +5,132 @@
  *   3. Create a new client end-to-end through the Sheet.
  *   4. Client detail navigation from list row.
  *
- * These tests exercise real backend data so seed state is reset before each test.
+ * All backend calls are stubbed via page.route() — no live backend needed.
+ * These tests check UI behaviour and do NOT need a real database.
  */
-import { test, expect } from '@playwright/test';
-import { loginAs, seedClients } from './auth-helpers';
+import { test, expect, type Page } from '@playwright/test';
+import { loginAs } from './auth-helpers';
+
+// ---------------------------------------------------------------------------
+// Shared types & fixture factory
+// ---------------------------------------------------------------------------
+
+interface StubClient {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  address: string | null;
+  companyName: string;
+  companyAddress: string;
+  companyVatNumber: string;
+  companyIban: string;
+  companySwiftBic: string;
+  companyBankName: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
+function makeClient(
+  overrides: Partial<StubClient> & { id: string; name: string; email: string },
+): StubClient {
+  return {
+    phone: null,
+    address: null,
+    companyName: '',
+    companyAddress: '',
+    companyVatNumber: '',
+    companyIban: '',
+    companySwiftBic: '',
+    companyBankName: '',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+    deletedAt: null,
+    ...overrides,
+  };
+}
+
+/**
+ * Registers route stubs for the clients API with mutable state so POST/GET
+ * interactions within a test reflect correctly.
+ */
+async function stubClientsApi(page: Page, initialClients: StubClient[]) {
+  const clients = [...initialClients];
+
+  await page.route('**/api/v1/clients**', (route) => {
+    const url = new URL(route.request().url());
+    const method = route.request().method();
+
+    const pathParts = url.pathname.split('/').filter(Boolean);
+    const clientId = pathParts.length === 4 ? pathParts[3] : null;
+
+    if (clientId) {
+      if (method === 'GET') {
+        const client = clients.find((c) => c.id === clientId);
+        if (client) {
+          void route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(client),
+          });
+        } else {
+          void route.fulfill({
+            status: 404,
+            contentType: 'application/json',
+            body: JSON.stringify({ status: 404, detail: 'Not found' }),
+          });
+        }
+        return;
+      }
+
+      if (method === 'DELETE') {
+        const idx = clients.findIndex((c) => c.id === clientId);
+        if (idx !== -1) clients.splice(idx, 1);
+        void route.fulfill({ status: 204 });
+        return;
+      }
+    } else {
+      if (method === 'GET') {
+        void route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            content: clients,
+            page: 0,
+            size: 20,
+            totalElements: clients.length,
+            totalPages: clients.length === 0 ? 0 : 1,
+          }),
+        });
+        return;
+      }
+
+      if (method === 'POST') {
+        const body = route.request().postDataJSON() as Partial<StubClient>;
+        const newClient: StubClient = makeClient({
+          id: `client-created-${Date.now()}`,
+          name: body.name ?? 'New Client',
+          email: body.email ?? 'new@example.com',
+          ...body,
+        });
+        clients.push(newClient);
+        void route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify(newClient),
+        });
+        return;
+      }
+    }
+
+    void route.continue();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Smoke — Auth guard
+// ---------------------------------------------------------------------------
 
 test.describe('Smoke — Auth guard', () => {
   test('unauthenticated access to / redirects to /login', async ({ page }) => {
@@ -30,9 +152,15 @@ test.describe('Smoke — Auth guard', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Smoke — Dashboard → Clients sidebar navigation
+// ---------------------------------------------------------------------------
+
 test.describe('Smoke — Dashboard → Clients sidebar navigation', () => {
-  test('clicking Clients nav item navigates to /clients', async ({ page, request }) => {
-    await seedClients(request, [{ name: 'Nav Test', email: 'nav@example.com' }]);
+  test('clicking Clients nav item navigates to /clients', async ({ page }) => {
+    await stubClientsApi(page, [
+      makeClient({ id: 'client-nav', name: 'Nav Test', email: 'nav@example.com' }),
+    ]);
     await loginAs(page, { navigateTo: '/' });
     await page.setViewportSize({ width: 1280, height: 800 });
 
@@ -44,8 +172,8 @@ test.describe('Smoke — Dashboard → Clients sidebar navigation', () => {
     await expect(page.locator('[data-testid="clients-page"]')).toBeVisible();
   });
 
-  test('clicking Dashboard nav item returns to /', async ({ page, request }) => {
-    await seedClients(request, []);
+  test('clicking Dashboard nav item returns to /', async ({ page }) => {
+    await stubClientsApi(page, []);
     await loginAs(page, { navigateTo: '/clients' });
     await page.setViewportSize({ width: 1280, height: 800 });
 
@@ -57,9 +185,14 @@ test.describe('Smoke — Dashboard → Clients sidebar navigation', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Smoke — Create client end-to-end
+// ---------------------------------------------------------------------------
+
 test.describe('Smoke — Create client end-to-end', () => {
-  test('creates a new client via the Sheet and sees it in the table', async ({ page, request }) => {
-    await seedClients(request, []);
+  test('creates a new client via the Sheet and sees it in the table', async ({ page }) => {
+    // Start with empty list; POST stub will add the new client
+    await stubClientsApi(page, []);
     await loginAs(page, { navigateTo: '/clients' });
 
     // Open create sheet
@@ -79,7 +212,7 @@ test.describe('Smoke — Create client end-to-end', () => {
     // Submit via the form's submit button
     await sheet.locator('[data-testid="btn-submit"]').click();
 
-    // Sheet closes and new row appears
+    // Sheet closes and new row appears (list refetch returns the newly created client)
     await expect(sheet).not.toBeVisible();
     await expect(
       page.locator('[data-testid="client-row"]').filter({ hasText: 'Smoke Test Co' }),
@@ -87,29 +220,22 @@ test.describe('Smoke — Create client end-to-end', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Smoke — Client detail navigation
+// ---------------------------------------------------------------------------
+
 test.describe('Smoke — Client detail navigation', () => {
   test('clicking a client row Edit button and navigating to detail via URL works', async ({
     page,
-    request,
   }) => {
-    // Seed and capture ID
-    const basicAuth = 'Basic ' + Buffer.from('admin:secret').toString('base64');
-    const listResp = await request.get('http://localhost:8080/api/v1/clients?size=100', {
-      headers: { Authorization: basicAuth },
+    const detailClient = makeClient({
+      id: 'client-detail-smoke-001',
+      name: 'Detail Smoke',
+      email: 'detailsmoke@example.com',
     });
-    const existing = (await listResp.json()) as { content: { id: string }[] };
-    for (const c of existing.content) {
-      await request.delete(`http://localhost:8080/api/v1/clients/${c.id}`, {
-        headers: { Authorization: basicAuth },
-      });
-    }
-    const createResp = await request.post('http://localhost:8080/api/v1/clients', {
-      headers: { Authorization: basicAuth, 'Content-Type': 'application/json' },
-      data: { name: 'Detail Smoke', email: 'detailsmoke@example.com' },
-    });
-    const created = (await createResp.json()) as { id: string };
 
-    await loginAs(page, { navigateTo: `/clients/${created.id}` });
+    await stubClientsApi(page, [detailClient]);
+    await loginAs(page, { navigateTo: `/clients/${detailClient.id}` });
 
     await expect(page.locator('[data-testid="client-detail-page"]')).toBeVisible({
       timeout: 10_000,

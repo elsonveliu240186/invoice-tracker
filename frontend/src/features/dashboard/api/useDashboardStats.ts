@@ -9,7 +9,10 @@ interface UseDashboardStatsResult {
   error: ApiError | null;
 }
 
-export function useDashboardStats(): UseDashboardStatsResult {
+export function useDashboardStats(
+  from?: string | null,
+  to?: string | null,
+): UseDashboardStatsResult {
   const [data, setData] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
@@ -18,7 +21,7 @@ export function useDashboardStats(): UseDashboardStatsResult {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    getDashboardStats()
+    getDashboardStats(from, to)
       .then((d) => {
         if (!cancelled) setData(d);
       })
@@ -31,7 +34,7 @@ export function useDashboardStats(): UseDashboardStatsResult {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [from, to]);
 
   return { data, loading, error };
 }

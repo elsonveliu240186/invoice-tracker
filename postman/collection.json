@@ -14,12 +14,24 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "auth",
+                "login"
+              ]
             },
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -54,12 +66,24 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/auth/register",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "auth", "register"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "auth",
+                "register"
+              ]
             },
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -89,12 +113,24 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/auth/forgot-password",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "auth", "forgot-password"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "auth",
+                "forgot-password"
+              ]
             },
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -127,14 +163,28 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/ping",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "ping"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "ping"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -157,23 +207,41 @@
       "name": "Clients",
       "item": [
         {
-          "name": "Dashboard KPI — Count Clients (size=1)",
+          "name": "Dashboard KPI \u00e2\u20ac\u201d Count Clients (size=1)",
           "description": "Used by DashboardPage to read totalElements for the Total Clients KPI card. Added by FEAT-20260512-03.",
           "request": {
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/clients?size=1",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "clients"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "clients"
+              ],
               "query": [
-                { "key": "size", "value": "1", "description": "Minimal page to read totalElements only" }
+                {
+                  "key": "size",
+                  "value": "1",
+                  "description": "Minimal page to read totalElements only"
+                }
               ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -200,20 +268,50 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/clients?query=&page=0&size=20&sort=name,asc",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "clients"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "clients"
+              ],
               "query": [
-                { "key": "query", "value": "", "description": "Case-insensitive substring match on name or email" },
-                { "key": "page", "value": "0", "description": "Zero-based page number" },
-                { "key": "size", "value": "20", "description": "Page size (1-100)" },
-                { "key": "sort", "value": "name,asc", "description": "Sort field and direction" }
+                {
+                  "key": "query",
+                  "value": "",
+                  "description": "Case-insensitive substring match on name or email"
+                },
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "Zero-based page number"
+                },
+                {
+                  "key": "size",
+                  "value": "20",
+                  "description": "Page size (1-100)"
+                },
+                {
+                  "key": "sort",
+                  "value": "name,asc",
+                  "description": "Sort field and direction"
+                }
               ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -246,18 +344,35 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/clients",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "clients"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "clients"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             },
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -294,14 +409,29 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/clients/{{clientId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "clients", "{{clientId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "clients",
+                "{{clientId}}"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -331,18 +461,36 @@
             "method": "PUT",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/clients/{{clientId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "clients", "{{clientId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "clients",
+                "{{clientId}}"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             },
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -376,14 +524,29 @@
             "method": "DELETE",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/clients/{{clientId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "clients", "{{clientId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "clients",
+                "{{clientId}}"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -413,14 +576,29 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/dashboard/stats",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "dashboard", "stats"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "dashboard",
+                "stats"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -457,6 +635,87 @@
               }
             }
           ]
+        },
+        {
+          "name": "Get Expense Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/dashboard/expense-stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "dashboard",
+                "expense-stats"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "",
+                  "description": "Optional start date (YYYY-MM-DD)",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "",
+                  "description": "Optional end date (YYYY-MM-DD)",
+                  "disabled": true
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('response has effectiveFrom and effectiveTo', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('effectiveFrom').that.matches(/^\\d{4}-\\d{2}-\\d{2}$/);",
+                  "  pm.expect(body).to.have.property('effectiveTo').that.matches(/^\\d{4}-\\d{2}-\\d{2}$/);",
+                  "  pm.expect(body).to.have.property('totalExpenses');",
+                  "});",
+                  "pm.test('expenseByMonth is an array of {month, total} objects', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.expenseByMonth).to.be.an('array');",
+                  "  body.expenseByMonth.forEach(entry => {",
+                  "    pm.expect(entry).to.have.property('month').that.matches(/^\\d{4}-\\d{2}$/);",
+                  "    pm.expect(entry).to.have.property('total');",
+                  "  });",
+                  "});",
+                  "pm.test('expenseByCategory is an array of {category, total, count} objects', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.expenseByCategory).to.be.an('array');",
+                  "  body.expenseByCategory.forEach(entry => {",
+                  "    pm.expect(entry).to.have.property('category').that.is.a('string');",
+                  "    pm.expect(entry).to.have.property('total');",
+                  "    pm.expect(entry).to.have.property('count').that.is.a('number');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -469,18 +728,35 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             },
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -514,18 +790,38 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices?page=0&size=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices"
+              ],
               "query": [
-                { "key": "page", "value": "0" },
-                { "key": "size", "value": "20" }
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
               ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -552,14 +848,29 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices",
+                "{{invoiceId}}"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -587,14 +898,30 @@
             "method": "PATCH",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/mark-paid",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "mark-paid"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices",
+                "{{invoiceId}}",
+                "mark-paid"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -626,14 +953,30 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/pdf",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "pdf"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices",
+                "{{invoiceId}}",
+                "pdf"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -658,14 +1001,30 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/send-email",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "send-email"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices",
+                "{{invoiceId}}",
+                "send-email"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -690,14 +1049,29 @@
             "method": "DELETE",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices",
+                "{{invoiceId}}"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -727,14 +1101,30 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/preview-pdf",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "preview-pdf"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices",
+                "{{invoiceId}}",
+                "preview-pdf"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -765,18 +1155,42 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/generate?format=PDF&overwrite=false",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "generate"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices",
+                "{{invoiceId}}",
+                "generate"
+              ],
               "query": [
-                { "key": "format", "value": "PDF", "description": "PDF or DOCX" },
-                { "key": "overwrite", "value": "false", "description": "true to replace existing artefact (Regenerate)" }
+                {
+                  "key": "format",
+                  "value": "PDF",
+                  "description": "PDF or DOCX"
+                },
+                {
+                  "key": "overwrite",
+                  "value": "false",
+                  "description": "true to replace existing artefact (Regenerate)"
+                }
               ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -805,18 +1219,42 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/generate?format=DOCX&overwrite=false",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "generate"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices",
+                "{{invoiceId}}",
+                "generate"
+              ],
               "query": [
-                { "key": "format", "value": "DOCX", "description": "PDF or DOCX" },
-                { "key": "overwrite", "value": "false", "description": "true to replace existing artefact (Regenerate)" }
+                {
+                  "key": "format",
+                  "value": "DOCX",
+                  "description": "PDF or DOCX"
+                },
+                {
+                  "key": "overwrite",
+                  "value": "false",
+                  "description": "true to replace existing artefact (Regenerate)"
+                }
               ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -845,18 +1283,41 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/generate?format=PDF&overwrite=true",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "generate"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices",
+                "{{invoiceId}}",
+                "generate"
+              ],
               "query": [
-                { "key": "format", "value": "PDF" },
-                { "key": "overwrite", "value": "true", "description": "Regenerate flow — replaces existing artefact" }
+                {
+                  "key": "format",
+                  "value": "PDF"
+                },
+                {
+                  "key": "overwrite",
+                  "value": "true",
+                  "description": "Regenerate flow \u00e2\u20ac\u201d replaces existing artefact"
+                }
               ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -883,17 +1344,37 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/generated?format=PDF",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "generated"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices",
+                "{{invoiceId}}",
+                "generated"
+              ],
               "query": [
-                { "key": "format", "value": "PDF", "description": "PDF or DOCX" }
+                {
+                  "key": "format",
+                  "value": "PDF",
+                  "description": "PDF or DOCX"
+                }
               ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -924,17 +1405,37 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/generated?format=DOCX",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "generated"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices",
+                "{{invoiceId}}",
+                "generated"
+              ],
               "query": [
-                { "key": "format", "value": "DOCX", "description": "PDF or DOCX" }
+                {
+                  "key": "format",
+                  "value": "DOCX",
+                  "description": "PDF or DOCX"
+                }
               ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -965,14 +1466,31 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/generated/metadata",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "generated", "metadata"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices",
+                "{{invoiceId}}",
+                "generated",
+                "metadata"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -1015,14 +1533,30 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/docx",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "docx"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices",
+                "{{invoiceId}}",
+                "docx"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -1053,14 +1587,30 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/docx-pdf",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "docx-pdf"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices",
+                "{{invoiceId}}",
+                "docx-pdf"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -1091,14 +1641,30 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/invoices/{{invoiceId}}/docx-email",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "invoices", "{{invoiceId}}", "docx-email"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "invoices",
+                "{{invoiceId}}",
+                "docx-email"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -1130,14 +1696,29 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/settings/invoice-template",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "settings", "invoice-template"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "settings",
+                "invoice-template"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             },
             "body": {
@@ -1176,14 +1757,30 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/settings/invoice-template/preview",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "settings", "invoice-template", "preview"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "settings",
+                "invoice-template",
+                "preview"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -1212,14 +1809,30 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/{{apiVersion}}/settings/invoice-template/download",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "{{apiVersion}}", "settings", "invoice-template", "download"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "settings",
+                "invoice-template",
+                "download"
+              ]
             },
             "auth": {
               "type": "basic",
               "basic": [
-                { "key": "username", "value": "{{username}}", "type": "string" },
-                { "key": "password", "value": "{{password}}", "type": "string" }
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -1246,6 +1859,9 @@
     }
   ],
   "variable": [
-    { "key": "apiVersion", "value": "v1" }
+    {
+      "key": "apiVersion",
+      "value": "v1"
+    }
   ]
 }

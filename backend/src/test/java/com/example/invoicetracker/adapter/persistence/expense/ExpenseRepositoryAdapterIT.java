@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.invoicetracker.domain.expense.CategorySummary;
 import com.example.invoicetracker.domain.expense.Expense;
 import com.example.invoicetracker.domain.expense.ExpenseCategory;
+import com.example.invoicetracker.domain.expense.MonthlyExpense;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -153,6 +154,85 @@ class ExpenseRepositoryAdapterIT {
         assertThat(result.amount()).isEqualByComparingTo("35.00");
         assertThat(result.category()).isEqualTo(ExpenseCategory.EDUCATION);
         assertThat(result.description()).isEqualTo("Updated");
+    }
+
+    @Test
+    void expenseByMonth_groups_by_postgres_to_char() {
+        // Use a specific narrow date range unlikely to clash with other test data
+        LocalDate jan1 = LocalDate.of(2023, 1, 5);
+        LocalDate jan2 = LocalDate.of(2023, 1, 20);
+        LocalDate feb1 = LocalDate.of(2023, 2, 10);
+        LocalDate outsideDate = LocalDate.of(2022, 12, 31);
+
+        adapter.save(buildExpense(new BigDecimal("100.00"), ExpenseCategory.FOOD_DRINK, "m1", jan1));
+        adapter.save(buildExpense(new BigDecimal("50.00"), ExpenseCategory.TRANSPORT, "m2", jan2));
+        adapter.save(buildExpense(new BigDecimal("200.00"), ExpenseCategory.HOUSING, "m3", feb1));
+
+        // Soft-deleted: must be excluded
+        Expense toDelete = adapter.save(
+            buildExpense(new BigDecimal("999.00"), ExpenseCategory.FOOD_DRINK, "del", jan1));
+        Expense softDeleted = new Expense(
+            toDelete.id(), toDelete.amount(), toDelete.category(), toDelete.description(),
+            toDelete.expenseDate(), toDelete.createdAt(), toDelete.updatedAt(), Instant.now());
+        adapter.save(softDeleted);
+
+        // Out-of-range row: must be excluded
+        adapter.save(buildExpense(new BigDecimal("77.00"), ExpenseCategory.OTHER, "out", outsideDate));
+
+        LocalDate from = LocalDate.of(2023, 1, 1);
+        LocalDate to = LocalDate.of(2023, 2, 28);
+
+        List<MonthlyExpense> result = adapter.expenseByMonth(from, to);
+
+        assertThat(result).hasSize(2);
+        MonthlyExpense jan = result.stream()
+            .filter(m -> m.month().equals("2023-01")).findFirst().orElseThrow();
+        MonthlyExpense feb = result.stream()
+            .filter(m -> m.month().equals("2023-02")).findFirst().orElseThrow();
+
+        // Jan: 100 + 50 = 150 (999 soft-deleted excluded)
+        assertThat(jan.total()).isEqualByComparingTo("150.00");
+        // Feb: 200
+        assertThat(feb.total()).isEqualByComparingTo("200.00");
+    }
+
+    @Test
+    void expenseByCategoryInRange_groups_and_counts() {
+        LocalDate date1 = LocalDate.of(2022, 6, 1);
+        LocalDate date2 = LocalDate.of(2022, 6, 15);
+        LocalDate outsideDate = LocalDate.of(2022, 5, 31);
+
+        adapter.save(buildExpense(new BigDecimal("80.00"), ExpenseCategory.HEALTH, "h1", date1));
+        adapter.save(buildExpense(new BigDecimal("40.00"), ExpenseCategory.HEALTH, "h2", date2));
+        adapter.save(buildExpense(new BigDecimal("120.00"), ExpenseCategory.ENTERTAINMENT, "e1", date1));
+
+        // Out-of-range: must be excluded
+        adapter.save(buildExpense(new BigDecimal("500.00"), ExpenseCategory.HEALTH, "out", outsideDate));
+
+        // Soft-deleted: must be excluded
+        Expense toDelete = adapter.save(
+            buildExpense(new BigDecimal("999.00"), ExpenseCategory.ENTERTAINMENT, "del", date1));
+        Expense softDeleted = new Expense(
+            toDelete.id(), toDelete.amount(), toDelete.category(), toDelete.description(),
+            toDelete.expenseDate(), toDelete.createdAt(), toDelete.updatedAt(), Instant.now());
+        adapter.save(softDeleted);
+
+        LocalDate from = LocalDate.of(2022, 6, 1);
+        LocalDate to = LocalDate.of(2022, 6, 30);
+
+        List<CategorySummary> result = adapter.expenseByCategoryInRange(from, to);
+
+        assertThat(result).hasSizeGreaterThanOrEqualTo(2);
+
+        CategorySummary health = result.stream()
+            .filter(cs -> cs.category() == ExpenseCategory.HEALTH).findFirst().orElseThrow();
+        CategorySummary entertainment = result.stream()
+            .filter(cs -> cs.category() == ExpenseCategory.ENTERTAINMENT).findFirst().orElseThrow();
+
+        assertThat(health.total()).isEqualByComparingTo("120.00");
+        assertThat(health.count()).isEqualTo(2L);
+        assertThat(entertainment.total()).isEqualByComparingTo("120.00");
+        assertThat(entertainment.count()).isEqualTo(1L);
     }
 
     @Test

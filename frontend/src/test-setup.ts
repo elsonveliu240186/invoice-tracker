@@ -41,6 +41,34 @@ try {
   };
 }
 
+// ── ResizeObserver stub ───────────────────────────────────────────────────────
+// Radix UI Popover (and similar Popper-based primitives) use ResizeObserver to
+// track trigger/content size changes. jsdom does not include it; add a no-op stub.
+if (typeof window.ResizeObserver === 'undefined') {
+  window.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
+// ── PointerEvent polyfill ─────────────────────────────────────────────────────
+// Radix UI Popover (and similar primitives) rely on PointerEvent to open/close.
+// jsdom does not include PointerEvent; add a minimal stub so that pointer-based
+// interactions like userEvent.click work correctly in tests.
+if (typeof window.PointerEvent === 'undefined') {
+  class PointerEvent extends MouseEvent {
+    constructor(type: string, params: PointerEventInit = {}) {
+      super(type, params);
+    }
+  }
+  Object.defineProperty(window, 'PointerEvent', {
+    writable: true,
+    configurable: true,
+    value: PointerEvent,
+  });
+}
+
 // ── matchMedia global stub ────────────────────────────────────────────────────
 // motion.ts calls window.matchMedia at module-evaluation time (for prefersReducedMotion).
 // We must stub it before any test file imports a component that depends on motion.ts.
