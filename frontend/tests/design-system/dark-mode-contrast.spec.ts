@@ -43,10 +43,10 @@ function stubClients(page: import('@playwright/test').Page) {
 }
 
 function stubDashboard(page: import('@playwright/test').Page) {
-  return page.route('**/api/v1/dashboard**', (route) => {
+  return page.route('**/api/v1/dashboard**', async (route) => {
     const url = route.request().url();
     if (url.includes('expense-stats')) {
-      route.fulfill({
+      await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -55,7 +55,7 @@ function stubDashboard(page: import('@playwright/test').Page) {
         }),
       });
     } else {
-      route.fulfill({
+      await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
