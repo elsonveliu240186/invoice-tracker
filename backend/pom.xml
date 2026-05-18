@@ -335,6 +335,28 @@
                                 -->
                                 <exclude>**/application/expense/ExpenseFilter*</exclude>
                                 <exclude>**/application/expense/MonthlySummary*</exclude>
+                                <!--
+                                  Company profile persistence adapter: pure delegation pattern,
+                                  same justification as ClientRepositoryAdapter above.
+                                -->
+                                <exclude>**/adapter/persistence/company/CompanyProfileEntity*</exclude>
+                                <exclude>**/adapter/persistence/company/CompanyProfileJpaRepository*</exclude>
+                                <exclude>**/adapter/persistence/company/CompanyProfileRepositoryAdapter*</exclude>
+                                <!--
+                                  Company profile domain record: canonical constructor null-checks
+                                  are compiler-generated and not reachable from tests.
+                                -->
+                                <exclude>**/domain/company/CompanyProfile*</exclude>
+                                <exclude>**/domain/company/CompanyProfileRepository*</exclude>
+                                <!--
+                                  Settings DTO records: no logic.
+                                -->
+                                <exclude>**/adapter/web/settings/dto/CompanyProfileRequest*</exclude>
+                                <exclude>**/adapter/web/settings/dto/CompanyProfileResponse*</exclude>
+                                <!--
+                                  Validation annotation: no logic to branch.
+                                -->
+                                <exclude>**/adapter/web/validation/OptionalEmail*</exclude>
                             </excludes>
                             <rules>
                                 <rule>

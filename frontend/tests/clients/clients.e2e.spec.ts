@@ -192,7 +192,7 @@ test.describe('AC-9: /clients page lists clients', () => {
     await page.goto('/clients');
 
     await expect(page.getByTestId('empty-state')).toBeVisible();
-    await expect(page.getByTestId('empty-state')).toContainText(/no clients found/i);
+    await expect(page.getByTestId('empty-state')).toContainText(/no clients yet/i);
   });
 
   test('has a visible New client button', async ({ page }) => {
@@ -257,13 +257,13 @@ test.describe('AC-2 / AC-9: search', () => {
 // AC-9-b: New client modal open/close
 // ---------------------------------------------------------------------------
 
-test.describe('AC-9: New client modal', () => {
+test.describe('AC-9: New client sheet', () => {
   test('opens when New client button is clicked', async ({ page }) => {
     await setupApiMock(page, { onList: () => pageOf([]) });
     await page.goto('/clients');
 
     await page.getByTestId('btn-new-client').click();
-    await expect(page.getByTestId('client-modal')).toBeVisible();
+    await expect(page.getByTestId('client-form-sheet')).toBeVisible();
     await expect(page.getByRole('heading', { name: /new client/i })).toBeVisible();
   });
 
@@ -272,10 +272,10 @@ test.describe('AC-9: New client modal', () => {
     await page.goto('/clients');
 
     await page.getByTestId('btn-new-client').click();
-    await expect(page.getByTestId('client-modal')).toBeVisible();
+    await expect(page.getByTestId('client-form-sheet')).toBeVisible();
 
     await page.getByTestId('btn-cancel').click();
-    await expect(page.getByTestId('client-modal')).not.toBeVisible();
+    await expect(page.getByTestId('client-form-sheet')).not.toBeVisible();
   });
 
   test('closes when the X (close) button is clicked', async ({ page }) => {
@@ -283,8 +283,8 @@ test.describe('AC-9: New client modal', () => {
     await page.goto('/clients');
 
     await page.getByTestId('btn-new-client').click();
-    await page.getByTestId('modal-close').click();
-    await expect(page.getByTestId('client-modal')).not.toBeVisible();
+    await page.getByTestId('sheet-close').click();
+    await expect(page.getByTestId('client-form-sheet')).not.toBeVisible();
   });
 });
 
@@ -321,8 +321,8 @@ test.describe('AC-1: create client', () => {
     await page.getByTestId('input-phone').fill('+1 555 000 1234');
     await page.getByTestId('btn-submit').click();
 
-    // Modal closes
-    await expect(page.getByTestId('client-modal')).not.toBeVisible();
+    // Sheet closes
+    await expect(page.getByTestId('client-form-sheet')).not.toBeVisible();
 
     // Success toast
     await expect(page.getByTestId('toast')).toBeVisible();
@@ -342,7 +342,7 @@ test.describe('AC-6: form validation', () => {
     await setupApiMock(page, { onList: () => pageOf([]) });
     await page.goto('/clients');
     await page.getByTestId('btn-new-client').click();
-    await expect(page.getByTestId('client-modal')).toBeVisible();
+    await expect(page.getByTestId('client-form-sheet')).toBeVisible();
   });
 
   test('shows "Name is required" when name is blank', async ({ page }) => {
@@ -410,8 +410,8 @@ test.describe('AC-7: duplicate email (409)', () => {
 
     // Inline field error
     await expect(page.getByText(/email is already in use/i)).toBeVisible();
-    // Modal stays open
-    await expect(page.getByTestId('client-modal')).toBeVisible();
+    // Sheet stays open
+    await expect(page.getByTestId('client-form-sheet')).toBeVisible();
   });
 });
 
@@ -420,19 +420,19 @@ test.describe('AC-7: duplicate email (409)', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('AC-4 / AC-9: edit client', () => {
-  test('opens edit modal pre-filled with client data', async ({ page }) => {
+  test('opens edit sheet pre-filled with client data', async ({ page }) => {
     await setupApiMock(page, { onList: () => pageOf([ACME]) });
     await page.goto('/clients');
 
     await page.getByLabel(`Edit ${ACME.name}`).click();
 
-    await expect(page.getByTestId('client-modal')).toBeVisible();
+    await expect(page.getByTestId('client-form-sheet')).toBeVisible();
     await expect(page.getByRole('heading', { name: /edit client/i })).toBeVisible();
     await expect(page.getByTestId('input-name')).toHaveValue(ACME.name);
     await expect(page.getByTestId('input-email')).toHaveValue(ACME.email);
   });
 
-  test('submits update, closes modal, shows success toast (AC-4)', async ({ page }) => {
+  test('submits update, closes sheet, shows success toast (AC-4)', async ({ page }) => {
     const updatedAcme: Client = {
       ...ACME,
       name: 'Acme Corp Updated',
@@ -454,7 +454,7 @@ test.describe('AC-4 / AC-9: edit client', () => {
     await page.getByTestId('input-name').fill('Acme Corp Updated');
     await page.getByTestId('btn-submit').click();
 
-    await expect(page.getByTestId('client-modal')).not.toBeVisible();
+    await expect(page.getByTestId('client-form-sheet')).not.toBeVisible();
     await expect(page.getByTestId('toast')).toBeVisible();
     await expect(page.getByTestId('toast')).toContainText(/client updated/i);
     await expect(page.getByText('Acme Corp Updated')).toBeVisible();
@@ -591,22 +591,29 @@ test.describe('AC-9: pagination', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('smoke: regression', () => {
-  test('link-clients on HomePage navigates to /clients', async ({ page }) => {
+  test('sidebar Clients link on HomePage navigates to /clients', async ({ page }) => {
     await setupApiMock(page, { onList: () => pageOf([ACME, GLOBEX]) });
 
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/');
     await expect(page.getByTestId('home-page')).toBeVisible();
 
-    await page.getByTestId('link-clients').click();
+    // Navigate via the sidebar Clients link
+    await page.locator('[aria-label="Sidebar navigation"] a[href="/clients"]').click();
     await expect(page).toHaveURL('/clients');
     await expect(page.getByTestId('clients-page')).toBeVisible();
   });
 
   test('home page still renders correctly (AC-9 adjacent regression)', async ({ page }) => {
     await setupApiMock(page, { onList: () => pageOf([ACME, GLOBEX]) });
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/');
     await expect(page.getByTestId('home-page')).toBeVisible();
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
-    await expect(page.getByTestId('link-clients')).toBeVisible();
+    // DashboardPage shows a welcome banner (no plain "Dashboard" h1) and stat cards
+    await expect(page.getByTestId('welcome-banner')).toBeVisible();
+    // Clients link is accessible via the sidebar
+    await expect(
+      page.locator('[aria-label="Sidebar navigation"] a[href="/clients"]'),
+    ).toBeVisible();
   });
 });

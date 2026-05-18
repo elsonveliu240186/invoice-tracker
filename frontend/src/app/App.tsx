@@ -6,7 +6,7 @@ import { InvoiceDetailPage } from '@/pages/InvoiceDetailPage';
 import { InvoicesPage } from '@/pages/InvoicesPage';
 import { ExpensesPage } from '@/pages/ExpensesPage';
 import { InvoiceTemplateSettingsPage } from '@/pages/InvoiceTemplateSettingsPage';
-import { InvoiceTemplateManagerPage } from '@/pages/InvoiceTemplateManagerPage';
+import { CompanyProfileSettingsPage } from '@/pages/CompanyProfileSettingsPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
@@ -46,8 +46,8 @@ export function App() {
               <Route path="/invoices" element={<InvoicesPage />} />
               <Route path="/expenses" element={<ExpensesPage />} />
               <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
-              <Route path="/invoices/template" element={<InvoiceTemplateManagerPage />} />
               <Route path="/settings/invoice-template" element={<InvoiceTemplateSettingsPage />} />
+              <Route path="/settings/company" element={<CompanyProfileSettingsPage />} />
               <Route path="*" element={<NotFound />} />
             </Route>
           </Route>

@@ -6,7 +6,13 @@ import com.example.invoicetracker.Application;
 import com.example.invoicetracker.adapter.web.client.dto.ClientResponse;
 import com.example.invoicetracker.adapter.web.client.dto.CreateClientRequest;
 import com.example.invoicetracker.adapter.web.dashboard.dto.DashboardStatsResponse;
+import com.example.invoicetracker.adapter.web.dashboard.dto.ExpenseStatsResponse;
+import com.example.invoicetracker.adapter.web.expense.dto.CreateExpenseRequest;
+import com.example.invoicetracker.adapter.web.expense.dto.ExpenseResponse;
 import com.example.invoicetracker.adapter.web.invoice.dto.InvoiceResponse;
+import com.example.invoicetracker.domain.expense.ExpenseCategory;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -105,6 +111,18 @@ class DashboardControllerIT {
             .toEntity(InvoiceResponse.class);
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         return resp.getBody().id();
+    }
+
+    private void createExpense(BigDecimal amount, ExpenseCategory category, String date) {
+        CreateExpenseRequest req = new CreateExpenseRequest(
+            amount, category, "IT test", LocalDate.parse(date));
+        ResponseEntity<ExpenseResponse> resp = auth.post()
+            .uri("/api/v1/expenses")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(req)
+            .retrieve()
+            .toEntity(ExpenseResponse.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     }
 
     @Test
@@ -210,5 +228,37 @@ class DashboardControllerIT {
 
         // revenueByMonth must always be exactly 6 entries (zero-filled)
         assertThat(stats.revenueByMonth()).hasSize(6);
+    }
+
+    // ─── expense stats IT tests ──────────────────────────────────────────────
+
+    @Test
+    void expenseStats_reflects_created_expenses() {
+        // Create 3 expenses: 2 months × 2 categories
+        createExpense(new BigDecimal("100.00"), ExpenseCategory.FOOD_DRINK, "2026-04-10");
+        createExpense(new BigDecimal("50.00"), ExpenseCategory.TRANSPORT, "2026-04-15");
+        createExpense(new BigDecimal("200.00"), ExpenseCategory.FOOD_DRINK, "2026-05-01");
+
+        ResponseEntity<ExpenseStatsResponse> resp = auth.get()
+            .uri("/api/v1/dashboard/expense-stats")
+            .retrieve()
+            .toEntity(ExpenseStatsResponse.class);
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ExpenseStatsResponse body = resp.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.expenseByMonth()).hasSize(6);
+        assertThat(body.expenseByCategory()).isNotEmpty();
+        assertThat(body.grandTotal()).isGreaterThan(BigDecimal.ZERO);
+    }
+
+    @Test
+    void expenseStats_returns_401_when_unauthenticated() {
+        ResponseEntity<String> resp = noAuth.get()
+            .uri("/api/v1/dashboard/expense-stats")
+            .retrieve()
+            .toEntity(String.class);
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 }

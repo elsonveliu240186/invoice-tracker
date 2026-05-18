@@ -161,6 +161,92 @@
     </suppress>
 
     <!--
+        CVE-2026-41293, CVE-2026-41284, CVE-2026-43513, CVE-2026-43512,
+        CVE-2026-42498, CVE-2026-43515, CVE-2026-43514
+        — tomcat-embed-websocket 11.0.21 (Spring Boot 4.0.6 managed)
+        reason: Same root cause as the tomcat-embed-core suppressions above.
+                Spring Boot 4.0.6 ships Tomcat 11.0.21 for both tomcat-embed-core
+                and tomcat-embed-websocket. Both artifacts are affected by the same
+                set of CVEs. Suppressing websocket artifact to match core suppression.
+                Will be remediated together when Tomcat 11.0.22+ / Spring Boot 4.0.7+
+                is available.
+        owner: security-team
+        tracking: https://tomcat.apache.org/security-11.html
+        expires: 2026-08-17
+    -->
+    <suppress>
+        <notes>
+            reason: Same as tomcat-embed-core CVE-2026-41293 — websocket artifact from same
+                    Tomcat 11.0.21 release. No upstream fix available as of 2026-05-17.
+            owner: security-team
+            tracking: https://tomcat.apache.org/security-11.html
+            expires: 2026-08-17
+        </notes>
+        <gav regex="true">org\.apache\.tomcat\.embed:tomcat-embed-websocket:.*</gav>
+        <cve>CVE-2026-41293</cve>
+    </suppress>
+    <suppress>
+        <notes>
+            reason: Same as tomcat-embed-core — Tomcat 11.0.21 websocket, no upstream fix.
+            owner: security-team
+            tracking: https://tomcat.apache.org/security-11.html
+            expires: 2026-08-17
+        </notes>
+        <gav regex="true">org\.apache\.tomcat\.embed:tomcat-embed-websocket:.*</gav>
+        <cve>CVE-2026-41284</cve>
+    </suppress>
+    <suppress>
+        <notes>
+            reason: Same as tomcat-embed-core — Tomcat 11.0.21 websocket, no upstream fix.
+            owner: security-team
+            tracking: https://tomcat.apache.org/security-11.html
+            expires: 2026-08-17
+        </notes>
+        <gav regex="true">org\.apache\.tomcat\.embed:tomcat-embed-websocket:.*</gav>
+        <cve>CVE-2026-43513</cve>
+    </suppress>
+    <suppress>
+        <notes>
+            reason: Same as tomcat-embed-core — Tomcat 11.0.21 websocket, no upstream fix.
+            owner: security-team
+            tracking: https://tomcat.apache.org/security-11.html
+            expires: 2026-08-17
+        </notes>
+        <gav regex="true">org\.apache\.tomcat\.embed:tomcat-embed-websocket:.*</gav>
+        <cve>CVE-2026-43512</cve>
+    </suppress>
+    <suppress>
+        <notes>
+            reason: Same as tomcat-embed-core — Tomcat 11.0.21 websocket, no upstream fix.
+            owner: security-team
+            tracking: https://tomcat.apache.org/security-11.html
+            expires: 2026-08-17
+        </notes>
+        <gav regex="true">org\.apache\.tomcat\.embed:tomcat-embed-websocket:.*</gav>
+        <cve>CVE-2026-42498</cve>
+    </suppress>
+    <suppress>
+        <notes>
+            reason: Same as tomcat-embed-core — Tomcat 11.0.21 websocket, no upstream fix.
+            owner: security-team
+            tracking: https://tomcat.apache.org/security-11.html
+            expires: 2026-08-17
+        </notes>
+        <gav regex="true">org\.apache\.tomcat\.embed:tomcat-embed-websocket:.*</gav>
+        <cve>CVE-2026-43515</cve>
+    </suppress>
+    <suppress>
+        <notes>
+            reason: Same as tomcat-embed-core — Tomcat 11.0.21 websocket, no upstream fix.
+            owner: security-team
+            tracking: https://tomcat.apache.org/security-11.html
+            expires: 2026-08-17
+        </notes>
+        <gav regex="true">org\.apache\.tomcat\.embed:tomcat-embed-websocket:.*</gav>
+        <cve>CVE-2026-43514</cve>
+    </suppress>
+
+    <!--
         CVE-2018-1258 — spring-security-core 7.0.5 (FALSE POSITIVE)
         CVSS3: 8.8 (AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H)
         reason: FALSE POSITIVE. CVE-2018-1258 describes an authorization bypass in

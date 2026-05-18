@@ -14,6 +14,10 @@ interface CompanyProfile {
   email: string;
   phone: string;
   address: string;
+  vatNumber: string;
+  iban: string;
+  swiftBic: string;
+  bankName: string;
   updatedAt: string;
 }
 
@@ -191,6 +195,10 @@ const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
   email: '',
   phone: '',
   address: '',
+  vatNumber: '',
+  iban: '',
+  swiftBic: '',
+  bankName: '',
   updatedAt: '2026-01-01T00:00:00Z',
 };
 
@@ -558,6 +566,28 @@ export const handlers = [
         { month: '2026-03', revenue: 5800 },
         { month: '2026-04', revenue: 4400 },
         { month: '2026-05', revenue: 7000 },
+      ],
+    }),
+  ),
+
+  http.get('/api/v1/dashboard/expense-stats', () =>
+    HttpResponse.json({
+      from: '2025-12-01',
+      to: '2026-05-17',
+      grandTotal: '462.50',
+      expenseByMonth: [
+        { month: '2025-12', total: '0.00' },
+        { month: '2026-01', total: '85.00' },
+        { month: '2026-02', total: '120.00' },
+        { month: '2026-03', total: '95.50' },
+        { month: '2026-04', total: '120.00' },
+        { month: '2026-05', total: '42.00' },
+      ],
+      expenseByCategory: [
+        { category: 'FOOD_DRINK', total: '162.50', count: 4 },
+        { category: 'TRANSPORT', total: '120.00', count: 3 },
+        { category: 'HOUSING', total: '95.00', count: 1 },
+        { category: 'OTHER', total: '85.00', count: 2 },
       ],
     }),
   ),

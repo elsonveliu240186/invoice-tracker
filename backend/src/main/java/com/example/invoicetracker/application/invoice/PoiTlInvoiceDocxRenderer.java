@@ -2,6 +2,7 @@ package com.example.invoicetracker.application.invoice;
 
 import com.deepoove.poi.XWPFTemplate;
 import com.deepoove.poi.config.Configure;
+import com.deepoove.poi.config.Configure.ClearHandler;
 import com.example.invoicetracker.application.template.InvoiceTemplateProperties;
 import com.example.invoicetracker.application.template.InvoiceTemplateStore;
 import com.example.invoicetracker.domain.client.Client;
@@ -79,7 +80,9 @@ public class PoiTlInvoiceDocxRenderer implements InvoiceDocxRenderer {
             byte[] expandedBytes = expandLinesTable(rawBytes, invoice, currencyFmt);
 
             Map<String, Object> model = buildModel(invoice, client, company, currencyFmt);
-            Configure configure = Configure.builder().build();
+            Configure configure = Configure.builder()
+                .setValidErrorHandler(new ClearHandler())
+                .build();
 
             try (InputStream expanded = new ByteArrayInputStream(expandedBytes)) {
                 XWPFTemplate template = XWPFTemplate.compile(expanded, configure);
@@ -185,6 +188,26 @@ public class PoiTlInvoiceDocxRenderer implements InvoiceDocxRenderer {
         model.put("company", companyMap);
         model.put("client", clientMap);
         model.put("invoice", invoiceMap);
+
+        // Flat aliases so templates can use either {{clientName}} or {{client.name}}.
+        model.put("companyName",     companyMap.get("name"));
+        model.put("companyEmail",    companyMap.get("email"));
+        model.put("companyAddress",  companyMap.get("address"));
+        model.put("companyVatNumber", companyMap.get("vatNumber"));
+        model.put("companyIban",     companyMap.get("iban"));
+        model.put("companySwift",    companyMap.get("swift"));
+        model.put("companyBankName", companyMap.get("bankName"));
+        model.put("clientName",      clientMap.get("name"));
+        model.put("clientEmail",     clientMap.get("email"));
+        model.put("clientAddress",   clientMap.get("address"));
+        model.put("invoiceNumber",   invoiceMap.get("number"));
+        model.put("invoiceIssueDate", invoiceMap.get("issueDate"));
+        model.put("invoiceDueDate",  invoiceMap.get("dueDate"));
+        model.put("invoiceSubtotal", invoiceMap.get("subtotal"));
+        model.put("invoiceTaxRate",  invoiceMap.get("taxRate"));
+        model.put("invoiceTaxAmount", invoiceMap.get("taxAmount"));
+        model.put("invoiceTotal",    invoiceMap.get("total"));
+
         return model;
     }
 

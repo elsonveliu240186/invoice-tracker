@@ -35,7 +35,6 @@
     "settings": "Settings",
     "settingsInvoiceTemplate": "Invoice Template",
     "settingsCompany": "Company Profile",
-    "invoiceTemplate": "Manage template",
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar",
     "openMenu": "Open navigation menu",
@@ -75,7 +74,20 @@
     },
     "charts": {
       "revenueByMonth": "Revenue by Month",
-      "invoiceStatus": "Invoice Status"
+      "invoiceStatus": "Invoice Status",
+      "expenseByMonth": "Expense by Month",
+      "expenseByCategory": "Expense by Category",
+      "expensesTooltip": "Expenses"
+    },
+    "errors": {
+      "expenses": "Failed to load expense data."
+    },
+    "filter": {
+      "label": "Filter by date",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "clear": "Clear"
     },
     "error": "Failed to load dashboard data."
   },
@@ -270,8 +282,8 @@
       "download": "Download",
       "downloadDocx": "Download Word Doc",
       "downloadPdf": "Download PDF",
-      "downloadSavedDocx": "Download Word Doc",
-      "downloadSavedPdf": "Download PDF",
+      "downloadSavedDocx": "Download Saved Word Doc",
+      "downloadSavedPdf": "Download Saved PDF",
       "generate": "Generate",
       "generatePdf": "Generate PDF",
       "generateDocx": "Generate Word Doc",
@@ -299,17 +311,9 @@
     "confirm": {
       "send": {
         "title": "Send invoice to client?",
-        "description": "This will email the invoice PDF to the client's registered email address."
+        "description": "This will email the invoice PDF to the client's registered email address.",
+        "subtitle": "Will use saved PDF if generated, otherwise renders live from the template."
       }
-    },
-    "toast": {
-      "sendSuccess": "Invoice sent successfully",
-      "sendFailed": "Failed to send invoice",
-      "noRecipient": "Invoice has no recipient email address",
-      "pdfConversionFailed": "PDF conversion failed. Please try again.",
-      "downloadFailed": "Download failed. Please try again.",
-      "markPaidSuccess": "Invoice marked as paid.",
-      "markPaidFailed": "Could not mark invoice as paid."
     },
     "errors": {
       "notFound": "Invoice not found",
@@ -323,7 +327,11 @@
         "name": "Company Name",
         "email": "Email",
         "phone": "Phone",
-        "address": "Address"
+        "address": "Address",
+        "vatNumber": "VAT / Tax ID",
+        "iban": "IBAN",
+        "swiftBic": "SWIFT / BIC",
+        "bankName": "Bank Name"
       },
       "toast": {
         "saved": "Company profile saved"

@@ -55,7 +55,7 @@ export function GenerateInvoiceButton({ invoiceId, onGenerated }: GenerateInvoic
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" data-testid="generate-menu-content">
         <DropdownMenuItem
-          onSelect={() => void handleGenerate('PDF')}
+          onClick={() => void handleGenerate('PDF')}
           disabled={isPending}
           data-testid="btn-generate-pdf"
         >
@@ -63,7 +63,7 @@ export function GenerateInvoiceButton({ invoiceId, onGenerated }: GenerateInvoic
           {pendingPdf && <Loader2 className="ml-2 h-3 w-3 animate-spin" aria-hidden="true" />}
         </DropdownMenuItem>
         <DropdownMenuItem
-          onSelect={() => void handleGenerate('DOCX')}
+          onClick={() => void handleGenerate('DOCX')}
           disabled={isPending}
           data-testid="btn-generate-docx"
         >

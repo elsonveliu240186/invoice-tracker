@@ -1,5 +1,5 @@
 import { NavLink, Link } from 'react-router';
-import { LayoutDashboard, Users, FileText, X, Settings, FileOutput, Wallet } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, X, Settings, FileOutput, Wallet, Building2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 
@@ -23,6 +23,11 @@ const SETTINGS_ITEMS: NavItem[] = [
     to: '/settings/invoice-template',
     labelKey: 'nav.settingsInvoiceTemplate',
     icon: FileOutput,
+  },
+  {
+    to: '/settings/company',
+    labelKey: 'nav.settingsCompany',
+    icon: Building2,
   },
 ];
 

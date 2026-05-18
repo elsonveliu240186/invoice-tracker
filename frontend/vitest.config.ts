@@ -45,6 +45,8 @@ export default mergeConfig(
           'src/shared/ui/separator.tsx',
           // Additional shadcn/Radix primitive wrappers and utility UI atoms
           'src/shared/ui/sheet.tsx',
+          // Pure TypeScript interface files (no runtime code, v8 reports 0% correctly)
+          'src/features/settings/model/companyProfile.ts',
         ],
       },
     },

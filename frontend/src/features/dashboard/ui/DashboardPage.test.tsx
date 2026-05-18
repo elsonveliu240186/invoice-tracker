@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import { I18nextProvider } from 'react-i18next';
@@ -132,5 +133,97 @@ describe('DashboardPage', () => {
     await waitFor(() => expect(screen.queryByTestId('dashboard-loading')).not.toBeInTheDocument());
     expect(screen.getByText('Revenue by Month')).toBeInTheDocument();
     expect(screen.getByText('Invoice Status')).toBeInTheDocument();
+  });
+
+  // ── New tests for FEAT-20260517-01 ────────────────────────────────────────
+
+  it('renders_expense_by_month_chart_after_load', async () => {
+    renderDashboard();
+    await waitFor(() => expect(screen.queryByTestId('expense-loading')).not.toBeInTheDocument());
+    expect(screen.getByTestId('expense-by-month-chart')).toBeInTheDocument();
+  });
+
+  it('renders_expense_by_category_chart_after_load', async () => {
+    renderDashboard();
+    await waitFor(() => expect(screen.queryByTestId('expense-loading')).not.toBeInTheDocument());
+    expect(screen.getByTestId('expense-by-category-chart')).toBeInTheDocument();
+  });
+
+  it('expense_endpoint_failure_shows_inline_alert_but_keeps_invoice_charts', async () => {
+    server.use(
+      http.get('/api/v1/dashboard/expense-stats', () =>
+        HttpResponse.json({ status: 500, detail: 'Server Error' }, { status: 500 }),
+      ),
+    );
+    renderDashboard();
+    await waitFor(() => expect(screen.queryByTestId('dashboard-loading')).not.toBeInTheDocument());
+    // Invoice charts still show
+    expect(screen.getByTestId('revenue-chart')).toBeInTheDocument();
+    // Expense error alert is present
+    await waitFor(() => expect(screen.getByTestId('expense-error')).toBeInTheDocument());
+    expect(screen.getByTestId('expense-error')).toBeInTheDocument();
+  });
+
+  it('renders_i18n_chart_headings_after_load', async () => {
+    renderDashboard();
+    await waitFor(() => expect(screen.queryByTestId('expense-loading')).not.toBeInTheDocument());
+    expect(screen.getByText('Expense by Month')).toBeInTheDocument();
+    expect(screen.getByText('Expense by Category')).toBeInTheDocument();
+  });
+
+  it('renders_date_filter_control', () => {
+    renderDashboard();
+    expect(screen.getByTestId('dashboard-date-filter')).toBeInTheDocument();
+  });
+
+  it('applying_filter_re_fetches_with_new_params', async () => {
+    const capturedUrls: string[] = [];
+    server.use(
+      http.get('/api/v1/dashboard/expense-stats', ({ request }) => {
+        capturedUrls.push(request.url);
+        return HttpResponse.json({
+          from: '2026-01-01',
+          to: '2026-05-31',
+          grandTotal: '200.00',
+          expenseByMonth: [
+            { month: '2026-01', total: '50.00' },
+            { month: '2026-02', total: '50.00' },
+            { month: '2026-03', total: '50.00' },
+            { month: '2026-04', total: '50.00' },
+          ],
+          expenseByCategory: [{ category: 'OTHER', total: '200.00', count: 4 }],
+        });
+      }),
+      http.get('/api/v1/dashboard/stats', ({ request }) => {
+        capturedUrls.push(request.url);
+        return HttpResponse.json({
+          totalInvoices: 12,
+          draftCount: 4,
+          sentCount: 5,
+          paidCount: 3,
+          totalRevenue: 24500,
+          paidRevenue: 8200,
+          pendingRevenue: 16300,
+          revenueByMonth: [],
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderDashboard();
+    await waitFor(() => expect(screen.queryByTestId('expense-loading')).not.toBeInTheDocument());
+
+    // Open date filter
+    await user.click(screen.getByTestId('dashboard-date-filter'));
+    await waitFor(() => expect(screen.getByTestId('date-filter-from')).toBeInTheDocument());
+
+    await user.type(screen.getByTestId('date-filter-from'), '2026-01-01');
+    await user.type(screen.getByTestId('date-filter-to'), '2026-05-31');
+    await user.click(screen.getByTestId('date-filter-apply'));
+
+    await waitFor(() => {
+      const filtered = capturedUrls.filter((u) => u.includes('from='));
+      expect(filtered.length).toBeGreaterThan(0);
+    });
   });
 });
