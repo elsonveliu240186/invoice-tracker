@@ -43,13 +43,28 @@ function stubClients(page: import('@playwright/test').Page) {
 }
 
 function stubDashboard(page: import('@playwright/test').Page) {
-  return page.route('**/api/v1/dashboard**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ totalClients: 0, totalRevenue: 0, pendingInvoices: 0 }),
-    }),
-  );
+  return page.route('**/api/v1/dashboard**', (route) => {
+    const url = route.request().url();
+    if (url.includes('expense-stats')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          from: '2024-01-01', to: '2024-12-31',
+          grandTotal: '0.00', expenseByMonth: [], expenseByCategory: [],
+        }),
+      });
+    } else {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          totalInvoices: 0, draftCount: 0, sentCount: 0, paidCount: 0,
+          totalRevenue: 0, paidRevenue: 0, pendingRevenue: 0, revenueByMonth: [],
+        }),
+      });
+    }
+  });
 }
 
 /** Parse "rgb(r, g, b)" or "rgba(r, g, b, a)" into {r, g, b}. */
