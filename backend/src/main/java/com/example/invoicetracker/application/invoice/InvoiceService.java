@@ -1,5 +1,6 @@
 package com.example.invoicetracker.application.invoice;
 
+import com.example.invoicetracker.application.company.CompanyProfileResolver;
 import com.example.invoicetracker.domain.client.Client;
 import com.example.invoicetracker.domain.client.ClientNotFoundException;
 import com.example.invoicetracker.domain.client.ClientRepository;
@@ -46,32 +47,32 @@ public class InvoiceService {
     private final ClientRepository clientRepository;
     private final InvoicePdfRenderer pdfRenderer;
     private final InvoiceMailer mailer;
-    private final CompanyProperties companyProperties;
+    private final CompanyProfileResolver companyProfileResolver;
     private final InvoiceArtifactService artifactService;
 
     /**
      * Constructs the service.
      *
-     * @param invoiceRepository invoice persistence port
-     * @param clientRepository  client persistence port
-     * @param pdfRenderer       PDF renderer
-     * @param mailer            email sender
-     * @param companyProperties company configuration
-     * @param artifactService   artefact use-case service
+     * @param invoiceRepository    invoice persistence port
+     * @param clientRepository     client persistence port
+     * @param pdfRenderer          PDF renderer
+     * @param mailer               email sender
+     * @param companyProfileResolver resolves the effective company properties
+     * @param artifactService      artefact use-case service
      */
     public InvoiceService(
         InvoiceRepository invoiceRepository,
         ClientRepository clientRepository,
         InvoicePdfRenderer pdfRenderer,
         InvoiceMailer mailer,
-        CompanyProperties companyProperties,
+        CompanyProfileResolver companyProfileResolver,
         InvoiceArtifactService artifactService
     ) {
         this.invoiceRepository = invoiceRepository;
         this.clientRepository = clientRepository;
         this.pdfRenderer = pdfRenderer;
         this.mailer = mailer;
-        this.companyProperties = companyProperties;
+        this.companyProfileResolver = companyProfileResolver;
         this.artifactService = artifactService;
     }
 
@@ -275,7 +276,7 @@ public class InvoiceService {
             .orElseThrow(() -> new InvoiceNotFoundException(id));
         Client client = clientRepository.findByIdAndDeletedAtIsNull(invoice.clientId())
             .orElseThrow(() -> new ClientNotFoundException(invoice.clientId()));
-        return pdfRenderer.render(invoice, client, companyProperties);
+        return pdfRenderer.render(invoice, client, companyProfileResolver.resolve());
     }
 
     /**
@@ -302,9 +303,10 @@ public class InvoiceService {
         }
 
         // Prefer saved PDF artefact; fall back to live rendering if absent
+        CompanyProperties resolved = companyProfileResolver.resolve();
         byte[] pdfBytes = artifactService.findPdfBytes(id)
-            .orElseGet(() -> pdfRenderer.render(invoice, client, companyProperties));
-        mailer.send(invoice, toEmail, pdfBytes, companyProperties, client.name());
+            .orElseGet(() -> pdfRenderer.render(invoice, client, resolved));
+        mailer.send(invoice, toEmail, pdfBytes, resolved, client.name());
 
         Instant sentAt = Instant.now();
         Invoice updated = invoiceRepository.markSent(id, sentAt);

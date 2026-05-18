@@ -35,7 +35,6 @@
     "settings": "Settings",
     "settingsInvoiceTemplate": "Invoice Template",
     "settingsCompany": "Company Profile",
-    "invoiceTemplate": "Manage template",
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar",
     "openMenu": "Open navigation menu",
@@ -328,7 +327,11 @@
         "name": "Company Name",
         "email": "Email",
         "phone": "Phone",
-        "address": "Address"
+        "address": "Address",
+        "vatNumber": "VAT / Tax ID",
+        "iban": "IBAN",
+        "swiftBic": "SWIFT / BIC",
+        "bankName": "Bank Name"
       },
       "toast": {
         "saved": "Company profile saved"

@@ -22,11 +22,13 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -317,6 +319,32 @@ public class GlobalExceptionHandler {
         problem.setTitle("PDF Conversion Failed");
         problem.setDetail(ex.getMessage());
         problem.setProperty("code", code);
+        return problem;
+    }
+
+    /**
+     * Handles unsupported media type (415).
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ProblemDetail handleHttpMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Unsupported Media Type");
+        problem.setDetail("Content-Type '" + ex.getContentType() + "' is not supported.");
+        problem.setProperty("code", "UNSUPPORTED_MEDIA_TYPE");
+        return problem;
+    }
+
+    /**
+     * Handles concurrent update conflicts (409) from optimistic locking.
+     */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ProblemDetail handleOptimisticLockingFailure(OptimisticLockingFailureException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Conflict");
+        problem.setDetail("The resource was updated concurrently. Please retry.");
+        problem.setProperty("code", "OPTIMISTIC_LOCK_CONFLICT");
         return problem;
     }
 

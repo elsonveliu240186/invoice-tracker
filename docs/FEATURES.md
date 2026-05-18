@@ -4,6 +4,7 @@ Maintained by the **documentation** subagent. One row per feature.
 
 | ID | Title | State | Owner | Plan | Review | Security | QA | PR |
 |----|-------|-------|-------|------|--------|----------|----|----|
+| FEAT-20260518-02 | Persisted company profile + docx placeholder substitution | Done | elsonveliu | [PLAN.md](.features/FEAT-20260518-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260518-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260518-02/SECURITY.md) | [QA.md](.features/FEAT-20260518-02/QA.md) | — |
 | FEAT-20260517-01 | Expense dashboard charts — by month, by category, and dashboard date filter | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260517-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260517-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260517-01/SECURITY.md) | [QA.md](.features/FEAT-20260517-01/QA.md) | — |
 | FEAT-20260516-01 | Expense tracking with category dashboard + auth rate-limiting (Bucket4j) | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260516-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260516-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260516-01/SECURITY.md) | [QA.md](.features/FEAT-20260516-01/QA.md) | — |
 | FEAT-20260514-02 | Invoice template editor and full lifecycle (preview, generate, persist, download, email) | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260514-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260514-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260514-02/SECURITY.md) | [QA.md](.features/FEAT-20260514-02/QA.md) | — |
@@ -17,6 +18,53 @@ Maintained by the **documentation** subagent. One row per feature.
 | FEAT-20260512-02 | Authentication modernization | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-02/SECURITY.md) | [QA.md](.features/FEAT-20260512-02/QA.md) | — |
 | FEAT-20260512-01 | Frontend design system foundation | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-01/SECURITY.md) | [QA.md](.features/FEAT-20260512-01/QA.md) | — |
 | FEAT-20260511-01 | Client management (CRUD) | Done | elsonveliu | [PLAN.md](.features/FEAT-20260511-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260511-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260511-01/SECURITY.md) | [QA.md](.features/FEAT-20260511-01/QA.md) | — |
+
+## FEAT-20260518-02 — Persisted company profile + docx placeholder substitution
+
+### Overview
+
+Allows users to save their company details (name, address, phone, email, VAT number, IBAN, SWIFT/BIC, bank name) via a new Settings page at `/settings/company`. Values are stored in a singleton `company_profile` Postgres table (Flyway V14) and resolved at render time by `CompanyProfileResolver`, which takes precedence over the static `app.company.*` YAML. The bundled default `invoice-template.docx` is updated to use real poi-tl `{{...}}` tokens so freshly generated invoices show the persisted company branding. A full placeholder catalogue is published in `docs/INVOICE_TEMPLATE.md`.
+
+Review passed iteration 1 (no required fixes). Security passed iteration 1. QA passed: 1004 Vitest tests, 323 Playwright tests (0 failures on run 2).
+
+### New endpoints
+
+| Method | Path | Auth | Summary |
+|--------|------|------|---------|
+| GET | `/api/v1/settings/company` | HTTP Basic (required) | Returns the persisted company profile (or blank defaults if never written) |
+| PUT | `/api/v1/settings/company` | HTTP Basic (required) | Validates and upserts the company profile; subsequent renders use new values immediately |
+
+### Backend changes
+
+- **Flyway V14**: `company_profile` singleton table — `id SMALLINT PK DEFAULT 1 CHECK (id=1)`, 8 varchar columns, `updated_at TIMESTAMPTZ`, seed row `INSERT ... ON CONFLICT DO NOTHING`
+- **Domain**: `CompanyProfile` record (8 fields + `updatedAt`); `CompanyProfileRepository` port (`find()`, `save()`)
+- **Persistence**: `CompanyProfileEntity` (JPA, `@Version`); `CompanyProfileJpaRepository`; `CompanyProfileRepositoryAdapter`
+- **Application**: `CompanyProfileService` (`get()`, `update()`); `CompanyProfileResolver` — reads persisted → falls back to `CompanyProperties` YAML → empty string
+- **Controller**: `CompanyProfileController` at `GET/PUT /api/v1/settings/company`; DTOs `CompanyProfileRequest` (bean-validated record with `@OptionalEmail`, `@Size`) and `CompanyProfileResponse`
+- **Edited**: `InvoiceRenderService`, `InvoiceService`, `JavaMailInvoiceMailer` — inject `CompanyProfileResolver`, call `resolve()` instead of direct `CompanyProperties`
+- **Edited**: `invoice-template.docx` — all `[Company Name]` / `[Street Address]` literals replaced with poi-tl `{{...}}` tokens
+
+### Frontend changes
+
+- **New feature slice** `src/features/settings/`: `companyProfile.ts` type, `companyProfileSchema.ts` Zod schema, `companyProfileApi.ts`, `useCompanyProfile` hook, `CompanyProfileSettingsPage.tsx`, `CompanyProfileForm.tsx`
+- **New page**: `src/pages/CompanyProfileSettingsPage.tsx` (re-export)
+- **Edited**: `App.tsx` — route `/settings/company`; `Sidebar.tsx` — Building icon link `nav.settingsCompany`
+
+### Quality gate results
+
+| Gate | Result |
+|------|--------|
+| JaCoCo line + branch (new classes) | ≥ 0.90 pass |
+| Vitest (1004 tests) | 99.21/93.26/96.91/99.21 — pass |
+| pnpm lint | 0 errors |
+| gitleaks | 0 secrets |
+| Playwright E2E | 323 pass / 17 skip / 0 fail (run 2); one timing flake on run 1 (unrelated spec) |
+
+### Security findings
+
+No required fixes. Two non-blocking recommendations: add `@Pattern` regex on `iban`/`swiftBic` request fields; add CRLF strip in `buildSubject()` mail helper. IBAN/SWIFT restricted to `[A-Z0-9 ]` charset; CRLF stripped from email before SMTP headers; `@Version` optimistic lock; field names (not values) logged on INFO. See `.features/FEAT-20260518-02/SECURITY.md`.
+
+---
 
 ## FEAT-20260517-01 — Expense dashboard charts (by month, by category, date filter)
 

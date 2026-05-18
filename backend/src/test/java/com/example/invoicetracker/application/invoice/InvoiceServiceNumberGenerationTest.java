@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 
+import com.example.invoicetracker.application.company.CompanyProfileResolver;
 import com.example.invoicetracker.domain.client.ClientRepository;
 import com.example.invoicetracker.domain.invoice.Invoice;
 import com.example.invoicetracker.domain.invoice.InvoiceRepository;
@@ -31,13 +32,15 @@ class InvoiceServiceNumberGenerationTest {
     private InvoiceMailer mailer;
     @Mock
     private InvoiceArtifactService artifactService;
+    @Mock
+    private CompanyProfileResolver companyProfileResolver;
     private InvoiceService service;
 
     @BeforeEach
     void setUp() {
-        CompanyProperties company = InvoiceFixtures.company();
         service = new InvoiceService(
-            invoiceRepository, clientRepository, pdfRenderer, mailer, company, artifactService);
+            invoiceRepository, clientRepository, pdfRenderer, mailer,
+            companyProfileResolver, artifactService);
     }
 
     @Test

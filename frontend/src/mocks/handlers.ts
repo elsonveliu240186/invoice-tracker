@@ -14,6 +14,10 @@ interface CompanyProfile {
   email: string;
   phone: string;
   address: string;
+  vatNumber: string;
+  iban: string;
+  swiftBic: string;
+  bankName: string;
   updatedAt: string;
 }
 
@@ -191,6 +195,10 @@ const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
   email: '',
   phone: '',
   address: '',
+  vatNumber: '',
+  iban: '',
+  swiftBic: '',
+  bankName: '',
   updatedAt: '2026-01-01T00:00:00Z',
 };
 

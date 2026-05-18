@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/shared/lib/i18n';
 import { useAuthStore } from '@/features/auth/model/useAuthStore';
-import { resetMockClients, resetMockInvoices } from '@/mocks/handlers';
+import { resetMockClients, resetMockInvoices, resetMockCompanyProfile } from '@/mocks/handlers';
 import { App } from './App';
 
 beforeEach(() => {
@@ -23,6 +23,7 @@ beforeEach(() => {
   useAuthStore.setState({ user: null, status: 'unauthenticated', error: null });
   resetMockClients();
   resetMockInvoices();
+  resetMockCompanyProfile();
 });
 
 afterEach(() => {
@@ -123,6 +124,13 @@ describe('App — authenticated', () => {
     renderAppAuthenticated('/settings/invoice-template');
     await waitFor(() => {
       expect(screen.getByTestId('invoice-template-settings-page')).toBeInTheDocument();
+    });
+  });
+
+  it('renders company profile settings page at /settings/company when authenticated', async () => {
+    renderAppAuthenticated('/settings/company');
+    await waitFor(() => {
+      expect(screen.getByTestId('company-profile-settings-page')).toBeInTheDocument();
     });
   });
 

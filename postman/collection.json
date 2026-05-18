@@ -1691,6 +1691,128 @@
       "name": "Settings (FEAT-20260513-03)",
       "item": [
         {
+          "name": "Get Company Profile (FEAT-20260518-02)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/settings/company",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "settings",
+                "company"
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('response has all 8 company fields', () => {",
+                  "  const body = pm.response.json();",
+                  "  ['name', 'address', 'phone', 'email', 'vatNumber', 'iban', 'swiftBic', 'bankName'].forEach(field => {",
+                  "    pm.expect(body).to.have.property(field);",
+                  "  });",
+                  "});",
+                  "pm.test('updatedAt is present (string or null)', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Company Profile (FEAT-20260518-02)",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/settings/company",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "settings",
+                "company"
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Invoice Tracker Co\",\n  \"address\": \"123 Business Ave, New York, NY 10001\",\n  \"phone\": \"+1 555 000 0000\",\n  \"email\": \"billing@invoicetracker.local\",\n  \"vatNumber\": \"US123456789\",\n  \"iban\": \"US12 3456 7890 1234 5678 90\",\n  \"swiftBic\": \"BOFAUS3N\",\n  \"bankName\": \"Bank of Example\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('response reflects updated name', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.name).to.eql('Invoice Tracker Co');",
+                  "});",
+                  "pm.test('response has updatedAt timestamp', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.updatedAt).to.be.a('string').and.match(/^\\d{4}-\\d{2}-\\d{2}T/);",
+                  "});",
+                  "pm.test('response has all 8 company fields', () => {",
+                  "  const body = pm.response.json();",
+                  "  ['name', 'address', 'phone', 'email', 'vatNumber', 'iban', 'swiftBic', 'bankName'].forEach(field => {",
+                  "    pm.expect(body).to.have.property(field);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Upload Invoice Template",
           "request": {
             "method": "POST",

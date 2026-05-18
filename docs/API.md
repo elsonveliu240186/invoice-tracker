@@ -67,6 +67,8 @@ The backend API is unchanged by FEAT-20260512-03. The following frontend-only ro
 | Settings | POST | `/api/v1/settings/invoice-template` | Required | Upload a new DOCX invoice template |
 | Settings | GET | `/api/v1/settings/invoice-template/preview` | Required | Get active template metadata |
 | Settings | GET | `/api/v1/settings/invoice-template/download` | Required | Download the active invoice template |
+| Settings | GET | `/api/v1/settings/company` | Required | Get the persisted company profile (FEAT-20260518-02) |
+| Settings | PUT | `/api/v1/settings/company` | Required | Upsert the company profile; affects all subsequent renders (FEAT-20260518-02) |
 
 ---
 
@@ -981,6 +983,115 @@ Streams the active template (filesystem or classpath default) as a DOCX download
 **Response headers**: `Content-Disposition: attachment; filename="invoice-template.docx"`, `Cache-Control: private, no-store`.
 
 **Error responses**: `401`, `404 TEMPLATE_NOT_FOUND` (only if the classpath default is also missing — should not occur in normal operation).
+
+---
+
+## Company Profile (FEAT-20260518-02)
+
+### GET `/api/v1/settings/company`
+
+Returns the persisted company profile. When no `PUT` has ever been called the response contains blank strings for all fields and a `null` `updatedAt`. The row always exists (seeded by Flyway V14 `INSERT ... ON CONFLICT DO NOTHING`).
+
+**Auth**: HTTP Basic required. Returns `401` when unauthenticated.
+
+**Request**: no body.
+
+**Success response** `200 OK`:
+
+```json
+{
+  "name": "Invoice Tracker Co",
+  "address": "123 Business Ave, New York, NY 10001",
+  "phone": "+1 555 000 0000",
+  "email": "billing@invoicetracker.local",
+  "vatNumber": "US123456789",
+  "iban": "US12 3456 7890 1234 5678 90",
+  "swiftBic": "BOFAUS3N",
+  "bankName": "Bank of Example",
+  "updatedAt": "2026-05-18T10:14:00Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Company trading name — becomes `{{companyName}}` in DOCX templates |
+| `address` | string | Full address — `{{companyAddress}}` / `{{company.address}}` |
+| `phone` | string | Contact phone — `{{companyPhone}}` / `{{company.phone}}` |
+| `email` | string | Billing email — `{{companyEmail}}` / `{{company.email}}` |
+| `vatNumber` | string | VAT / tax registration number — `{{companyVatNumber}}` |
+| `iban` | string | IBAN — `{{companyIban}}` |
+| `swiftBic` | string | SWIFT/BIC code — `{{companySwiftBic}}` |
+| `bankName` | string | Bank name — `{{companyBankName}}` |
+| `updatedAt` | ISO-8601 instant or `null` | Timestamp of last `PUT`; `null` when the profile has never been written |
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+
+---
+
+### PUT `/api/v1/settings/company`
+
+Validates and upserts the company profile (singleton row — `INSERT ... ON CONFLICT (id) DO UPDATE`). The change takes effect immediately: all subsequent DOCX / PDF renders and email subject lines will use the new values without an app restart.
+
+**Auth**: HTTP Basic required.
+
+**Content-Type**: `application/json`.
+
+**Request body** (`CompanyProfileRequest`):
+
+```json
+{
+  "name": "Invoice Tracker Co",
+  "address": "123 Business Ave, New York, NY 10001",
+  "phone": "+1 555 000 0000",
+  "email": "billing@invoicetracker.local",
+  "vatNumber": "US123456789",
+  "iban": "US12 3456 7890 1234 5678 90",
+  "swiftBic": "BOFAUS3N",
+  "bankName": "Bank of Example"
+}
+```
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `name` | string | yes | `@NotBlank`, max 200 characters |
+| `address` | string | no | max 500 characters; `null` stored as `""` |
+| `phone` | string | no | max 32 characters |
+| `email` | string | no | `@OptionalEmail` — valid email format or empty string; max 254 characters |
+| `vatNumber` | string | no | max 50 characters |
+| `iban` | string | no | max 100 characters; charset restricted to `[A-Z0-9 ]` |
+| `swiftBic` | string | no | max 20 characters; charset restricted to `[A-Z0-9 ]` |
+| `bankName` | string | no | max 200 characters |
+
+Validation uses Jakarta Bean Validation (`@NotBlank`, `@Size`, `@OptionalEmail` custom constraint). Errors use the existing `GlobalExceptionHandler` `ProblemDetail` convention with `code: VALIDATION_FAILED` and an `errors: [{ field, message }]` array.
+
+**Success response** `200 OK` — `CompanyProfileResponse` (same shape as GET, with updated `updatedAt`):
+
+```json
+{
+  "name": "Invoice Tracker Co",
+  "address": "123 Business Ave, New York, NY 10001",
+  "phone": "+1 555 000 0000",
+  "email": "billing@invoicetracker.local",
+  "vatNumber": "US123456789",
+  "iban": "US12 3456 7890 1234 5678 90",
+  "swiftBic": "BOFAUS3N",
+  "bankName": "Bank of Example",
+  "updatedAt": "2026-05-18T10:14:00Z"
+}
+```
+
+**Error responses**:
+
+| Status | Code | Condition |
+|--------|------|-----------|
+| `400 Bad Request` | `VALIDATION_FAILED` | `name` blank or a field exceeds its max length; `errors[]` lists per-field details |
+| `401 Unauthorized` | `UNAUTHENTICATED` | No / invalid credentials |
+| `409 Conflict` | `OPTIMISTIC_LOCK_CONFLICT` | Concurrent `PUT` detected via `@Version`; client should retry |
+| `415 Unsupported Media Type` | — | `Content-Type` is not `application/json` |
 
 ---
 

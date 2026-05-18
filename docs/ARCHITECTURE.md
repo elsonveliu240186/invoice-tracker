@@ -32,7 +32,7 @@ C4Container
 
 ## Components — Backend (C4 — level 3)
 
-Updated by FEAT-20260516-01 (expense tracking + auth rate-limiting). FEAT-20260514-02 added InvoiceArtifactService and lifecycle endpoints. FEAT-20260514-01 added DashboardController/Service and MarkAsPaid. FEAT-20260513-03 added InvoiceRenderController, InvoiceRenderService, PoiTlInvoiceDocxRenderer, LibreOfficePdfConverter, DocxThenPdfInvoicePdfRenderer, and InvoiceTemplateController. FEAT-20260513-02 added InvoiceController, InvoiceService, OpenPdfInvoiceRenderer, JavaMailInvoiceMailer, and InvoiceRepositoryAdapter. Previous update: FEAT-20260512-02 (authentication modernization).
+Updated by FEAT-20260518-02 (persisted company profile + docx placeholder substitution). FEAT-20260516-01 added ExpenseController/Service and AuthRateLimitFilter. FEAT-20260514-02 added InvoiceArtifactService and lifecycle endpoints. FEAT-20260514-01 added DashboardController/Service and MarkAsPaid. FEAT-20260513-03 added InvoiceRenderController, InvoiceRenderService, PoiTlInvoiceDocxRenderer, LibreOfficePdfConverter, DocxThenPdfInvoicePdfRenderer, and InvoiceTemplateController. FEAT-20260513-02 added InvoiceController, InvoiceService, OpenPdfInvoiceRenderer, JavaMailInvoiceMailer, and InvoiceRepositoryAdapter. Previous update: FEAT-20260512-02 (authentication modernization).
 
 ```mermaid
 flowchart TB
@@ -44,6 +44,7 @@ flowchart TB
         dash_ctl[DashboardController<br/>GET /api/v1/dashboard/stats]
         render_ctl[InvoiceRenderController<br/>/api/v1/invoices/{id}/docx<br/>/docx-pdf  /docx-email]
         tpl_ctl[InvoiceTemplateController<br/>/api/v1/settings/invoice-template]
+        cp_ctl[CompanyProfileController<br/>GET + PUT /api/v1/settings/company<br/>NEW — FEAT-20260518-02]
     end
     subgraph application["application"]
         exp_svc[ExpenseService<br/>create / list / get / update / delete / summary]
@@ -53,6 +54,8 @@ flowchart TB
         inv_art_svc[InvoiceArtifactService<br/>previewPdf / generate / streamGenerated<br/>metadata / deleteAll]
         dash_svc[DashboardService<br/>getStats — Clock-injected<br/>zero-fills revenueByMonth]
         render_svc[InvoiceRenderService<br/>renderDocx / renderPdf / sendEmail]
+        cp_svc[CompanyProfileService<br/>get / update — NEW FEAT-20260518-02]
+        cp_resolver[CompanyProfileResolver<br/>persisted → YAML → empty<br/>NEW — FEAT-20260518-02]
         tpl_store_port[InvoiceTemplateStore port]
         art_store_port[GeneratedArtifactStore port]
         docx_port[InvoiceDocxRenderer port]
@@ -60,13 +63,13 @@ flowchart TB
         art_props[GeneratedArtifactProperties<br/>app.invoice.generated.*]
     end
     subgraph domain["domain"]
-        entities[Client, AppUser, Invoice, InvoiceLine<br/>GeneratedArtifact record<br/>ArtifactFormat enum PDF/DOCX<br/>Expense, ExpenseCategory enum (10 values)<br/>CategorySummary]
+        entities[Client, AppUser, Invoice, InvoiceLine<br/>GeneratedArtifact record<br/>ArtifactFormat enum PDF/DOCX<br/>Expense, ExpenseCategory enum (10 values)<br/>CategorySummary<br/>CompanyProfile record — NEW FEAT-20260518-02]
         status[InvoiceStatus enum<br/>DRAFT / SENT / PAID]
-        repos[ClientRepository, AppUserRepository, InvoiceRepository<br/>GeneratedArtifactRepository<br/>countByStatus / revenueByStatus / revenueByMonth]
+        repos[ClientRepository, AppUserRepository, InvoiceRepository<br/>GeneratedArtifactRepository<br/>CompanyProfileRepository — NEW FEAT-20260518-02<br/>countByStatus / revenueByStatus / revenueByMonth]
         exceptions[InvoiceHasNoRecipientException<br/>PdfConversionFailedException<br/>GeneratedArtifactNotFoundException<br/>ArtifactAlreadyExistsException<br/>ArtifactTooLargeException]
     end
     subgraph adapter_persistence["adapter.persistence"]
-        jpa[ClientRepositoryAdapter<br/>AppUserRepositoryAdapter<br/>InvoiceRepositoryAdapter<br/>GeneratedArtifactRepositoryAdapter<br/>ExpenseRepositoryAdapter<br/>markPaid / softDelete / revenueByMonth / summary JPQL]
+        jpa[ClientRepositoryAdapter<br/>AppUserRepositoryAdapter<br/>InvoiceRepositoryAdapter<br/>GeneratedArtifactRepositoryAdapter<br/>ExpenseRepositoryAdapter<br/>CompanyProfileRepositoryAdapter — NEW FEAT-20260518-02<br/>markPaid / softDelete / revenueByMonth / summary JPQL]
     end
     subgraph adapter_template["adapter.template"]
         fs_store[FilesystemInvoiceTemplateStore<br/>atomic replace / ZIP validation / SSRF scan<br/>VBA macro rejection]
@@ -87,12 +90,13 @@ flowchart TB
         app_cfg[AppConfig<br/>Clock.systemUTC bean<br/>@EnableConfigurationProperties(GeneratedArtifactProperties)]
     end
     subgraph infra_ext["External"]
-        db[(Postgres<br/>invoices / invoice_lines<br/>invoice_generated_artifacts<br/>app_users / clients<br/>expenses NEW — V12)]
+        db[(Postgres<br/>invoices / invoice_lines<br/>invoice_generated_artifacts<br/>app_users / clients<br/>expenses — V12<br/>company_profile — V14 NEW FEAT-20260518-02)]
         fs[(FS ./templates/invoice-template.docx)]
         gen_fs[(FS ./generated/invoices/&lt;id&gt;.pdf|.docx<br/>named Docker volume generated_invoices)]
         lo_bin([soffice headless binary])
         smtp[MailHog / SMTP]
         cp[(Classpath default template)]
+        yaml_co[CompanyProperties<br/>app.company.* YAML fallback]
     end
     exp_ctl --> exp_svc
     ctl --> svc
@@ -102,6 +106,10 @@ flowchart TB
     dash_ctl --> dash_svc
     render_ctl --> render_svc
     tpl_ctl --> tpl_store_port
+    cp_ctl --> cp_svc
+    cp_svc --> repos
+    cp_resolver --> repos
+    cp_resolver -. fallback .-> yaml_co
     dash_svc --> repos
     inv_svc --> repos
     inv_svc --> inv_art_svc
@@ -112,6 +120,7 @@ flowchart TB
     render_svc --> pdf_conv_port
     render_svc --> mailer
     render_svc --> repos
+    render_svc --> cp_resolver
     tpl_store_port -.implemented by.-> fs_store
     art_store_port -.implemented by.-> fs_art_store
     docx_port -.implemented by.-> poi
@@ -128,6 +137,49 @@ flowchart TB
     sec -.permits.- auth_ctl
     app_cfg -.provides Clock.-> dash_svc
 ```
+
+## Company profile + placeholder resolution (FEAT-20260518-02)
+
+```mermaid
+flowchart LR
+    user[User] -->|/settings/company| fe[React SPA]
+    fe -->|GET / PUT /api/v1/settings/company| ctl[CompanyProfileController]
+    ctl --> svc[CompanyProfileService]
+    svc --> repo[(company_profile<br/>singleton row)]
+    fe -->|GET /api/v1/invoices/{id}/docx| ren[InvoiceRenderController]
+    ren --> rsvc[InvoiceRenderService]
+    rsvc --> resolver[CompanyProfileResolver]
+    resolver -->|persisted| repo
+    resolver -->|fallback YAML| props[CompanyProperties]
+    rsvc --> docx[PoiTlInvoiceDocxRenderer]
+    docx -->|reads| tpl[(invoice-template.docx<br/>+ poi-tl tokens)]
+    docx -->|writes| out[merged .docx]
+```
+
+**`company_profile` table** (Flyway `V14__create_company_profile.sql`):
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | SMALLINT PK | `DEFAULT 1 CHECK (id = 1)` — singleton enforcement |
+| `name` | VARCHAR(200) | Required; rendered as `{{companyName}}` / `{{company.name}}` |
+| `address` | VARCHAR(500) | |
+| `phone` | VARCHAR(32) | |
+| `email` | VARCHAR(254) | `@OptionalEmail` validation (empty allowed) |
+| `vat_number` | VARCHAR(50) | |
+| `iban` | VARCHAR(100) | Charset restricted to `[A-Z0-9 ]` |
+| `swift_bic` | VARCHAR(20) | |
+| `bank_name` | VARCHAR(200) | |
+| `updated_at` | TIMESTAMPTZ | `DEFAULT now()` |
+
+JPA entity carries `@Version` for optimistic locking (same pattern as `ClientEntity`). No secondary indexes — table is single-row.
+
+**`CompanyProfileResolver` precedence chain** (called by `InvoiceRenderService`, `InvoiceService`, `JavaMailInvoiceMailer`):
+
+1. Persisted `company_profile` row (non-blank fields win)
+2. `CompanyProperties` YAML (`app.company.*`) fallback
+3. Empty string (never null)
+
+---
 
 ## Invoice artifact lifecycle (FEAT-20260514-02)
 
@@ -627,6 +679,20 @@ flowchart LR
 - **Decision**: The `expenses.category` column is `VARCHAR(50)` with a Postgres `CHECK` constraint listing the 10 valid enum values, rather than a native `ENUM` type.
 - **Why**: Adding new categories to a native Postgres `ENUM` requires a DDL `ALTER TYPE` which may lock the table briefly. `VARCHAR(50)` with a `CHECK` constraint allows category additions via a simple `ALTER TABLE ... CONSTRAINT` which can be applied without downtime. Enforcement at the application layer via `ExpenseCategory.valueOf()` catches invalid values before they reach JPQL. H2 compatibility (test profile) is maintained because H2 supports `CHECK` constraints but not Postgres-specific enum types.
 - **Trade-offs**: JPA does not get type-safe `@Enumerated(EnumType.STRING)` semantics for validation; all validation is in the service layer. This mirrors the ADR-002 pattern.
+
+### ADR-028 — FEAT-20260518-02: Singleton company profile table with PK CHECK constraint
+
+- **Date**: 2026-05-18
+- **Decision**: The `company_profile` table uses `id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1)` to enforce exactly one row. The service upserts via `INSERT ... ON CONFLICT (id) DO UPDATE`. No auto-increment sequence; `find()` returns an empty-fields record as default when the row is absent.
+- **Why**: A singleton-table approach removes any "which row?" ambiguity in `CompanyProfileResolver.resolve()` and eliminates null-handling. The PK `CHECK` constraint is a Postgres-native guard that prevents accidental multi-row inserts at the database level. `@Version` on the JPA entity provides optimistic concurrency control consistent with other entities in the project.
+- **Trade-offs**: Per-user company profiles cannot be added without a `ALTER TABLE ADD COLUMN user_id + DROP CONSTRAINT` migration. The port (`CompanyProfileRepository`) is designed to remain stable; adding user scoping requires only a new `findByUserId` method and a resolver policy change.
+
+### ADR-029 — FEAT-20260518-02: CompanyProfileResolver as a service between InvoiceRenderService and YAML
+
+- **Date**: 2026-05-18
+- **Decision**: `CompanyProfileResolver` is a Spring service injected into `InvoiceRenderService`, `InvoiceService`, and `JavaMailInvoiceMailer`. It encapsulates the three-tier fallback (persisted → YAML → empty string) so callers receive a fully populated `CompanyProperties`-shaped object. `PoiTlInvoiceDocxRenderer` is unchanged.
+- **Why**: Injecting the resolver at the service layer (rather than the renderer) keeps the renderer stateless and template-agnostic, consistent with the existing FEAT-20260513-03 design. The renderer receives a plain data object; the resolution strategy is an application-layer concern. This separation means the fallback logic is tested once in `CompanyProfileResolverTest`, not duplicated across every rendering path.
+- **Trade-offs**: The resolver adds a DB read (one `SELECT` on the single-row table) on every render. At negligible row count this is a constant-time, single-index lookup. Caching via `@CacheEvict` on `PUT /settings/company` is a future optimization if render latency becomes a concern.
 
 ### ADR-008 — FEAT-20260512-01: Dual toast system during transition (sonner + legacy)
 
