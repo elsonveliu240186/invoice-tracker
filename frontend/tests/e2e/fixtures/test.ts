@@ -9,7 +9,7 @@ import { resetBackend, purgeMailhog, registerUser } from './api';
 
 export { expect } from '@playwright/test';
 
-const E2E_USERNAME = process.env['E2E_USERNAME'] ?? 'admin';
+const E2E_USERNAME = process.env['E2E_USERNAME'] ?? 'admin@example.com';
 const E2E_PASSWORD = process.env['E2E_PASSWORD'] ?? 'Secret1!';
 
 // Auto-fixture: runs reset + purge + re-register admin before every test.

@@ -7,7 +7,7 @@ import { ClientsPage } from '../pages/ClientsPage';
 import { LoginPage } from '../pages/LoginPage';
 
 const ADMIN = {
-  email: process.env['E2E_USERNAME'] ?? 'admin',
+  email: process.env['E2E_USERNAME'] ?? 'admin@example.com',
   password: process.env['E2E_PASSWORD'] ?? 'Secret1!',
 };
 

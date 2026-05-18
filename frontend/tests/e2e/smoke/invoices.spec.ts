@@ -14,7 +14,7 @@ test('seeded invoice appears in list with DRAFT status', async ({ page, factory 
   const loginPage = new LoginPage(page);
   await loginPage.goto();
   await loginPage.login(
-    process.env['E2E_USERNAME'] ?? 'admin',
+    process.env['E2E_USERNAME'] ?? 'admin@example.com',
     process.env['E2E_PASSWORD'] ?? 'Secret1!',
   );
   await expect(page).toHaveURL('/', { timeout: 10000 });

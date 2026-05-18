@@ -9,7 +9,7 @@ import { request } from '@playwright/test';
 
 const API_URL = process.env['E2E_API_URL'] ?? 'http://localhost:8082';
 const MAILHOG_URL = process.env['E2E_MAILHOG_URL'] ?? 'http://localhost:8026';
-const USERNAME = process.env['E2E_USERNAME'] ?? 'admin';
+const USERNAME = process.env['E2E_USERNAME'] ?? 'admin@example.com';
 const PASSWORD = process.env['E2E_PASSWORD'] ?? 'Secret1!';
 
 async function waitForUrl(

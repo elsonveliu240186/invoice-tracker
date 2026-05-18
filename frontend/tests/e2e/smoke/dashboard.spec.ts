@@ -15,7 +15,7 @@ test('dashboard KPI cards render with seeded data', async ({ page, factory }) =>
   const loginPage = new LoginPage(page);
   await loginPage.goto();
   await loginPage.login(
-    process.env['E2E_USERNAME'] ?? 'admin',
+    process.env['E2E_USERNAME'] ?? 'admin@example.com',
     process.env['E2E_PASSWORD'] ?? 'Secret1!',
   );
 

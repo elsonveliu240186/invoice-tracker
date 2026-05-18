@@ -17,7 +17,7 @@ const FIXTURES_DIR = path.resolve(__dirname, '../fixtures/files');
 const FIXTURES_TMP = process.env['E2E_FIXTURES_TMP'] ?? FIXTURES_DIR;
 
 const ADMIN = {
-  email: process.env['E2E_USERNAME'] ?? 'admin',
+  email: process.env['E2E_USERNAME'] ?? 'admin@example.com',
   password: process.env['E2E_PASSWORD'] ?? 'Secret1!',
 };
 

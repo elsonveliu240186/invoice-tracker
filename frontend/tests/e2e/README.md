@@ -39,7 +39,7 @@ Playwright reads them via `process.env`:
 | `E2E_BASE_URL` | `http://localhost:8081` | Frontend nginx URL |
 | `E2E_API_URL` | `http://localhost:8082` | Backend Spring Boot URL |
 | `E2E_MAILHOG_URL` | `http://localhost:8026` | MailHog REST API |
-| `E2E_USERNAME` | `admin` | Admin user email |
+| `E2E_USERNAME` | `admin@example.com` | Admin user email |
 | `E2E_PASSWORD` | `Secret1!` | Admin user password |
 
 ## Architecture

@@ -321,7 +321,7 @@ jobs:
           E2E_BASE_URL: 'http://localhost:8081'
           E2E_API_URL: 'http://localhost:8082'
           E2E_MAILHOG_URL: 'http://localhost:8026'
-          E2E_USERNAME: 'admin'
+          E2E_USERNAME: 'admin@example.com'
           E2E_PASSWORD: 'Secret1!'
         run: pnpm e2e:smoke
 
@@ -386,7 +386,7 @@ jobs:
           E2E_BASE_URL: 'http://localhost:8081'
           E2E_API_URL: 'http://localhost:8082'
           E2E_MAILHOG_URL: 'http://localhost:8026'
-          E2E_USERNAME: 'admin'
+          E2E_USERNAME: 'admin@example.com'
           E2E_PASSWORD: 'Secret1!'
         run: pnpm e2e:regression
 
