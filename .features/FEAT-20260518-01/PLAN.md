@@ -1,7 +1,8 @@
 ---
 feature_id: FEAT-20260518-01
 title: True E2E smoke + regression suite — full-stack boot, industry-standard coverage
-status: AwaitingApproval
+status: Developing
+approved_at: 2026-05-18T10:30:00Z
 size: XL
 generated_at: 2026-05-18T00:00:00Z
 generated_by: claude-opus

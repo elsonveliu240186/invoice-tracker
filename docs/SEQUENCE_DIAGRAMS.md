@@ -581,3 +581,89 @@ sequenceDiagram
     Filter-->>A: 429 Too Many Requests {code:"RATE_LIMIT_EXCEEDED"}
     Note over Filter: BE is never reached
 ```
+
+---
+
+### FEAT-20260518-01 — True E2E smoke + regression suite
+
+#### E2E per-test reset flow
+
+This diagram shows what happens before each Playwright spec. The `resetBackend()` call is wired into `beforeEach` in `tests/e2e/fixtures/test.ts`; `purgeMailhog()` runs from the same hook. The schema-level clean/migrate happens once per container start (not shown here — see `FlywayCleanMigrateInitializer`).
+
+```mermaid
+sequenceDiagram
+    actor PW as Playwright<br/>(beforeEach fixture)
+    participant Fix as fixtures/test.ts
+    participant API as E2eResetController<br/>POST /api/v1/test-support/reset
+    participant SVC as reset() method
+    participant DB as Postgres (e2e DB)
+    participant MH as MailHog REST API<br/>DELETE /api/v1/messages
+
+    PW->>Fix: beforeEach hook fires
+    Fix->>API: POST /api/v1/test-support/reset<br/>Authorization: Basic <e2e credentials>
+    API->>API: @Profile("e2e") guard — bean present
+    API->>API: SecurityConfig.anyRequest().authenticated()<br/>→ 401 if no valid Basic header
+    API->>SVC: reset()
+    SVC->>DB: TRUNCATE invoice_generated_artifacts CASCADE
+    SVC->>DB: TRUNCATE invoice_lines CASCADE
+    SVC->>DB: TRUNCATE invoices CASCADE
+    SVC->>DB: TRUNCATE expenses CASCADE
+    SVC->>DB: TRUNCATE clients CASCADE
+    SVC->>DB: TRUNCATE app_users CASCADE
+    SVC->>DB: DELETE FROM company_profile WHERE id = 1<br/>INSERT blank seed row
+    DB-->>SVC: OK
+    SVC-->>API: void
+    API-->>Fix: HTTP 204 No Content
+    Fix->>MH: DELETE http://localhost:8026/api/v1/messages
+    MH-->>Fix: HTTP 200 (inbox cleared)
+    Fix-->>PW: beforeEach complete — clean state for spec
+```
+
+#### E2E reset — error paths
+
+```mermaid
+sequenceDiagram
+    actor PW as Playwright
+    participant API as E2eResetController
+
+    note over PW,API: Scenario A — reset endpoint called in non-e2e profile (production guard)
+    PW->>API: POST /api/v1/test-support/reset
+    API-->>PW: HTTP 404 Not Found<br/>(bean absent — @Profile("e2e") excluded)
+
+    note over PW,API: Scenario B — missing credentials
+    PW->>API: POST /api/v1/test-support/reset<br/>(no Authorization header)
+    API-->>PW: HTTP 401 Unauthorized<br/>(SecurityConfig HttpStatusEntryPoint)
+```
+
+#### Smoke vs. regression CI flow
+
+```mermaid
+sequenceDiagram
+    participant GH as GitHub Actions
+    participant BS as e2e-smoke job<br/>(every PR + push)
+    participant BR as e2e-regression job<br/>(nightly + push to main)
+    participant DC as docker-compose.e2e.yml
+    participant PW as Playwright
+
+    GH->>BS: PR opened / push event
+    BS->>DC: docker compose up -d --build --wait
+    DC-->>BS: all 4 services healthy<br/>(postgres, mailhog, backend, frontend)
+    BS->>PW: pnpm e2e:smoke (Chrome only)
+    PW-->>BS: smoke results
+    alt smoke PASS
+        BS-->>GH: check green — merge allowed
+    else smoke FAIL
+        BS->>GH: upload Playwright HTML report + backend logs
+        BS-->>GH: check red — merge blocked
+    end
+    BS->>DC: docker compose down -v
+
+    GH->>BR: schedule 0 2 * * * / push to main
+    BR->>DC: docker compose up -d --build --wait
+    BR->>PW: pnpm e2e:regression (Chrome + Firefox)
+    PW-->>BR: regression results
+    alt regression FAIL
+        BR->>GH: upload full Playwright trace
+    end
+    BR->>DC: docker compose down -v
+```

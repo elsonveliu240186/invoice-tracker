@@ -488,6 +488,82 @@ flowchart LR
     palProvider --> paletteStore
 ```
 
+## E2E test infrastructure (FEAT-20260518-01)
+
+Updated by FEAT-20260518-01 (True E2E smoke + regression suite). The architecture adds a dedicated test environment that boots the full stack via Docker Compose and drives it with Playwright, isolated from the local dev stack by non-conflicting ports and a separate compose project name.
+
+### Two-tier E2E architecture
+
+```mermaid
+flowchart LR
+  subgraph Host["CI runner / dev box"]
+    PW_S["Playwright smoke<br/>(Chromium — every PR)"]
+    PW_R["Playwright regression<br/>(Chromium + Firefox — nightly)"]
+  end
+
+  subgraph Compose["docker-compose.e2e.yml<br/>COMPOSE_PROJECT_NAME=invoice-tracker-e2e"]
+    FE["frontend nginx<br/>:8081 → 80"]
+    BE["backend Spring Boot<br/>profile=e2e<br/>:8082 → 8080"]
+    DB[("postgres:16<br/>tmpfs — no volume")]
+    MH["mailhog<br/>SMTP :1026<br/>REST/UI :8026"]
+  end
+
+  PW_S & PW_R -- "browser → UI" --> FE
+  PW_S & PW_R -- "API seed/teardown" --> BE
+  PW_S & PW_R -- "inbox assertions" --> MH
+  FE -- "/api/* proxy" --> BE
+  BE --> DB
+  BE -- SMTP --> MH
+```
+
+### Page Object Model and fixture layers
+
+```
+tests/e2e/
+├── global-setup.ts          ← register admin user; purge MailHog inbox
+├── global-teardown.ts       ← optional summary reporting
+├── fixtures/
+│   ├── test.ts              ← extended Playwright `test` — beforeEach: resetBackend() + purgeMailhog()
+│   ├── factory.ts           ← TestDataFactory: createClient / createInvoice / createExpense / saveCompanyProfile
+│   ├── api.ts               ← raw HTTP helpers over request context
+│   └── files/               ← sample-template.docx, evil.exe (32 B), oversized fixture (generated in globalSetup)
+├── pages/                   ← 9 POM classes (zero raw locators in spec files)
+│   ├── LoginPage.ts
+│   ├── AppShellPage.ts
+│   ├── ClientsPage.ts
+│   ├── InvoicesPage.ts
+│   ├── InvoiceDetailPage.ts
+│   ├── ExpensesPage.ts
+│   ├── DashboardPage.ts
+│   ├── SettingsCompanyPage.ts
+│   └── SettingsTemplatePage.ts
+├── smoke/                   ← 7 specs: auth, clients, invoices, send-email, expenses, dashboard, settings
+└── regression/              ← 12 specs (Chrome + Firefox + mobile viewport 390×844)
+```
+
+### DB clean strategy (`e2e` Spring profile)
+
+| Step | Mechanism | When |
+|------|-----------|------|
+| Full schema reset | `FlywayCleanMigrateInitializer` calls `flyway.clean()` then `flyway.migrate()` | Container (re)start — each CI job |
+| Per-test table truncation | `POST /api/v1/test-support/reset` (E2eResetController) | `beforeEach` hook in every spec via `resetBackend()` |
+| MailHog inbox purge | `DELETE http://localhost:8026/api/v1/messages` | `global-setup.ts` + `beforeEach` via `purgeMailhog()` |
+
+`flyway.clean-disabled=false` is scoped exclusively to the `e2e` YAML document in `application.yml`. All other profiles retain the Flyway 10 default (`clean-disabled=true`).
+
+### Accessibility strategy
+
+Every regression spec includes `checkA11y(page)` via `@axe-core/playwright` with rules scoped to `wcag2a, wcag2aa, wcag21aa`. `critical` and `serious` violations fail the test. `moderate` / `minor` are logged as warnings only. The dedicated `regression/accessibility.spec.ts` spec runs axe against 6 key routes. `@axe-core/playwright` is a devDependency and is never bundled in the production build.
+
+### CI jobs
+
+| Job | Trigger | Browsers | Target time | Artifacts on failure |
+|-----|---------|----------|-------------|----------------------|
+| `e2e-smoke` | Every PR + push | Chromium | ≤ 3 min | Playwright HTML report + backend logs |
+| `e2e-regression` | Nightly `0 2 * * *` + push to `main` | Chromium + Firefox | ≤ 12 min | Full Playwright trace |
+
+---
+
 ## Decisions log
 
 ### ADR-000 — Scaffolded with agenticai
@@ -693,6 +769,27 @@ flowchart LR
 - **Decision**: `CompanyProfileResolver` is a Spring service injected into `InvoiceRenderService`, `InvoiceService`, and `JavaMailInvoiceMailer`. It encapsulates the three-tier fallback (persisted → YAML → empty string) so callers receive a fully populated `CompanyProperties`-shaped object. `PoiTlInvoiceDocxRenderer` is unchanged.
 - **Why**: Injecting the resolver at the service layer (rather than the renderer) keeps the renderer stateless and template-agnostic, consistent with the existing FEAT-20260513-03 design. The renderer receives a plain data object; the resolution strategy is an application-layer concern. This separation means the fallback logic is tested once in `CompanyProfileResolverTest`, not duplicated across every rendering path.
 - **Trade-offs**: The resolver adds a DB read (one `SELECT` on the single-row table) on every render. At negligible row count this is a constant-time, single-index lookup. Caching via `@CacheEvict` on `PUT /settings/company` is a future optimization if render latency becomes a concern.
+
+### ADR-030 — FEAT-20260518-01: Two-tier E2E design (smoke fast-path, regression thorough)
+
+- **Date**: 2026-05-18
+- **Decision**: E2E tests are split into two independent Playwright projects. `smoke` (7 specs, Chromium only, ≤ 3 min) runs on every PR and blocks merge on failure. `regression` (12 specs, Chromium + Firefox + mobile, ≤ 12 min) runs nightly and on pushes to `main`.
+- **Why**: Running the full regression suite on every PR would add 9–12 min to PR feedback and is disproportionate for code reviews. The smoke tier validates all golden paths. The regression tier catches cross-browser bugs, error-path regressions, and accessibility violations without blocking fast developer iteration.
+- **Trade-offs**: A regression that only manifests in Firefox will not block a PR. The nightly job provides the safety net, but a fix lands on `main` before being caught. This is accepted for v1; teams with stricter SLAs can promote the regression job to pre-merge.
+
+### ADR-031 — FEAT-20260518-01: `@Profile("e2e")` as the sole production isolation mechanism for E2eResetController
+
+- **Date**: 2026-05-18
+- **Decision**: `E2eResetController` uses `@Profile("e2e")` to be excluded from the Spring application context in every profile other than `e2e`. No feature flag, no environment variable guard, no URL obscurity — the bean is simply absent.
+- **Why**: Spring's `@Profile` is evaluated at context startup, not at request time. An absent bean means no request mapping is registered; the endpoint returns 404 before reaching any authorization filter. This is a defence-in-depth control layered on top of the HTTP Basic authentication that `SecurityConfig` already enforces. `E2eResetControllerProfileGuardIT` verifies the 404 contract without the `e2e` profile active.
+- **Trade-offs**: `@Profile` is opt-in; a developer who starts the app with `-Dspring.profiles.active=e2e` locally will expose the reset endpoint. This is acceptable — the endpoint requires valid credentials and operates only on the e2e database. The `.env.e2e` README documents this explicitly.
+
+### ADR-032 — FEAT-20260518-01: Flyway `clean()` on container start for schema isolation
+
+- **Date**: 2026-05-18
+- **Decision**: `FlywayCleanMigrateInitializer` (`@Configuration @Profile("e2e")`) implements `FlywayMigrationStrategy` to call `flyway.clean()` immediately before `flyway.migrate()` on every container start. This is supplemented by `POST /api/v1/test-support/reset` for per-test row truncation without a schema rebuild.
+- **Why**: CI E2E jobs build fresh images from scratch, so each job starts with a clean container. The `clean()` call ensures that any schema drift between migration versions is eliminated at startup rather than causing silent failures. Per-test isolation via `resetBackend()` is faster than a full `clean()+migrate()` cycle (milliseconds vs. seconds) and is sufficient for row-level isolation within a single test run.
+- **Trade-offs**: `flyway.clean-disabled=false` is a destructive setting. Scoping it to the `e2e` YAML document and enforcing `@Profile("e2e")` on the initializer bean provides two independent guards against accidental use in non-test environments.
 
 ### ADR-008 — FEAT-20260512-01: Dual toast system during transition (sonner + legacy)
 

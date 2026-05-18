@@ -4,6 +4,7 @@ Maintained by the **documentation** subagent. One row per feature.
 
 | ID | Title | State | Owner | Plan | Review | Security | QA | PR |
 |----|-------|-------|-------|------|--------|----------|----|----|
+| FEAT-20260518-01 | True E2E smoke + regression suite — full-stack boot, industry-standard coverage | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260518-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260518-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260518-01/SECURITY.md) | [QA.md](.features/FEAT-20260518-01/QA.md) | — |
 | FEAT-20260518-02 | Persisted company profile + docx placeholder substitution | Done | elsonveliu | [PLAN.md](.features/FEAT-20260518-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260518-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260518-02/SECURITY.md) | [QA.md](.features/FEAT-20260518-02/QA.md) | — |
 | FEAT-20260517-01 | Expense dashboard charts — by month, by category, and dashboard date filter | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260517-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260517-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260517-01/SECURITY.md) | [QA.md](.features/FEAT-20260517-01/QA.md) | — |
 | FEAT-20260516-01 | Expense tracking with category dashboard + auth rate-limiting (Bucket4j) | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260516-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260516-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260516-01/SECURITY.md) | [QA.md](.features/FEAT-20260516-01/QA.md) | — |
@@ -18,6 +19,59 @@ Maintained by the **documentation** subagent. One row per feature.
 | FEAT-20260512-02 | Authentication modernization | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-02/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-02/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-02/SECURITY.md) | [QA.md](.features/FEAT-20260512-02/QA.md) | — |
 | FEAT-20260512-01 | Frontend design system foundation | Shipping | elsonveliu | [PLAN.md](.features/FEAT-20260512-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260512-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260512-01/SECURITY.md) | [QA.md](.features/FEAT-20260512-01/QA.md) | — |
 | FEAT-20260511-01 | Client management (CRUD) | Done | elsonveliu | [PLAN.md](.features/FEAT-20260511-01/PLAN.md) | [REVIEW.md](.features/FEAT-20260511-01/REVIEW.md) | [SECURITY.md](.features/FEAT-20260511-01/SECURITY.md) | [QA.md](.features/FEAT-20260511-01/QA.md) | — |
+
+## FEAT-20260518-01 — True E2E smoke + regression suite
+
+### Overview
+
+Adds a dedicated real-stack E2E testing layer that boots the full application (Postgres, MailHog, Spring Boot, nginx) via `docker-compose.e2e.yml` and runs a two-tier Playwright suite. Existing mocked Playwright specs are untouched. The smoke tier runs on every PR (≤ 3 min); the regression tier runs nightly and on pushes to `main` (≤ 12 min).
+
+Review passed on iteration 2 (iteration 1: 4 blocking findings resolved). Security passed on iteration 1 (gitleaks 0 leaks, Trivy pass, Grype pass, Semgrep 0 findings). QA passed: 333 backend unit tests + 80 IT tests; 1004 Vitest tests.
+
+### New test-support endpoint (e2e profile only — returns 404 in production)
+
+| Method | Path | Auth | Summary |
+|--------|------|------|---------|
+| POST | `/api/v1/test-support/reset` | HTTP Basic (required) | Truncates all business tables in FK order; resets company_profile to blank seed row. Returns 204. |
+
+### Key new files
+
+| Path | Description |
+|------|-------------|
+| `docker-compose.e2e.yml` | Four-service compose stack: Postgres 16 (tmpfs), MailHog, backend (e2e profile), frontend nginx. Non-default ports 8081/8082/8026/1026. |
+| `.env.e2e` | Committed throwaway test credentials. No real secrets. |
+| `backend/.../config/FlywayCleanMigrateInitializer.java` | `@Profile("e2e")` `FlywayMigrationStrategy` — calls `clean()` then `migrate()` for a fresh schema on each container start. |
+| `backend/.../adapter/web/testsupport/E2eResetController.java` | `@Profile("e2e")` controller — `POST /api/v1/test-support/reset`; 404 in all other profiles. |
+| `backend/src/main/resources/application.yml` | `on-profile: e2e` document: datasource → `invoicetracker_e2e`, `flyway.clean-disabled=false`, mail → mailhog. |
+| `frontend/playwright.config.ts` | Added `smoke` (Chromium) and `regression` (Chromium + Firefox) named projects; both excluded from default `pnpm e2e`. |
+| `frontend/tests/e2e/global-setup.ts` | Registers admin user; purges MailHog inbox. |
+| `frontend/tests/e2e/fixtures/test.ts` | Extended `test` fixture with `beforeEach` `resetBackend()` + `purgeMailhog()`. |
+| `frontend/tests/e2e/fixtures/factory.ts` | `TestDataFactory` with typed builders: `createClient`, `createInvoice`, `createExpense`, `saveCompanyProfile`. |
+| `frontend/tests/e2e/fixtures/api.ts` | Raw HTTP helpers: `registerUser`, `loginAndGetBasic`, `seedClient`, `seedInvoice`, `seedExpense`, `purgeMailhog`, `getMailhogMessages`, `resetBackend`. |
+| `frontend/tests/e2e/pages/` | 9 Page Object Model classes — `LoginPage`, `AppShellPage`, `ClientsPage`, `InvoicesPage`, `InvoiceDetailPage`, `ExpensesPage`, `DashboardPage`, `SettingsCompanyPage`, `SettingsTemplatePage`. Zero raw locators in spec files. |
+| `frontend/tests/e2e/smoke/` (7 specs) | `auth`, `clients`, `invoices`, `send-email`, `expenses`, `dashboard`, `settings` — golden-path only. |
+| `frontend/tests/e2e/regression/` (12 specs) | `auth`, `clients`, `invoices-crud`, `invoices-lifecycle`, `invoices-docx`, `invoices-send`, `expenses`, `dashboard`, `settings-company`, `settings-template`, `navigation`, `accessibility`. Includes axe-core a11y scan, cross-browser, mobile viewport. |
+| `.github/workflows/ci.yml` | Jobs `e2e-smoke` (every PR + push) and `e2e-regression` (nightly cron `0 2 * * *` + push to main). |
+| `CHECKS.yml` | Added `e2e_smoke: true` and `e2e_regression: true` gate keys. |
+
+### Quality gate results
+
+| Gate | Result |
+|------|--------|
+| Backend build (mvnw verify) | 333 unit tests + 80 IT tests pass; JaCoCo ≥ 90% on new e2e classes |
+| Vitest (1004 tests) | pass |
+| pnpm lint | 0 errors |
+| gitleaks | 0 secrets |
+| Semgrep | 0 findings (636 rules, 594 files) |
+| pnpm audit | 0 high/critical |
+| Trivy | pass |
+| Grype | pass (go-module false positives suppressed in .grype.yaml) |
+
+### Security findings
+
+No required fixes. All OWASP Top 10 items mitigated or n/a. Key controls: `@Profile("e2e")` makes reset endpoint a 404 in production; `.env.e2e` contains only throwaway credentials; `flyway.clean-disabled=false` scoped to e2e YAML document only; axe-core is a devDependency; MailHog bound to compose network. See `.features/FEAT-20260518-01/SECURITY.md` for the full assessment.
+
+---
 
 ## FEAT-20260518-02 — Persisted company profile + docx placeholder substitution
 

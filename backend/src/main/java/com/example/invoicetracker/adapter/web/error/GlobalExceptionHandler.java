@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Translates domain and validation exceptions to RFC 7807 ProblemDetail responses.
@@ -345,6 +346,19 @@ public class GlobalExceptionHandler {
         problem.setTitle("Conflict");
         problem.setDetail("The resource was updated concurrently. Please retry.");
         problem.setProperty("code", "OPTIMISTIC_LOCK_CONFLICT");
+        return problem;
+    }
+
+    /**
+     * Handles requests to non-existent routes (404).
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ProblemDetail handleNoResourceFound(NoResourceFoundException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        problem.setType(URI.create("about:blank"));
+        problem.setTitle("Not Found");
+        problem.setDetail("The requested resource was not found.");
+        problem.setProperty("code", "NOT_FOUND");
         return problem;
     }
 
