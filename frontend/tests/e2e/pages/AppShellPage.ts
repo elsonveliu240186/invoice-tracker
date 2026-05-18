@@ -16,7 +16,7 @@ export class AppShellPage {
     return this.page.getByRole('link', { name: label });
   }
 
-  async currentRoute(): Promise<string> {
+  currentRoute(): string {
     return new URL(this.page.url()).pathname;
   }
 }

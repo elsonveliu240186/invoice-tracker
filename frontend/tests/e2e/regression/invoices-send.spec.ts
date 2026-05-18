@@ -21,7 +21,7 @@ async function login(page: import('@playwright/test').Page) {
   await expect(page).toHaveURL('/', { timeout: 10000 });
 }
 
-test('MailHog subject matches invoice number', async ({ page, request, factory }) => {
+test('MailHog subject matches invoice number', async ({ page, factory }) => {
   const ts = Date.now();
   const invoiceNumber = `REG-SEND-${ts}`;
   const client = await factory.createClient({ email: `send-test-${ts}@e2e.test` });

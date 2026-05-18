@@ -26,9 +26,9 @@ export const test = base.extend<{ factory: TestDataFactory; _reset: void }>({
     },
     { auto: true },
   ],
-  factory: async ({ request }, use) => {
+  factory: async ({ request }, provide) => {
     const authHeader = getBasicAuthHeader(E2E_USERNAME, E2E_PASSWORD);
     const factory = new TestDataFactory(request, authHeader);
-    await use(factory);
+    await provide(factory);
   },
 });

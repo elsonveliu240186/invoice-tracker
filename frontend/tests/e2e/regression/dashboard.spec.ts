@@ -76,7 +76,7 @@ test('date filter narrows KPI cards', async ({ page, factory }) => {
   await expect(page.getByTestId('stat-cards')).toBeVisible({ timeout: 5000 });
 });
 
-test('mobile viewport: dashboard renders', async ({ page, factory }) => {
+test('mobile viewport: dashboard renders', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await login(page);
 
